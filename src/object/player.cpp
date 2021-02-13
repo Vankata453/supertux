@@ -170,6 +170,7 @@ Player::Player(PlayerStatus* _player_status, const std::string& name_) :
   idle_timer(),
   idle_stage(0),
   climbing(0),
+  m_last_pos(),
   m_last_speed()
 {
   this->name = name_;
@@ -1324,13 +1325,23 @@ Player::draw(DrawingContext& context)
     }
   }
 
-  std::ostringstream oss;
-  oss << _("Speed: ") << std::setprecision(5) << m_last_speed.x
-              << ", " << std::setprecision(5) << m_last_speed.y;
-  std::string result = oss.str();
+  std::ostringstream pos_oss;
+  pos_oss << _("Position: ") << std::setprecision(5) << bbox.p1.x
+                     << ", " << std::setprecision(5) << bbox.p1.y;
 
   context.draw_text(Resources::small_font,
-                    result,
+                    pos_oss.str(),
+                    Vector(SCREEN_WIDTH - 64, 48)
+                      + Sector::current()->camera->get_translation(),
+                    ALIGN_RIGHT,
+                    LAYER_HUD);
+
+  std::ostringstream speed_oss;
+  speed_oss << _("Speed: ") << std::setprecision(5) << m_last_speed.x
+                    << ", " << std::setprecision(5) << m_last_speed.y;
+
+  context.draw_text(Resources::small_font,
+                    speed_oss.str(),
                     Vector(SCREEN_WIDTH - 64, 64)
                       + Sector::current()->camera->get_translation(),
                     ALIGN_RIGHT,
