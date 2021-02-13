@@ -32,6 +32,7 @@
 #include "scripting/squirrel_util.hpp"
 #include "supertux/game_session.hpp"
 #include "supertux/gameconfig.hpp"
+#include "supertux/resources.hpp"
 #include "supertux/sector.hpp"
 #include "supertux/tile.hpp"
 #include "trigger/climbable.hpp"
@@ -168,7 +169,8 @@ Player::Player(PlayerStatus* _player_status, const std::string& name_) :
   unduck_hurt_timer(),
   idle_timer(),
   idle_stage(0),
-  climbing(0)
+  climbing(0),
+  m_last_speed()
 {
   this->name = name_;
   controller = InputManager::current()->get_controller();
@@ -436,6 +438,9 @@ Player::update(float elapsed_time)
       sprite->set_animation_loops(-1);
   }
 
+  m_last_speed = bbox.p1 - m_last_pos;
+  m_last_pos = bbox.p1;
+  //std::cerr << bbox.p1 << std::endl;
 }
 
 bool
@@ -1319,6 +1324,17 @@ Player::draw(DrawingContext& context)
     }
   }
 
+  std::ostringstream oss;
+  oss << _("Speed: ") << std::setprecision(5) << m_last_speed.x
+              << ", " << std::setprecision(5) << m_last_speed.y;
+  std::string result = oss.str();
+
+  context.draw_text(Resources::small_font,
+                    result,
+                    Vector(SCREEN_WIDTH - 64, 64)
+                      + Sector::current()->camera->get_translation(),
+                    ALIGN_RIGHT,
+                    LAYER_HUD);
 }
 
 void
