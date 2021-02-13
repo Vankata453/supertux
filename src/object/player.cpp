@@ -32,6 +32,7 @@
 #include "scripting/squirrel_util.hpp"
 #include "supertux/game_session.hpp"
 #include "supertux/gameconfig.hpp"
+#include "supertux/resources.hpp"
 #include "supertux/sector.hpp"
 #include "supertux/tile.hpp"
 #include "trigger/climbable.hpp"
@@ -168,7 +169,9 @@ Player::Player(PlayerStatus* _player_status, const std::string& name_) :
   unduck_hurt_timer(),
   idle_timer(),
   idle_stage(0),
-  climbing(0)
+  climbing(0),
+  m_last_pos(),
+  m_last_speed()
 {
   this->name = name_;
   controller = InputManager::current()->get_controller();
@@ -436,6 +439,9 @@ Player::update(float elapsed_time)
       sprite->set_animation_loops(-1);
   }
 
+  m_last_speed = bbox.p1 - m_last_pos;
+  m_last_pos = bbox.p1;
+  //std::cerr << bbox.p1 << std::endl;
 }
 
 bool
@@ -1319,6 +1325,27 @@ Player::draw(DrawingContext& context)
     }
   }
 
+  std::ostringstream pos_oss;
+  pos_oss << _("Position: ") << std::setprecision(5) << bbox.p1.x
+                     << ", " << std::setprecision(5) << bbox.p1.y;
+
+  context.draw_text(Resources::small_font,
+                    pos_oss.str(),
+                    Vector(SCREEN_WIDTH - 64, 48)
+                      + Sector::current()->camera->get_translation(),
+                    ALIGN_RIGHT,
+                    LAYER_HUD);
+
+  std::ostringstream speed_oss;
+  speed_oss << _("Speed: ") << std::setprecision(5) << m_last_speed.x
+                    << ", " << std::setprecision(5) << m_last_speed.y;
+
+  context.draw_text(Resources::small_font,
+                    speed_oss.str(),
+                    Vector(SCREEN_WIDTH - 64, 64)
+                      + Sector::current()->camera->get_translation(),
+                    ALIGN_RIGHT,
+                    LAYER_HUD);
 }
 
 void
