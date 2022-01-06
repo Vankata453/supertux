@@ -30,6 +30,11 @@
 #include "util/gettext.hpp"
 #include "video/compositor.hpp"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#endif
+
 EditorMenu::EditorMenu()
 {
   bool worldmap = Editor::current()->get_level()->is_worldmap();
@@ -86,6 +91,7 @@ EditorMenu::EditorMenu()
   add_submenu(worldmap ? _("Worldmap Settings") : _("Level Settings"),
               MenuStorage::EDITOR_LEVEL_MENU);
   add_entry(MNID_HELP, _("Keyboard Shortcuts"));
+  add_entry(MNID_SCRIPTING_REF, "Scripting Reference");
 
   add_hl();
   add_entry(MNID_QUITEDITOR, _("Exit Level Editor"));
@@ -176,6 +182,18 @@ EditorMenu::menu_action(MenuItem& item)
       dialog->add_cancel_button(_("Got it!"));
       MenuManager::instance().set_dialog(std::move(dialog));
     }
+    break;
+
+  case MNID_SCRIPTING_REF:
+      Dialog::show_confirmation(_("Do you want to package this world as an add-on?"), [] {
+        #ifdef __EMSCRIPTEN__
+          EM_ASM({
+            window.open("https://github.com/SuperTux/supertux/wiki/Scripting_reference");
+          }, 0); // EM_ASM is a variadic macro and Clang requires at least 1 value for the variadic argument
+        #else
+          FileSystem::open_path("https://github.com/SuperTux/supertux/wiki/Scripting_reference");
+        #endif
+      });
     break;
 
     case MNID_LEVELSEL:
