@@ -19,7 +19,7 @@
 
 #include "gui/menu.hpp"
 
-class EditorMenu final : public Menu
+class EditorScriptingReferenceMenu final : public Menu
 {
 private:
   enum MenuIDs {
@@ -39,7 +39,9 @@ private:
     MNID_SOUND,
     MNID_TEXT,
     MNID_THUNDERSTORM,
-    MNID_TILEMAP
+    MNID_TILEMAP,
+    MNID_WILL_O_WISP,
+    MNID_WIND
   };
 
 public:
