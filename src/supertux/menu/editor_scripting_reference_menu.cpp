@@ -40,8 +40,8 @@ EditorScriptingReferenceMenu::EditorScriptingReferenceMenu()
     add_entry(MNID_CANDLE, _("Candle"));
     add_entry(MNID_DISPLAY_EFFECT, _("DisplayEffect"));
     add_entry(MNID_FLOATING_IMAGE, _("FloatingImage"));
-    add_entry(MNID_GLOBALS_PART_1, _("Globals"));
-    add_entry(MNID_GLOBALS_PART_2, _("Globals"));
+    add_entry(MNID_GLOBALS_PART_1, _("Globals (Part 1)"));
+    add_entry(MNID_GLOBALS_PART_2, _("Globals (Part 2)"));
     add_entry(MNID_LEVEL, _("Level"));
     add_entry(MNID_LEVEL_TIME, _("LevelTime"));
     add_entry(MNID_PATH, _("Path"));
