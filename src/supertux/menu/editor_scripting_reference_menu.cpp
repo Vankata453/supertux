@@ -14,7 +14,7 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "supertux/menu/editor_menu.hpp"
+#include "supertux/menu/editor_scripting_reference_menu.hpp"
 
 #include <physfs.h>
 
