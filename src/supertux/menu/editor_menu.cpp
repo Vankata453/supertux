@@ -185,7 +185,7 @@ EditorMenu::menu_action(MenuItem& item)
     break;
 
   case MNID_SCRIPTING_REF:
-      Dialog::show_confirmation(_("Do you want to package this world as an add-on?"), [] {
+      Dialog::show_confirmation(_("This will take you to the Scripting Reference webpage, located in the wiki.\nAre you sure you want to continue?"), [] {
         #ifdef __EMSCRIPTEN__
           EM_ASM({
             window.open("https://github.com/SuperTux/supertux/wiki/Scripting_reference");
