@@ -40,7 +40,8 @@ EditorScriptingReferenceMenu::EditorScriptingReferenceMenu()
     add_entry(MNID_CANDLE, _("Candle"));
     add_entry(MNID_DISPLAY_EFFECT, _("DisplayEffect"));
     add_entry(MNID_FLOATING_IMAGE, _("FloatingImage"));
-    add_entry(MNID_GLOBALS, _("Globals"));
+    add_entry(MNID_GLOBALS_PART_1, _("Globals"));
+    add_entry(MNID_GLOBALS_PART_2, _("Globals"));
     add_entry(MNID_LEVEL, _("Level"));
     add_entry(MNID_LEVEL_TIME, _("LevelTime"));
     add_entry(MNID_PATH, _("Path"));
@@ -54,6 +55,8 @@ EditorScriptingReferenceMenu::EditorScriptingReferenceMenu()
     add_entry(MNID_TILEMAP, _("Tilemap"));
     add_entry(MNID_WILL_O_WISP, _("Will-o-wisp"));
     add_entry(MNID_WIND, _("Wind"));
+    add_hl();
+    add_back(_("Back"));
 }
 
 EditorScriptingReferenceMenu::~EditorScriptingReferenceMenu()
@@ -113,8 +116,8 @@ EditorScriptingReferenceMenu::menu_action(MenuItem& item)
         "`fade_out(float time)` -> Just the opposite of fade_in."));
       break;
       
-    case MNID_GLOBALS:
-      dialog->set_text(_("This module contains global constants and methods.\n"
+    case MNID_GLOBALS_PART_1:
+      dialog->set_text(_("This module contains global constants and methods (Part 1).\n"
         "`display(*** object)` -> Displays the string value of object in the Console. Object can be of any data type.\n"
         "`print_stacktrace()` -> Displays contents of the current stack.\n"
         "`bool is_christmas()` -> Returns whether Christmas mode is enabled.\n"
@@ -133,7 +136,11 @@ EditorScriptingReferenceMenu::menu_action(MenuItem& item)
         "`load_state()` -> Loads world state from scripting table.\n"
         "`play_music(string musicfile)` -> Plays music, e.g. “antarctica/chipdisko.music”.\n"
         "`stop_music(float fadetime)` -> Fades out music in fadetime seconds.\n"
-        "`play_sound(string soundfile)` -> Plays sound, e.g “sounds/lifeup.wav”.\n"
+        "`play_sound(string soundfile)` -> Plays sound, e.g “sounds/lifeup.wav”."));
+      break;
+
+    case MNID_GLOBALS_PART_2:
+      dialog->set_text(_("This module contains global constants and methods (Part 2).\n"
         "`debug_collrects(bool enable)` -> Enables or disables drawing of collision rectangles.\n"
         "`debug_show_fps(bool enable)` -> Enables or disables drawing of the FPS. (Also affects config file)\n"
         "`debug_draw_solids_only(bool enable)` -> When enabled, only draws solid tilemaps. (No background/foreground tiles)\n"
