@@ -56,6 +56,9 @@ EditorScriptingReferenceMenu::EditorScriptingReferenceMenu()
     add_entry(MNID_WIND, _("Wind"));
 }
 
+EditorMenu::~EditorMenu()
+{}
+
 void
 EditorScriptingReferenceMenu::menu_action(MenuItem& item)
 {
