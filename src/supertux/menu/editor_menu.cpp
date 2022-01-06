@@ -23,6 +23,7 @@
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
 #include "supertux/level.hpp"
+#include "supertux/menu/menu_storage.hpp"
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
 #include "supertux/menu/editor_save_as.hpp"
@@ -86,6 +87,7 @@ EditorMenu::EditorMenu()
   add_submenu(worldmap ? _("Worldmap Settings") : _("Level Settings"),
               MenuStorage::EDITOR_LEVEL_MENU);
   add_entry(MNID_HELP, _("Keyboard Shortcuts"));
+  add_submenu(_("Scripting Reference"), MenuStorage::EDITOR_SCRIPTING_REFERENCE_MENU);
 
   add_hl();
   add_entry(MNID_QUITEDITOR, _("Exit Level Editor"));
