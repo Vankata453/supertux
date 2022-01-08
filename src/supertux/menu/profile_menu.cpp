@@ -89,7 +89,7 @@ ProfileMenu::menu_action(MenuItem& item)
   }
   else {
     g_config->profile = item.get_id();
-    break;
+    return;
   }
   MenuManager::instance().set_menu(std::make_unique<ProfileMenu>());
 }
