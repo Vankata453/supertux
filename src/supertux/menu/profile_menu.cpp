@@ -51,7 +51,7 @@ ProfileMenu::ProfileMenu()
 
   add_hl();
   add_entry(MNID_RESETPROFILE, _("Reset profile"));
-  add_entry(MNID_RESETALLPROFILES, _("Delete all profiles"));
+  add_entry(MNID_RESETALLPROFILES, _("Reset all profiles"));
 
   add_hl();
   add_back(_("Back"));
@@ -84,7 +84,7 @@ ProfileMenu::menu_action(MenuItem& item)
   }
   else if (id == MNID_RESETALLPROFILES)
   {
-    Dialog::show_confirmation(_("This will reset all your game progress on all of them. Are you sure?"), [this]() {
+    Dialog::show_confirmation(_("This will reset your game progress on all profiles. Are you sure?"), [this]() {
       for (int i = 1; i <= g_config->profile_count; i++)
       {
         delete_savegames(i);
