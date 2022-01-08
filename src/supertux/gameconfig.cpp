@@ -286,6 +286,7 @@ Config::save()
   writer.start_list("supertux-config");
 
   writer.write("profile", profile);
+  writer.write("profile_count", profile_count);
   writer.write("show_fps", show_fps);
   writer.write("show_player_pos", show_player_pos);
   writer.write("show_controller", show_controller);
