@@ -89,6 +89,7 @@ ProfileMenu::menu_action(MenuItem& item)
   }
   else {
     g_config->profile = item.get_id();
+    MenuManager::instance().clear_menu_stack();
     return;
   }
   MenuManager::instance().set_menu(std::make_unique<ProfileMenu>());
