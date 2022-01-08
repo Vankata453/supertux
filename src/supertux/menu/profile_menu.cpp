@@ -33,7 +33,7 @@ ProfileMenu::ProfileMenu()
 {
   add_label(_("Select Profile"));
   add_hl();
-  for (int i = 1; i <= 5; ++i)
+  for (int i = 1; i <= g_config->profile_count; ++i)
   {
     std::ostringstream out;
     if (i == g_config->profile)
@@ -47,8 +47,11 @@ ProfileMenu::ProfileMenu()
     add_entry(i, out.str());
   }
   add_hl();
-  add_entry(6, _("Reset profile"));
-  add_entry(7, _("Reset all profiles"));
+  add_entry(MNID_ADDPROFILE, _("Add profile"));
+
+  add_hl();
+  add_entry(MNID_RESETPROFILE, _("Reset profile"));
+  add_entry(MNID_RESETALLPROFILES, _("Delete all profiles"));
 
   add_hl();
   add_back(_("Back"));
@@ -58,25 +61,38 @@ void
 ProfileMenu::menu_action(MenuItem& item)
 {
   const auto& id = item.get_id();
-  if(id <= 5)
+  //Check if the ID is a number
+  if (std::floor(id) == id)
   {
     g_config->profile = item.get_id();
   }
-  else if(id == 6)
+  else if (id == MNID_ADDPROFILE)
   {
-    Dialog::show_confirmation(_("Deleting your profile will reset your game progress. Are you sure?"), [this]() {
-      delete_savegames(g_config->profile);
-    });
+    g_config->profile_count += 1;
+    MenuManager::instance().set_menu(std::make_unique<ProfileMenu>());
   }
-  else if(id == 7)
+  else if (id == MNID_RESETPROFILE)
   {
-    Dialog::show_confirmation(_("This will reset your game progress on all profiles. Are you sure?"), [this]() {
-      for (int i = 1; i <= 5; i++) {
-        delete_savegames(i);
+    Dialog::show_confirmation(_("Resetting your profile will reset your game progress. Are you sure?"), [this]() {
+      delete_savegames(g_config->profile);
+      if (g_config->profile == g_config->profile_count && g_config->profile > 1)
+      {
+        g_config->profile -= 1;
+        g_config->profile_count -= 1;
       }
     });
   }
-  MenuManager::instance().clear_menu_stack();
+  else if (id == MNID_RESETALLPROFILES)
+  {
+    Dialog::show_confirmation(_("This will reset all your game progress on all of them. Are you sure?"), [this]() {
+      for (int i = 1; i <= g_config->profile_count; i++)
+      {
+        delete_savegames(i);
+      }
+      g_config->profile = 1;
+      g_config->profile_count = 1;
+    });
+  }
 }
 
 void

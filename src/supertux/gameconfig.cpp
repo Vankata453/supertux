@@ -33,6 +33,7 @@
 
 Config::Config() :
   profile(1),
+  profile_count(1),
   fullscreen_size(0, 0),
   fullscreen_refresh_rate(0),
   window_size(1280, 800),

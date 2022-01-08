@@ -19,6 +19,12 @@
 
 #include "gui/menu.hpp"
 
+enum ProfileMenuIDs {
+  MNID_ADDPROFILE,
+  MNID_RESETPROFILE,
+  MNID_RESETALLPROFILES
+};
+
 class ProfileMenu final : public Menu
 {
 public:

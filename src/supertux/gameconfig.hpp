@@ -39,6 +39,7 @@ public:
   void save();
 
   int profile;
+  int profile_count;
 
   /** the width/height to be used to display the game in fullscreen */
   Size fullscreen_size;
