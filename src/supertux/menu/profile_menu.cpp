@@ -61,12 +61,7 @@ void
 ProfileMenu::menu_action(MenuItem& item)
 {
   const auto& id = item.get_id();
-  //Check if the ID is a number
-  if (std::floor(id) == id)
-  {
-    g_config->profile = item.get_id();
-  }
-  else if (id == MNID_ADDPROFILE)
+  if (id == MNID_ADDPROFILE)
   {
     g_config->profile_count += 1;
     MenuManager::instance().set_menu(std::make_unique<ProfileMenu>());
@@ -80,6 +75,7 @@ ProfileMenu::menu_action(MenuItem& item)
         g_config->profile -= 1;
         g_config->profile_count -= 1;
       }
+      MenuManager::instance().set_menu(std::make_unique<ProfileMenu>());
     });
   }
   else if (id == MNID_RESETALLPROFILES)
@@ -91,7 +87,11 @@ ProfileMenu::menu_action(MenuItem& item)
       }
       g_config->profile = 1;
       g_config->profile_count = 1;
+      MenuManager::instance().set_menu(std::make_unique<ProfileMenu>());
     });
+  }
+  else {
+    g_config->profile = item.get_id();
   }
 }
 

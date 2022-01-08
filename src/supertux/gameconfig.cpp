@@ -110,6 +110,7 @@ Config::load()
 
   auto config_mapping = root.get_mapping();
   config_mapping.get("profile", profile);
+  config_mapping.get("profile_count", profile_count);
   config_mapping.get("show_fps", show_fps);
   config_mapping.get("show_player_pos", show_player_pos);
   config_mapping.get("show_controller", show_controller);
