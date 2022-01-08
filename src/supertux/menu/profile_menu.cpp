@@ -64,7 +64,6 @@ ProfileMenu::menu_action(MenuItem& item)
   if (id == MNID_ADDPROFILE)
   {
     g_config->profile_count += 1;
-    MenuManager::instance().set_menu(std::make_unique<ProfileMenu>());
   }
   else if (id == MNID_RESETPROFILE)
   {
@@ -75,7 +74,6 @@ ProfileMenu::menu_action(MenuItem& item)
         g_config->profile -= 1;
         g_config->profile_count -= 1;
       }
-      MenuManager::instance().set_menu(std::make_unique<ProfileMenu>());
     });
   }
   else if (id == MNID_RESETALLPROFILES)
@@ -87,12 +85,13 @@ ProfileMenu::menu_action(MenuItem& item)
       }
       g_config->profile = 1;
       g_config->profile_count = 1;
-      MenuManager::instance().set_menu(std::make_unique<ProfileMenu>());
     });
   }
   else {
     g_config->profile = item.get_id();
+    break;
   }
+  MenuManager::instance().set_menu(std::make_unique<ProfileMenu>());
 }
 
 void
