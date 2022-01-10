@@ -575,14 +575,20 @@ OptionsMenu::menu_action(MenuItem& item)
       {
         case 2:
           VideoSystem::current()->set_vsync(-1);
+          g_config->vsync_mode = -1;
+          g_config->try_vsync = false;
           break;
 
         case 1:
           VideoSystem::current()->set_vsync(0);
+          g_config->vsync_mode = 0;
+          g_config->try_vsync = true;
           break;
 
         case 0:
           VideoSystem::current()->set_vsync(1);
+          g_config->vsync_mode = 1;
+          g_config->try_vsync = true;
           break;
 
         default:

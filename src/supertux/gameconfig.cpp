@@ -45,6 +45,7 @@ Config::Config() :
   use_fullscreen(false),
   video(VideoSystem::VIDEO_AUTO),
   try_vsync(true),
+  vsync_mode(0),
   show_fps(false),
   show_player_pos(false),
   show_controller(false),
@@ -192,6 +193,7 @@ Config::load()
     config_video_mapping->get("video", video_string);
     video = VideoSystem::get_video_system(video_string);
     config_video_mapping->get("vsync", try_vsync);
+    config_video_mapping->get("vsync_mode", vsync_mode);
 
     config_video_mapping->get("fullscreen_width",  fullscreen_size.width);
     config_video_mapping->get("fullscreen_height", fullscreen_size.height);
@@ -337,6 +339,7 @@ Config::save()
     writer.write("video", VideoSystem::get_video_string(video));
   }
   writer.write("vsync", try_vsync);
+  writer.write("vsync", vsync_mode);
 
   writer.write("fullscreen_width",  fullscreen_size.width);
   writer.write("fullscreen_height", fullscreen_size.height);
