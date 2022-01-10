@@ -64,6 +64,7 @@ enum OptionsMenuIDs {
   MNID_MAGNIFICATION,
   MNID_ASPECTRATIO,
   MNID_VSYNC,
+  MNID_RENDERER,
   MNID_SOUND,
   MNID_MUSIC,
   MNID_SOUND_VOLUME,
@@ -85,6 +86,7 @@ OptionsMenu::OptionsMenu(bool complete) :
   next_window_resolution(0),
   next_resolution(0),
   next_vsync(0),
+  next_renderer(),
   next_sound_volume(0),
   next_music_volume(0),
   magnifications(),
@@ -381,6 +383,21 @@ OptionsMenu::OptionsMenu(bool complete) :
   MenuItem& vsync = add_string_select(MNID_VSYNC, _("VSync"), &next_vsync, vsyncs);
   vsync.set_help(_("Set the VSync mode"));
 
+#if !defined(__EMSCRIPTEN__)
+  std::string curr_renderer = g_config->video,
+  switch (curr_renderer) {
+    case "opengl":
+      curr_renderer = "OpenGL";
+      break;
+    
+    case "sdl":
+      curr_renderer = "SDL";
+      break;
+  }
+  add_toggle(MNID_RENDERER,_("Renderer"), &curr_renderer)
+    .set_help(_("Set the renderer for the game"));
+#endif
+
 #if !defined(ENABLE_TOUCHSCREEN_SUPPORT) && !defined(__EMSCRIPTEN__)
   MenuItem& aspect = add_string_select(MNID_ASPECTRATIO, _("Aspect Ratio"), &next_aspect_ratio, aspect_ratios);
   aspect.set_help(_("Adjust the aspect ratio"));
@@ -600,6 +617,20 @@ OptionsMenu::menu_action(MenuItem& item)
     case MNID_SOUND:
       SoundManager::current()->enable_sound(g_config->sound_enabled);
       g_config->save();
+      break;
+
+    case MNID_RENDERER:
+        case 1:
+          g_config->video = "sdl";
+          break;
+
+        case 0:
+          g_config->video = "opengl";
+          break;
+
+        default:
+          assert(false);
+          break;
       break;
 
     case MNID_SOUND_VOLUME:
