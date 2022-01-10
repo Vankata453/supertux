@@ -94,6 +94,7 @@ OptionsMenu::OptionsMenu(bool complete) :
   window_resolutions(),
   resolutions(),
   vsyncs(),
+  renderers(),
   sound_volumes(),
   music_volumes()
 {
@@ -275,6 +276,23 @@ OptionsMenu::OptionsMenu(bool complete) :
     }
   }
 
+  { // renderer
+    renderers.push_back(_("OpenGL"));
+    renderers.push_back(_("SDL"));
+    int currRenderer = g_config->video;
+
+    if (currRenderer == "opengl") {
+      next_renderer = 1;
+    }
+    else if (currRenderer == "sdl") {
+      next_renderer = 0;
+    }
+    else {
+      log_warning << "Unknown swap mode: " << mode << std::endl;
+      next_renderer = 0;
+    }
+  }
+
   // Sound Volume
   sound_volumes.clear();
   for (const char* percent : {"0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"}) {
@@ -384,18 +402,8 @@ OptionsMenu::OptionsMenu(bool complete) :
   vsync.set_help(_("Set the VSync mode"));
 
 #if !defined(__EMSCRIPTEN__)
-  std::string curr_renderer = g_config->video,
-  switch (curr_renderer) {
-    case "opengl":
-      curr_renderer = "OpenGL";
-      break;
-    
-    case "sdl":
-      curr_renderer = "SDL";
-      break;
-  }
-  add_toggle(MNID_RENDERER,_("Renderer"), &curr_renderer)
-    .set_help(_("Set the renderer for the game"));
+  MenuItem& renderer = add_string_select(MNID_RENDERER, _("Renderer"), &next_renderer, renderers);
+  renderer.set_help(_("Set the game's renderer"));
 #endif
 
 #if !defined(ENABLE_TOUCHSCREEN_SUPPORT) && !defined(__EMSCRIPTEN__)
@@ -614,12 +622,9 @@ OptionsMenu::menu_action(MenuItem& item)
       g_config->save();
       break;
 
-    case MNID_SOUND:
-      SoundManager::current()->enable_sound(g_config->sound_enabled);
-      g_config->save();
-      break;
-
     case MNID_RENDERER:
+      switch (next_renderer)
+      {
         case 1:
           g_config->video = "sdl";
           break;
@@ -631,6 +636,12 @@ OptionsMenu::menu_action(MenuItem& item)
         default:
           assert(false);
           break;
+      }
+      break;
+
+    case MNID_SOUND:
+      SoundManager::current()->enable_sound(g_config->sound_enabled);
+      g_config->save();
       break;
 
     case MNID_SOUND_VOLUME:
