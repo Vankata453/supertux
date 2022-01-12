@@ -135,6 +135,10 @@ ProfileMenu::menu_action(MenuItem& item)
       g_config->profile = "default";
     });
   }
+  else
+  {
+    return;
+  }
   MenuManager::instance().clear_menu_stack();
 }
 
