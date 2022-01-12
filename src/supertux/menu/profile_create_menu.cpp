@@ -26,7 +26,7 @@
 #include "util/gettext.hpp"
 
 ProfileCreateMenu::ProfileCreateMenu() :
-  profile_name(),
+  profile_name()
 {
   add_label(_("Add profile"));
   add_hl();

@@ -22,6 +22,7 @@
 
 #include "gui/dialog.hpp"
 #include "gui/menu_manager.hpp"
+#include "gui/menu_storage.hpp"
 #include "gui/menu_item.hpp"
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
@@ -46,7 +47,7 @@ ProfileMenu::ProfileMenu()
     add_entry(1, _("default"));
   }
   if (userdata_directories.size() > 4) add_hl();
-  for (int i = 1; i <= userdata_directories.size(); ++i)
+  for (std::size_t i = 0; i < userdata_directories.size(); ++i)
   {
     std::string folder_name = userdata_directories[i];
     if (folder_name != "addons" && folder_name != "levels" && folder_name != "screenshots" && folder_name != "default")
@@ -113,7 +114,7 @@ ProfileMenu::menu_action(MenuItem& item)
   {
     Dialog::show_confirmation(_("This will delete all of your profiles and game progress on them. Are you sure?"), [this]() {
       std::vector<std::string> userdata_directories = FileSystem::get_subfolder_names("/");
-      for (int i = 1; i <= userdata_directories.size(); ++i)
+      for (std::size_t i = 0; i < userdata_directories.size(); ++i)
       {
         std::string folder_name = userdata_directories[i];
         if (folder_name != "addons" && folder_name != "levels" && folder_name != "screenshots")
