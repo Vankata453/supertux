@@ -44,6 +44,7 @@
 #include "supertux/menu/particle_editor_save_as.hpp"
 #include "supertux/menu/particle_editor_open.hpp"
 #include "supertux/menu/profile_menu.hpp"
+#include "supertux/menu/profile_create_menu.hpp"
 #include "supertux/menu/web_asset_menu.hpp"
 #include "supertux/menu/worldmap_menu.hpp"
 #include "supertux/menu/worldmap_cheat_menu.hpp"
