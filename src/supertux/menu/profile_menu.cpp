@@ -37,7 +37,7 @@ ProfileMenu::ProfileMenu()
   std::vector<std::string> userdata_directories;
   std::string selected_profile;
 
-  char **rc = PHYSFS_enumerateFiles("savegames");
+  char **rc = PHYSFS_enumerateFiles("");
   char **i;
   for (i = rc; *i != NULL; i++)
       if (physfsutil::is_directory(*i)) userdata_directories.push_back(*i);
@@ -93,14 +93,21 @@ void
 ProfileMenu::menu_action(MenuItem& item)
 {
   const auto& id = item.get_id();
+    
   if (id == 1)
   {
-    g_config->profile = item.get_text();
+    std::string profile_name = item.get_text();
+    if (profile_name[0] == '[' && profile_name[profile_name.size() - 1] == ']')
+    {
+      profile_name.erase(0, 1);
+      profile_name.erase(profile_name.size() - 1);
+    }
+    g_config->profile = profile_name;
   }
   else if (id == 2)
   {
     std::string conf_msg;
-    if (item.get_text() == "default") 
+    if (g_config->profile == "default") 
     {
       conf_msg = "Resetting your profile will delete your game progress. Are you sure?";
     }
@@ -118,7 +125,7 @@ ProfileMenu::menu_action(MenuItem& item)
     Dialog::show_confirmation(_("This will delete all of your profiles and game progress on them. Are you sure?"), [this]() {
       std::vector<std::string> userdata_directories;
 
-      char **rc = PHYSFS_enumerateFiles("savegames");
+      char **rc = PHYSFS_enumerateFiles("");
       char **i;
       for (i = rc; *i != NULL; i++)
           if (physfsutil::is_directory(*i)) userdata_directories.push_back(*i);

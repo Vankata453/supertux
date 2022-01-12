@@ -20,6 +20,7 @@
 #include "gui/dialog.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
+#include "supertux/gameconfig.hpp"
 #include "supertux/menu/menu_storage.hpp"
 #include "supertux/world.hpp"
 #include "util/file_system.hpp"
@@ -60,6 +61,7 @@ ProfileCreateMenu::menu_action(MenuItem& item)
   }
 
   PHYSFS_mkdir(profile_name.c_str());
+  g_config->profile = profile_name;
 
   MenuManager::instance().pop_menu();
 }
