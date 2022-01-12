@@ -21,6 +21,7 @@
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
 #include "supertux/gameconfig.hpp"
+#include "supertux/globals.hpp"
 #include "supertux/menu/menu_storage.hpp"
 #include "supertux/world.hpp"
 #include "util/file_system.hpp"
@@ -54,9 +55,9 @@ ProfileCreateMenu::menu_action(MenuItem& item)
     return;
   }
 
-  if (FileSystem::exists("/" + profile_name))
+  if (PHYSFS_exists(profile_name.c_str()))
   {
-    Dialog::show_message(_("A profile with this name currently exists. Please choose a different name."));
+    Dialog::show_message(_("A profile with this name currently exists, or there was an error creating it. Please choose a different name."));
     return;
   }
 

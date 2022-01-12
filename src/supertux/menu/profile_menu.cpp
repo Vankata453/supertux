@@ -146,6 +146,7 @@ ProfileMenu::menu_action(MenuItem& item)
   {
     return;
   }
+  
   MenuManager::instance().clear_menu_stack();
 }
 
