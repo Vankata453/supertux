@@ -28,6 +28,7 @@
 #include "supertux/globals.hpp"
 #include "util/file_system.hpp"
 #include "util/gettext.hpp"
+#include "physfs/util.hpp"
 
 #include <physfs.h>
 
@@ -126,7 +127,7 @@ ProfileMenu::menu_action(MenuItem& item)
       for (i = rc; *i != NULL; i++)
           if (physfsutil::is_directory(*i)) userdata_directories.push_back(*i);
       PHYSFS_freeList(rc);
-      
+
       for (std::size_t i = 0; i < userdata_directories.size(); ++i)
       {
         std::string folder_name = userdata_directories[i];
@@ -155,7 +156,7 @@ ProfileMenu::delete_savegames(std::string profile_name) const
   PHYSFS_delete(profile_name.c_str());
 
   //If the default profile was deleted, recreate it
-  if (name == "default") PHYSFS_mkdir(profile_name.c_str());
+  if (profile_name == "default") PHYSFS_mkdir(profile_name.c_str());
 }
 
 /* EOF */
