@@ -25,7 +25,7 @@ public:
   ProfileMenu();
 
   void menu_action(MenuItem& item) override;
-  void delete_savegames(std::string name) const;
+  void delete_savegames(std::string profile_name) const;
 };
 
 #endif

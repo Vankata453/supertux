@@ -129,21 +129,20 @@ ProfileMenu::menu_action(MenuItem& item)
 }
 
 void
-ProfileMenu::delete_savegames(std::string name) const
+ProfileMenu::delete_savegames(std::string profile_name) const
 {
-  const auto& profile_path = std::to_string(name);
   std::unique_ptr<char*, decltype(&PHYSFS_freeList)>
-    files(PHYSFS_enumerateFiles(profile_path.c_str()),
+    files(PHYSFS_enumerateFiles(profile_name.c_str()),
           PHYSFS_freeList);
   for (const char* const* filename = files.get(); *filename != nullptr; ++filename)
   {
-    std::string filepath = FileSystem::join(profile_path.c_str(), *filename);
+    std::string filepath = FileSystem::join(profile_name.c_str(), *filename);
     PHYSFS_delete(filepath.c_str());
   }
-  PHYSFS_delete(profile_path.c_str());
+  PHYSFS_delete(profile_name.c_str());
 
   //If the default profile was deleted, recreate it
-  if (name == "default") PHYSFS_mkdir(profile_path.c_str());
+  if (name == "default") PHYSFS_mkdir(profile_name.c_str());
 }
 
 /* EOF */
