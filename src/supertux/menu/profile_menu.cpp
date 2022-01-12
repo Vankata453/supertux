@@ -22,7 +22,7 @@
 
 #include "gui/dialog.hpp"
 #include "gui/menu_manager.hpp"
-#include "gui/menu_storage.hpp"
+#include "supertux/menu/menu_storage.hpp"
 #include "gui/menu_item.hpp"
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
