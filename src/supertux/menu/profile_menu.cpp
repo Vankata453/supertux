@@ -18,6 +18,7 @@
 
 #include <boost/format.hpp>
 #include <sstream>
+#include <vector>
 
 #include "gui/dialog.hpp"
 #include "gui/menu_manager.hpp"

@@ -18,6 +18,7 @@
 #define HEADER_SUPERTUX_UTIL_FILE_SYSTEM_HPP
 
 #include <string>
+#include <vector>
 
 namespace FileSystem {
 
