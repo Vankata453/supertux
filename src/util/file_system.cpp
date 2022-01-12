@@ -130,6 +130,15 @@ std::string relpath(const std::string& filename, const std::string& basedir)
 #endif
 }
 
+std::vector<std::string> get_subfolder_names(const std::string& path)
+{
+  std::vector<std::string> folder_names;
+  fs::directory_iterator iter{p};
+  //Loop through all subfolders and save their names in a string array
+  while (iter != directory_iterator{})
+    if (is_directory(i->path())) folder_names.push_back(i->path().filename().string());
+}
+
 std::string strip_extension(const std::string& filename)
 {
   std::string::size_type p = filename.find_last_of('.');

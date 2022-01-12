@@ -90,6 +90,9 @@ MenuStorage::create(MenuId menu_id)
     case PROFILE_MENU:
       return std::make_unique<ProfileMenu>();
 
+    case PROFILE_CREATE_MENU:
+      return std::make_unique<ProfileCreateMenu>();
+
     case KEYBOARD_MENU:
       return std::unique_ptr<Menu>(new KeyboardMenu(*InputManager::current()));
 
