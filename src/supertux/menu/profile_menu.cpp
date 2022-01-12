@@ -73,16 +73,16 @@ ProfileMenu::ProfileMenu()
     }
   }
   add_hl();
-  add_entry(2, _("Add profile"));
+  add_submenu(_("Add profile"), MenuStorage::PROFILE_CREATE_MENU);
   add_hl();
   if (selected_profile == "default")
   {
-    add_entry(3, _("Reset profile"));
+    add_entry(2, _("Reset profile"));
   }
   else
   {
-    add_entry(3, _("Delete profile"));
-    add_entry(4, _("Delete all profiles"));
+    add_entry(2, _("Delete profile"));
+    add_entry(3, _("Delete all profiles"));
   }
 
   add_hl();
@@ -99,10 +99,6 @@ ProfileMenu::menu_action(MenuItem& item)
   }
   else if (id == 2)
   {
-    MenuManager::instance().push_menu(MenuStorage::PROFILE_CREATE_MENU);
-  }
-  else if (id == 3)
-  {
     std::string conf_msg;
     if (item.get_text() == "default") 
     {
@@ -117,7 +113,7 @@ ProfileMenu::menu_action(MenuItem& item)
       g_config->profile = "default";
     });
   }
-  else if (id == 4)
+  else if (id == 3)
   {
     Dialog::show_confirmation(_("This will delete all of your profiles and game progress on them. Are you sure?"), [this]() {
       std::vector<std::string> userdata_directories;
