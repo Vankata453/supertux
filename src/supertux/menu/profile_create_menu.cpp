@@ -25,6 +25,8 @@
 #include "util/file_system.hpp"
 #include "util/gettext.hpp"
 
+#include <physfs.h>
+
 ProfileCreateMenu::ProfileCreateMenu() :
   profile_name()
 {
@@ -57,7 +59,7 @@ ProfileCreateMenu::menu_action(MenuItem& item)
     return;
   }
 
-  FileSystem::mkdir("/" + profile_name);
+  PHYSFS_mkdir(profile_name.c_str());
 
   MenuManager::instance().pop_menu();
 }
