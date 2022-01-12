@@ -33,8 +33,14 @@
 
 ProfileMenu::ProfileMenu()
 {
-  std::vector<std::string> userdata_directories = FileSystem::get_subfolder_names("/");
+  std::vector<std::string> userdata_directories;
   std::string selected_profile;
+
+  char **rc = PHYSFS_enumerateFiles("savegames");
+  char **i;
+  for (i = rc; *i != NULL; i++)
+      if (physfsutil::is_directory(*i)) userdata_directories.push_back(*i);
+  PHYSFS_freeList(rc);
 
   add_label(_("Select Profile"));
   add_hl();
@@ -113,7 +119,14 @@ ProfileMenu::menu_action(MenuItem& item)
   else if (id == 4)
   {
     Dialog::show_confirmation(_("This will delete all of your profiles and game progress on them. Are you sure?"), [this]() {
-      std::vector<std::string> userdata_directories = FileSystem::get_subfolder_names("/");
+      std::vector<std::string> userdata_directories;
+
+      char **rc = PHYSFS_enumerateFiles("savegames");
+      char **i;
+      for (i = rc; *i != NULL; i++)
+          if (physfsutil::is_directory(*i)) userdata_directories.push_back(*i);
+      PHYSFS_freeList(rc);
+      
       for (std::size_t i = 0; i < userdata_directories.size(); ++i)
       {
         std::string folder_name = userdata_directories[i];

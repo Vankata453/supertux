@@ -18,7 +18,6 @@
 #define HEADER_SUPERTUX_UTIL_FILE_SYSTEM_HPP
 
 #include <string>
-#include <vector>
 
 namespace FileSystem {
 
@@ -40,9 +39,6 @@ std::string basename(const std::string& filename);
 /** Return a path to 'filename' that is relative to 'basedir', e.g.
     reldir("/levels/juser/level1.stl", "/levels") -> "juser/level1.stl" */
 std::string relpath(const std::string& filename, const std::string& basedir);
-
-/** Returns the names of all subfolders in a given directory */
-std::vector<std::string> get_subfolder_names(const std::string& path);
 
 /** remove everything starting from and including the last dot */
 std::string strip_extension(const std::string& filename);
