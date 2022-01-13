@@ -36,10 +36,10 @@ ProfileMenu::ProfileMenu()
 {
   std::vector<std::string> userdata_directories;
 
-  char **rc = PHYSFS_enumerateFiles("profiles/");
+  char **rc = PHYSFS_enumerateFiles("profiles");
   char **i;
   for (i = rc; *i != NULL; i++)
-      if (physfsutil::is_directory(*i)) userdata_directories.push_back(*i);
+    if (physfsutil::is_symlink(*i)) userdata_directories.push_back(*i);
   PHYSFS_freeList(rc);
 
   add_label(_("Select Profile"));
@@ -52,7 +52,8 @@ ProfileMenu::ProfileMenu()
   {
     add_entry(1, _("default"));
   }
-  if (userdata_directories.size() > 4) add_hl();
+  if (userdata_directories.size() > 1) 
+    add_hl();
   for (std::size_t i = 0; i < userdata_directories.size(); ++i)
   {
     std::string folder_name = userdata_directories[i];
@@ -123,10 +124,10 @@ ProfileMenu::menu_action(MenuItem& item)
     Dialog::show_confirmation(_("This will delete all of your profiles and game progress on them. Are you sure?"), [this]() {
       std::vector<std::string> userdata_directories;
 
-      char **rc = PHYSFS_enumerateFiles("profiles/");
+      char **rc = PHYSFS_enumerateFiles("profiles");
       char **i;
       for (i = rc; *i != NULL; i++)
-          if (physfsutil::is_directory(*i)) userdata_directories.push_back(*i);
+        if (physfsutil::is_symlink(*i)) userdata_directories.push_back(*i);
       PHYSFS_freeList(rc);
 
       for (std::size_t i = 0; i < userdata_directories.size(); ++i)

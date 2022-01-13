@@ -55,6 +55,12 @@ ProfileCreateMenu::menu_action(MenuItem& item)
     return;
   }
 
+  if (profile_name.size() > 20)
+  {
+    Dialog::show_message(_("Profile names must have a maximum of 20 characters. Please choose a different name."));
+    return;
+  }
+
   if (PHYSFS_exists(profile_name.c_str()))
   {
     Dialog::show_message(_("A profile with this name currently exists, or there was an error creating it. Please choose a different name."));
