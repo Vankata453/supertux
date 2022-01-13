@@ -65,7 +65,7 @@ ProfileCreateMenu::menu_action(MenuItem& item)
     return;
   }
 
-  if (!regex_match(profile_name, regex("^[A-Za-z0-9\-\_]+$")))
+  if (!regex_match(profile_name, std::regex("^[A-Za-z0-9\\-\\_]+$")))
   {
     Dialog::show_message(_("Profile names should only contain lowercase letters, numbers, dashes and underscores.\nPlease choose a different name."));
     return;
