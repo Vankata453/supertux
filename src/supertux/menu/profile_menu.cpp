@@ -74,12 +74,10 @@ ProfileMenu::ProfileMenu()
   add_hl();
   add_entry(2, _("Reset profile"));
   add_entry(3, _("Reset all profiles"));
+  add_hl();
   if (g_config->profile != "default")
-  {
-    add_hl();
     add_entry(4, _("Delete profile"));
-    add_entry(5, _("Delete all profiles"));
-  }
+  add_entry(5, _("Delete all profiles"));
 
   add_hl();
   add_back(_("Back"));
@@ -103,7 +101,8 @@ ProfileMenu::menu_action(MenuItem& item)
   else if (id == 2 || id == 4)
   {
     std::string conf_msg;
-    if (g_config->profile == "default") 
+    const bool is_reset = id == 2;
+    if (is_reset)
     {
       conf_msg = "Resetting your profile will delete your game progress. Are you sure?";
     }
@@ -111,14 +110,24 @@ ProfileMenu::menu_action(MenuItem& item)
     {
       conf_msg = "Deleting your profile will reset your game progress. Are you sure?";
     }
-    Dialog::show_confirmation(_(conf_msg), [this, id]() {
-      delete_savegames(g_config->profile, id == 2);
-      g_config->profile = "default";
+    Dialog::show_confirmation(_(conf_msg), [this, is_reset]() {
+      delete_savegames(g_config->profile, is_reset);
+      if (!is_reset) g_config->profile = "default";
     });
   }
   else if (id == 3 || id == 5)
   {
-    Dialog::show_confirmation(_("This will delete all of your profiles and game progress on them. Are you sure?"), [this, id]() {
+    std::string conf_msg;
+    const bool is_reset = id == 3;
+    if (is_reset)
+    {
+      conf_msg = "This will reset all of your profiles and game progress on them. Are you sure?";
+    }
+    else
+    {
+      conf_msg = "This will delete all of your profiles and game progress on them. Are you sure?";
+    }
+    Dialog::show_confirmation(_(conf_msg), [this, is_reset]() {
       std::vector<std::string> profile_directories;
 
       char **rc = PHYSFS_enumerateFiles("profiles");
@@ -130,9 +139,9 @@ ProfileMenu::menu_action(MenuItem& item)
       for (std::size_t i = 0; i < profile_directories.size(); ++i)
       {
         std::string folder_name = profile_directories[i];
-        delete_savegames(folder_name, id == 3);
+        delete_savegames(folder_name, is_reset);
       }
-      g_config->profile = "default";
+      if (!is_reset) g_config->profile = "default";
     });
   }
   else
