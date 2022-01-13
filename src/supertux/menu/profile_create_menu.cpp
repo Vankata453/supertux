@@ -27,6 +27,10 @@
 #include "util/file_system.hpp"
 #include "util/gettext.hpp"
 
+#include <algorithm>
+#include <cctype>
+#include <regex>
+#include <string>
 #include <physfs.h>
 
 ProfileCreateMenu::ProfileCreateMenu() :
@@ -61,11 +65,21 @@ ProfileCreateMenu::menu_action(MenuItem& item)
     return;
   }
 
-  if (PHYSFS_exists(profile_name.c_str()))
+  if (!regex_match(profile_name, regex("^[A-Za-z0-9\-\_]+$")))
   {
-    Dialog::show_message(_("A profile with this name currently exists, or there was an error creating it.\nPlease choose a different name."));
+    Dialog::show_message(_("Profile names should only contain lowercase letters, numbers, dashes and underscores.\nPlease choose a different name."));
     return;
   }
+
+  if (PHYSFS_exists(profile_name.c_str()))
+  {
+    Dialog::show_message(_("A profile with this name currently exists, or there was an error creating this one.\nPlease choose a different name."));
+    return;
+  }
+
+  //Make every character lowercase
+  std::transform(profile_name.begin(), profile_name.end(), profile_name.begin(),
+    [](unsigned char ch) { return std::tolower(ch); });
 
   std::string profile_path = "profiles/" + profile_name;
   PHYSFS_mkdir(profile_path.c_str());
