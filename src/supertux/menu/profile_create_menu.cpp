@@ -71,7 +71,7 @@ ProfileCreateMenu::menu_action(MenuItem& item)
   PHYSFS_mkdir(profile_path.c_str());
   g_config->profile = profile_name;
 
-  MenuManager::instance().pop_menu();
+  MenuManager::instance().set_menu(MenuStorage::PROFILE_MENU);
 }
 
 /* EOF */
