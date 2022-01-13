@@ -39,10 +39,7 @@ ProfileMenu::ProfileMenu()
   char **rc = PHYSFS_enumerateFiles("profiles");
   char **i;
   for (i = rc; *i != NULL; i++)
-  {
-    if (physfsutil::is_regular_file(*i)) continue;
     profile_directories.push_back(*i);
-  }
   PHYSFS_freeList(rc);
 
   add_label(_("Select Profile"));
@@ -130,10 +127,7 @@ ProfileMenu::menu_action(MenuItem& item)
       char **rc = PHYSFS_enumerateFiles("profiles");
       char **i;
       for (i = rc; *i != NULL; i++)
-      {
-        if (physfsutil::is_regular_file(*i)) continue;
         profile_directories.push_back(*i);
-      }
       PHYSFS_freeList(rc);
 
       for (std::size_t i = 0; i < profile_directories.size(); ++i)
