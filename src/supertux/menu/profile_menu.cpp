@@ -34,12 +34,15 @@
 
 ProfileMenu::ProfileMenu()
 {
-  std::vector<std::string> userdata_directories;
+  std::vector<std::string> profile_directories;
 
   char **rc = PHYSFS_enumerateFiles("profiles");
   char **i;
   for (i = rc; *i != NULL; i++)
-    if (physfsutil::is_symlink(*i)) userdata_directories.push_back(*i);
+  {
+    if (physfsutil::is_regular_file(*i)) continue;
+    profile_directories.push_back(*i);
+  }
   PHYSFS_freeList(rc);
 
   add_label(_("Select Profile"));
@@ -52,11 +55,11 @@ ProfileMenu::ProfileMenu()
   {
     add_entry(1, _("default"));
   }
-  if (userdata_directories.size() > 1) 
+  if (profile_directories.size() > 1) 
     add_hl();
-  for (std::size_t i = 0; i < userdata_directories.size(); ++i)
+  for (std::size_t i = 0; i < profile_directories.size(); ++i)
   {
-    std::string folder_name = userdata_directories[i];
+    std::string folder_name = profile_directories[i];
     if (folder_name != "default")
     {
       std::ostringstream out;
@@ -122,17 +125,20 @@ ProfileMenu::menu_action(MenuItem& item)
   else if (id == 3)
   {
     Dialog::show_confirmation(_("This will delete all of your profiles and game progress on them. Are you sure?"), [this]() {
-      std::vector<std::string> userdata_directories;
+      std::vector<std::string> profile_directories;
 
       char **rc = PHYSFS_enumerateFiles("profiles");
       char **i;
       for (i = rc; *i != NULL; i++)
-        if (physfsutil::is_symlink(*i)) userdata_directories.push_back(*i);
+      {
+        if (physfsutil::is_regular_file(*i)) continue;
+        profile_directories.push_back(*i);
+      }
       PHYSFS_freeList(rc);
 
-      for (std::size_t i = 0; i < userdata_directories.size(); ++i)
+      for (std::size_t i = 0; i < profile_directories.size(); ++i)
       {
-        std::string folder_name = userdata_directories[i];
+        std::string folder_name = profile_directories[i];
         delete_savegames(folder_name);
       }
       g_config->profile = "default";
