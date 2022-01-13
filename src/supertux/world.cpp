@@ -182,7 +182,7 @@ World::get_savegame_filename() const
 {
   const std::string worlddirname = FileSystem::basename(m_basedir);
   std::ostringstream stream;
-  stream << g_config->profile << "/" << worlddirname << ".stsg";
+  stream << "profiles/" << g_config->profile << "/" << worlddirname << ".stsg";
   return stream.str();
 }
 

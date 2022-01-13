@@ -61,7 +61,8 @@ ProfileCreateMenu::menu_action(MenuItem& item)
     return;
   }
 
-  PHYSFS_mkdir(profile_name.c_str());
+  std::string profile_path = "profiles/" + profile_name;
+  PHYSFS_mkdir(profile_path.c_str());
   g_config->profile = profile_name;
 
   MenuManager::instance().pop_menu();

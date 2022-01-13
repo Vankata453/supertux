@@ -35,9 +35,8 @@
 ProfileMenu::ProfileMenu()
 {
   std::vector<std::string> userdata_directories;
-  std::string selected_profile;
 
-  char **rc = PHYSFS_enumerateFiles("");
+  char **rc = PHYSFS_enumerateFiles("profiles/");
   char **i;
   for (i = rc; *i != NULL; i++)
       if (physfsutil::is_directory(*i)) userdata_directories.push_back(*i);
@@ -57,13 +56,12 @@ ProfileMenu::ProfileMenu()
   for (std::size_t i = 0; i < userdata_directories.size(); ++i)
   {
     std::string folder_name = userdata_directories[i];
-    if (folder_name != "addons" && folder_name != "levels" && folder_name != "screenshots" && folder_name != "default")
+    if (folder_name != "default")
     {
       std::ostringstream out;
       if (folder_name == g_config->profile)
       {
         out << str(boost::format(_("[%s]")) %folder_name);
-        selected_profile = folder_name;
       }
       else
       {
@@ -75,7 +73,7 @@ ProfileMenu::ProfileMenu()
   add_hl();
   add_submenu(_("Add profile"), MenuStorage::PROFILE_CREATE_MENU);
   add_hl();
-  if (selected_profile == "default")
+  if (g_config->profile == "default")
   {
     add_entry(2, _("Reset profile"));
   }
@@ -125,7 +123,7 @@ ProfileMenu::menu_action(MenuItem& item)
     Dialog::show_confirmation(_("This will delete all of your profiles and game progress on them. Are you sure?"), [this]() {
       std::vector<std::string> userdata_directories;
 
-      char **rc = PHYSFS_enumerateFiles("");
+      char **rc = PHYSFS_enumerateFiles("profiles/");
       char **i;
       for (i = rc; *i != NULL; i++)
           if (physfsutil::is_directory(*i)) userdata_directories.push_back(*i);
@@ -134,10 +132,7 @@ ProfileMenu::menu_action(MenuItem& item)
       for (std::size_t i = 0; i < userdata_directories.size(); ++i)
       {
         std::string folder_name = userdata_directories[i];
-        if (folder_name != "addons" && folder_name != "levels" && folder_name != "screenshots")
-        {
-          delete_savegames(folder_name);
-        }
+        delete_savegames(folder_name);
       }
       g_config->profile = "default";
     });
@@ -153,18 +148,16 @@ ProfileMenu::menu_action(MenuItem& item)
 void
 ProfileMenu::delete_savegames(std::string profile_name) const
 {
+  const std::string profile_path = "profiles/" + profile_name;
   std::unique_ptr<char*, decltype(&PHYSFS_freeList)>
-    files(PHYSFS_enumerateFiles(profile_name.c_str()),
+    files(PHYSFS_enumerateFiles(profile_path.c_str()),
           PHYSFS_freeList);
   for (const char* const* filename = files.get(); *filename != nullptr; ++filename)
   {
-    std::string filepath = FileSystem::join(profile_name.c_str(), *filename);
+    std::string filepath = FileSystem::join(profile_path.c_str(), *filename);
     PHYSFS_delete(filepath.c_str());
   }
-  PHYSFS_delete(profile_name.c_str());
-
-  //If the default profile was deleted, recreate it
-  if (profile_name == "default") PHYSFS_mkdir(profile_name.c_str());
+  PHYSFS_delete(profile_path.c_str());
 }
 
 /* EOF */
