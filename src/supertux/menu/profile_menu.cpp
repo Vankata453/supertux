@@ -111,14 +111,14 @@ ProfileMenu::menu_action(MenuItem& item)
     {
       conf_msg = "Deleting your profile will reset your game progress. Are you sure?";
     }
-    Dialog::show_confirmation(_(conf_msg), [this]() {
+    Dialog::show_confirmation(_(conf_msg), [this, id]() {
       delete_savegames(g_config->profile, id == 2);
       g_config->profile = "default";
     });
   }
   else if (id == 3 || id == 5)
   {
-    Dialog::show_confirmation(_("This will delete all of your profiles and game progress on them. Are you sure?"), [this]() {
+    Dialog::show_confirmation(_("This will delete all of your profiles and game progress on them. Are you sure?"), [this, id]() {
       std::vector<std::string> profile_directories;
 
       char **rc = PHYSFS_enumerateFiles("profiles");
