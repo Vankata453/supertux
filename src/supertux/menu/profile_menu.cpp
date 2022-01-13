@@ -104,11 +104,11 @@ ProfileMenu::menu_action(MenuItem& item)
     const bool is_reset = id == 2;
     if (is_reset)
     {
-      conf_msg = "Resetting your profile will delete your game progress. Are you sure?";
+      conf_msg = "Resetting your profile will delete your game progress on it.\nAre you sure?";
     }
     else
     {
-      conf_msg = "Deleting your profile will reset your game progress. Are you sure?";
+      conf_msg = "This will delete your profile, wiping all game progress on it and removing it from the list.\nAre you sure?";
     }
     Dialog::show_confirmation(_(conf_msg), [this, is_reset]() {
       delete_savegames(g_config->profile, is_reset);
@@ -121,11 +121,11 @@ ProfileMenu::menu_action(MenuItem& item)
     const bool is_reset = id == 3;
     if (is_reset)
     {
-      conf_msg = "This will reset all of your profiles and game progress on them. Are you sure?";
+      conf_msg = "This will reset all of your profiles and game progress on them.\nAre you sure?";
     }
     else
     {
-      conf_msg = "This will delete all of your profiles and game progress on them. Are you sure?";
+      conf_msg = "This will delete all of your profiles, wiping all game progress on them and removing them from the list.\nAre you sure?";
     }
     Dialog::show_confirmation(_(conf_msg), [this, is_reset]() {
       std::vector<std::string> profile_directories;
