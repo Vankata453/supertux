@@ -1,5 +1,5 @@
 //  SuperTux
-//  Copyright (C) 2008 Ingo Ruhnke <grumbel@gmail.com>
+//  Copyright (C) 2022 Vankata453
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -14,20 +14,24 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADER_SUPERTUX_SUPERTUX_MENU_PROFILE_MENU_HPP
-#define HEADER_SUPERTUX_SUPERTUX_MENU_PROFILE_MENU_HPP
+#ifndef HEADER_SUPERTUX_SUPERTUX_PROFILE_CREATE_MENU_HPP
+#define HEADER_SUPERTUX_SUPERTUX_PROFILE_CREATE_MENU_HPP
 
-#include <vector>
 #include "gui/menu.hpp"
 
-class ProfileMenu final : public Menu
+class ProfileCreateMenu final : public Menu
 {
 public:
-  ProfileMenu();
+  ProfileCreateMenu();
 
   void menu_action(MenuItem& item) override;
-  std::vector<std::string> get_savegames();
-  void delete_savegames(std::string profile_name, bool recreate) const;
+
+private:
+  std::string profile_name;
+
+private:
+  ProfileCreateMenu(const ProfileCreateMenu&) = delete;
+  ProfileCreateMenu& operator=(const ProfileCreateMenu&) = delete;
 };
 
 #endif

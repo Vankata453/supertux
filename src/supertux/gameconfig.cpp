@@ -34,7 +34,7 @@
 #endif
 
 Config::Config() :
-  profile(1),
+  profile("default"),
   fullscreen_size(0, 0),
   fullscreen_refresh_rate(0),
   window_size(1280, 800),
