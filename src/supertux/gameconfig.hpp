@@ -38,7 +38,7 @@ public:
   void load();
   void save();
 
-  std::string profile;
+  int profile;
 
   /** the width/height to be used to display the game in fullscreen */
   Size fullscreen_size;
