@@ -42,7 +42,7 @@ Door::Door(const ReaderMapping& mapping) :
   mapping.get("x", m_col.m_bbox.get_left());
   mapping.get("y", m_col.m_bbox.get_top());
   mapping.get("sector", target_sector);
-  mapping.get("keepmusic", keep_music);
+  mapping.get("keep_music", keep_music);
   mapping.get("spawnpoint", target_spawnpoint);
   mapping.get("sprite", sprite_name);
 
@@ -83,7 +83,7 @@ Door::get_settings()
   result.add_sprite(_("Sprite"), &sprite_name, "sprite", std::string("images/objects/door/door.sprite"));
   result.add_script(_("Script"), &script, "script");
   result.add_text(_("Sector"), &target_sector, "sector");
-  result.add_toggle(_("Keep music"), &keep_music, "keep_music");
+  result.add_bool(_("Keep music"), &keep_music, "keep_music");
   result.add_text(_("Spawn point"), &target_spawnpoint, "spawnpoint");
 
   result.reorder({"sector", "spawnpoint", "keep_music", "name", "x", "y"});
