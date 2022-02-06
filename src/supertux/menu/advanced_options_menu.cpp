@@ -16,12 +16,13 @@
 
 #include "supertux/menu/debug_menu.hpp"
 
+#include "gui/item_toggle.hpp"
 #include "supertux/debug.hpp"
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
 #include "util/gettext.hpp"
 
-DebugMenu::DebugMenu()
+AdvancedOptionsMenu::AdvancedOptionsMenu()
 {
   add_toggle(-1, _("Show Controller"), &g_config->show_controller)
     .set_help(_("Toggles whether the game should show what keys are being pressed, on a controller"));
@@ -41,7 +42,7 @@ DebugMenu::DebugMenu()
 }
 
 void
-DebugMenu::menu_action(MenuItem& item)
+AdvancedOptionsMenu::menu_action(MenuItem& item)
 {
     g_config->save();
 }
