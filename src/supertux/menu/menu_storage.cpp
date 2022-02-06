@@ -19,6 +19,7 @@
 #include <assert.h>
 
 #include "supertux/menu/addon_menu.hpp"
+#include "supertux/menu/advanced_options_menu.hpp"
 #include "supertux/menu/cheat_menu.hpp"
 #include "supertux/menu/debug_menu.hpp"
 #include "supertux/menu/contrib_menu.hpp"
@@ -83,6 +84,9 @@ MenuStorage::create(MenuId menu_id)
 
     case OPTIONS_MENU:
       return std::unique_ptr<Menu>(new OptionsMenu(true));
+
+    case ADVANCED_OPTIONS_MENU:
+      return std::make_unique<AdvancedOptionsMenu>();
 
     case INGAME_OPTIONS_MENU:
       return std::unique_ptr<Menu>(new OptionsMenu(false));
