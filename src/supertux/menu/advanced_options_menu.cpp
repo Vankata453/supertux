@@ -19,6 +19,7 @@
 #include "supertux/debug.hpp"
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
+#include "util/gettext.hpp"
 
 DebugMenu::DebugMenu()
 {
