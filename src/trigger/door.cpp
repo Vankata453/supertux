@@ -32,6 +32,7 @@ Door::Door(const ReaderMapping& mapping) :
   state(CLOSED),
   target_sector(),
   target_spawnpoint(),
+  keep_music(false),
   script(),
   sprite_name("images/objects/door/door.sprite"),
   sprite(),
@@ -41,6 +42,7 @@ Door::Door(const ReaderMapping& mapping) :
   mapping.get("x", m_col.m_bbox.get_left());
   mapping.get("y", m_col.m_bbox.get_top());
   mapping.get("sector", target_sector);
+  mapping.get("keepmusic", keep_music);
   mapping.get("spawnpoint", target_spawnpoint);
   mapping.get("sprite", sprite_name);
 
@@ -58,6 +60,7 @@ Door::Door(int x, int y, const std::string& sector, const std::string& spawnpoin
   state(CLOSED),
   target_sector(sector),
   target_spawnpoint(spawnpoint),
+  keep_music(false),
   script(),
   sprite_name("images/objects/door/door.sprite"),
   sprite(SpriteManager::current()->create(sprite_name)),
@@ -80,9 +83,10 @@ Door::get_settings()
   result.add_sprite(_("Sprite"), &sprite_name, "sprite", std::string("images/objects/door/door.sprite"));
   result.add_script(_("Script"), &script, "script");
   result.add_text(_("Sector"), &target_sector, "sector");
+  result.add_toggle(_("Keep music"), &keep_music, "keep_music");
   result.add_text(_("Spawn point"), &target_spawnpoint, "spawnpoint");
 
-  result.reorder({"sector", "spawnpoint", "name", "x", "y"});
+  result.reorder({"sector", "spawnpoint", "keep_music", "name", "x", "y"});
 
   return result;
 }
@@ -180,7 +184,7 @@ Door::collision(GameObject& other, const CollisionHit& hit_)
 
         if (!target_sector.empty()) {
           GameSession::current()->respawn(target_sector, target_spawnpoint,
-                                          invincible, invincibilityperiod);
+                                          invincible, invincibilityperiod, keep_music);
           ScreenManager::current()->set_screen_fade(std::make_unique<FadeToBlack>(FadeToBlack::FADEIN, 1.0f));
         }
       }

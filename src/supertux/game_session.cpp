@@ -69,6 +69,7 @@ GameSession::GameSession(const std::string& levelfile_, Savegame& savegame, Stat
   m_newspawnpoint(),
   m_pastinvincibility(false),
   m_newinvincibilityperiod(0),
+  m_keepmusic(false),
   m_best_level_statistics(statistics),
   m_savegame(savegame),
   m_play_time(0),
@@ -385,7 +386,8 @@ GameSession::update(float dt_sec, const Controller& controller)
     assert(m_currentsector != nullptr);
     m_currentsector->stop_looping_sounds();
     sector->activate(m_newspawnpoint);
-    sector->get_singleton_by_type<MusicObject>().play_music(LEVEL_MUSIC);
+    if (!m_keepmusic)
+      sector->get_singleton_by_type<MusicObject>().play_music(LEVEL_MUSIC);
     m_currentsector = sector;
     m_currentsector->play_looping_sounds();
 
@@ -499,12 +501,13 @@ GameSession::finish(bool win)
 
 void
 GameSession::respawn(const std::string& sector, const std::string& spawnpoint,
-                     const bool invincibility, const int invincibilityperiod)
+                     const bool invincibility, const int invincibilityperiod, const bool keepmusic)
 {
   m_newsector = sector;
   m_newspawnpoint = spawnpoint;
   m_pastinvincibility = invincibility;
   m_newinvincibilityperiod = invincibilityperiod;
+  m_keepmusic = keepmusic;
 }
 
 void

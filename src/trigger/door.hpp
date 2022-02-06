@@ -55,6 +55,7 @@ private:
   DoorState state; /**< current state of the door */
   std::string target_sector; /**< target sector to teleport to */
   std::string target_spawnpoint; /**< target spawnpoint to teleport to */
+  bool keep_music; /**< whether the old sector's music should keep on playing */
   std::string script;
   std::string sprite_name;
   SpritePtr sprite; /**< "door" sprite to render */

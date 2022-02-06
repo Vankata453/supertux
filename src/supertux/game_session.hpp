@@ -56,7 +56,7 @@ public:
   /** ends the current level */
   void finish(bool win = true);
   void respawn(const std::string& sectorname, const std::string& spawnpointname,
-               const bool invincibility = false, const int invincibilityperiod = 0);
+               const bool invincibility = false, const int invincibilityperiod = 0, const bool keepmusic = false);
   void reset_level();
   void set_start_point(const std::string& sectorname,
                        const std::string& spawnpointname);
@@ -137,6 +137,9 @@ private:
   // Whether the player had invincibility before spawning in a new sector
   bool m_pastinvincibility;
   int m_newinvincibilityperiod;
+
+  // Whether the old sector's music should continue playing
+  bool m_keepmusic;
 
   Statistics* m_best_level_statistics;
   Savegame& m_savegame;
