@@ -20,11 +20,11 @@
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
 
-DebugMenu::DebugMenu() :
+DebugMenu::DebugMenu()
 {
-  add_toggle(-1, _("Show Controller"), &g_config->show_controller);
+  add_toggle(-1, _("Show Controller"), &g_config->show_controller)
     .set_help(_("Toggles whether the game should show what keys are being pressed, on a controller"));
-  add_toggle(-1, _("Show Framerate"), &g_config->show_fps);
+  add_toggle(-1, _("Show Framerate"), &g_config->show_fps)
     .set_help(_("Toggles whether the game shows the framerate it's running at"));
   add_toggle(-1, _("Show Player Position"), &g_config->show_player_pos)
     .set_help(_("Toggles whether the game shows the player's exact position (coordinates)"));

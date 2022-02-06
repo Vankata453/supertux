@@ -448,7 +448,7 @@ OptionsMenu::OptionsMenu(bool complete) :
   }
 
   add_submenu(_("Advanced options"), MenuStorage::ADVANCED_OPTIONS_MENU)
-      .set_help(_("Manage whether SuperTux should display the levels you play on your social media profiles (Discord)"));
+      .set_help(_("Manage advanced options for the game"));
 
   add_hl();
   add_back(_("Back"));
