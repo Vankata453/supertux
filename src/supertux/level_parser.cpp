@@ -19,6 +19,7 @@
 #include <physfs.h>
 #include <sstream>
 
+#include "gui/dialog.hpp"
 #include "supertux/level.hpp"
 #include "supertux/sector.hpp"
 #include "supertux/sector_parser.hpp"
@@ -191,9 +192,9 @@ LevelParser::load(const ReaderDocument& doc)
 
     if (m_level.m_tileset == "images/tiles_old.strf" && !m_worldmap)
     {
-      dialog.show_confirmation(_("This level uses an old unsupported tileset.\nWould you like to use the up-to-date one?
-        \n\n(Please keep in mind this can cause tiling issues. If needed, you can always go back to the old tileset at any time, 
-        by choosing 'tiles_old.strf' from 'Level Properties'.)")), [this]() {
+      Dialog.show_confirmation(_("This level uses an old unsupported tileset.\nWould you like to use the up-to-date one?"
+        "\n\n(Please keep in mind this can cause tiling issues. If needed, you can always go back to the old tileset at any time, "
+        "by choosing 'tiles_old.strf' from 'Level Properties'.)")), [this]() {
           m_level.m_tileset = "images/tiles.strf";
           try
           {
