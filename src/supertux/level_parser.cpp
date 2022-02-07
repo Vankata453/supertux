@@ -19,6 +19,7 @@
 #include <physfs.h>
 #include <sstream>
 
+#include "editor/editor.hpp"
 #include "gui/dialog.hpp"
 #include "supertux/level.hpp"
 #include "supertux/sector.hpp"
@@ -194,7 +195,7 @@ LevelParser::load(const ReaderDocument& doc)
     {
       Dialog::show_confirmation(_("This level uses an old unsupported tileset.\nWould you like to use the up-to-date one?"
         "\n\n(Please keep in mind this can cause tiling issues. If needed, you can always go back to the old tileset at any time, "
-        "by choosing 'tiles_old.strf' from 'Level Properties'.)")), [this]() {
+        "by choosing 'tiles_old.strf' from 'Level Properties'.)"), [this] {
           m_level.m_tileset = "images/tiles.strf";
           try
           {
@@ -205,7 +206,7 @@ LevelParser::load(const ReaderDocument& doc)
             // Lisp Type error might occur.
             log_warning << e.what() << std::endl;
           }
-      }
+      });
     }
   } else {
     log_warning << "[" << doc.get_filename() << "] level format version " << version << " is not supported" << std::endl;
