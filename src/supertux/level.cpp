@@ -44,7 +44,7 @@ Level::Level(bool worldmap) :
   m_sectors(),
   m_stats(),
   m_target_time(),
-  m_tileset("images/tiles.strf"),
+  m_tileset("images/tiles_old.strf"),
   m_suppress_pause_menu(),
   m_is_in_cutscene(false),
   m_skip_cutscene(false),
@@ -155,7 +155,7 @@ Level::save(Writer& writer)
     sector->save(writer);
   }
 
-  if (m_tileset != "images/tiles.strf")
+  if (m_tileset != "images/tiles_old.strf")
     writer.write("tileset", m_tileset, false);
 
   // Ends writing to supertux level file. Keep this at the very end.

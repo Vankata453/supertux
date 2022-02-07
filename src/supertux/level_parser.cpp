@@ -188,6 +188,24 @@ LevelParser::load(const ReaderDocument& doc)
                   << m_level.m_name << "\". You might not be allowed to share it."
                   << std::endl;
     }
+
+    if (m_level.m_tileset == "images/tiles_old.strf" && !m_worldmap)
+    {
+      dialog.show_confirmation(_("This level uses an old unsupported tileset.\nWould you like to use the up-to-date one?
+        \n\n(Please keep in mind this can cause tiling issues. If needed, you can always go back to the old tileset at any time, 
+        by choosing 'tiles_old.strf' from 'Level Properties'.)")), [this]() {
+          m_level.m_tileset = "images/tiles.strf";
+          try
+          {
+            editor->change_tileset();
+          }
+          catch(std::exception& e)
+          {
+            // Lisp Type error might occur.
+            log_warning << e.what() << std::endl;
+          }
+      }
+    }
   } else {
     log_warning << "[" << doc.get_filename() << "] level format version " << version << " is not supported" << std::endl;
   }
