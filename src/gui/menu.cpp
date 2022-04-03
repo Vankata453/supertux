@@ -37,6 +37,7 @@
 #include "gui/item_stringselect.hpp"
 #include "gui/item_textfield.hpp"
 #include "gui/item_toggle.hpp"
+#include "gui/item_string_array.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
 #include "gui/mousecursor.hpp"
@@ -51,6 +52,8 @@
 
 static const float MENU_REPEAT_INITIAL = 0.4f;
 static const float MENU_REPEAT_RATE    = 0.1f;
+
+#include "supertux/error_handler.hpp"
 
 Menu::Menu() :
   m_pos(Vector(static_cast<float>(SCREEN_WIDTH) / 2.0f,
@@ -267,9 +270,9 @@ Menu::add_string_select(int id, const std::string& text, int* selected, const st
 
 ItemFile&
 Menu::add_file(const std::string& text, std::string* input, const std::vector<std::string>& extensions,
-               const std::string& basedir, int id)
+               const std::string& basedir, bool path_relative_to_basedir, int id)
 {
-  auto item = std::make_unique<ItemFile>(text, input, extensions, basedir, id);
+  auto item = std::make_unique<ItemFile>(text, input, extensions, basedir, path_relative_to_basedir, id);
   auto item_ptr = item.get();
   add_item(std::move(item));
   return *item_ptr;
@@ -336,6 +339,15 @@ Menu::add_color(const std::string& text, Color* color, int id) {
 ItemBadguySelect&
 Menu::add_badguy_select(const std::string& text, std::vector<std::string>* badguys, int id) {
   auto item = std::make_unique<ItemBadguySelect>(text, badguys, id);
+  auto item_ptr = item.get();
+  add_item(std::move(item));
+  return *item_ptr;
+}
+
+ItemStringArray&
+Menu::add_string_array(const std::string& text, std::vector<std::string>& items, int id)
+{
+  auto item = std::make_unique<ItemStringArray>(text, items, id);
   auto item_ptr = item.get();
   add_item(std::move(item));
   return *item_ptr;
@@ -522,6 +534,10 @@ Menu::process_action(const MenuAction& menuaction)
   bool last_action = m_items[m_active_item]->no_other_action();
   m_items[m_active_item]->process_action(menuaction);
   if (last_action)
+    return;
+
+  // In case pop_menu() was called in the callback
+  if (MenuManager::instance().current_menu() != this)
     return;
 
   if (m_items[m_active_item]->changes_width())

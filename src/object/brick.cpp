@@ -103,8 +103,8 @@ Brick::try_break(Player* player)
   if (m_sprite->get_action() == "empty")
     return;
 
-  SoundManager::current()->play("sounds/brick.wav");
-  Player& player_one = Sector::get().get_player();
+  SoundManager::current()->play("sounds/brick.wav", get_pos());
+  Player& player_one = *Sector::get().get_players()[0];
   if (m_coin_counter > 0 ) {
     Sector::get().add<BouncyCoin>(get_pos(), true);
     m_coin_counter--;
@@ -181,13 +181,16 @@ HeavyBrick::collision(GameObject& other, const CollisionHit& hit)
       ricochet(&other);
   }
 
+  // Skip Brick::collision
+  // TODO: Make the Brick class an absract class and have the normal brick and
+  //       heavy brick both inherit that class?
   return Block::collision(other, hit);
 }
 
 void
 HeavyBrick::ricochet(GameObject* collider)
 {
-  SoundManager::current()->play("sounds/metal_hit.ogg");
+  SoundManager::current()->play("sounds/metal_hit.ogg", get_pos());
   start_bounce(collider);
 }
 

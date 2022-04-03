@@ -91,9 +91,7 @@ public:
   KeyboardConfig keyboard_config;
   JoystickConfig joystick_config;
 
-#ifdef ENABLE_TOUCHSCREEN_SUPPORT
   bool mobile_controls;
-#endif
 
   struct Addon
   {
@@ -133,6 +131,10 @@ public:
   bool editor_autotile_mode;
   bool editor_autotile_help;
   int editor_autosave_frequency;
+
+  bool multiplayer_auto_manage_players;
+  bool multiplayer_multibind;
+  bool multiplayer_buzz_controllers;
 
   std::string repository_url;
 

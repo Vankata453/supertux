@@ -257,6 +257,7 @@ public:
                    const std::string& key,
                    std::vector<std::string> filter,
                    const std::string& basedir,
+                   bool path_relative_to_basedir,
                    unsigned int flags);
 
   virtual void save(Writer& write) const override;
@@ -268,6 +269,7 @@ private:
   boost::optional<std::string> m_default_value;
   const std::vector<std::string> m_filter;
   std::string m_basedir;
+  bool m_path_relative_to_basedir;
 
 private:
   FileObjectOption(const FileObjectOption&) = delete;
@@ -460,6 +462,23 @@ private:
 private:
   ButtonOption(const ButtonOption&) = delete;
   ButtonOption& operator=(const ButtonOption&) = delete;
+};
+
+class StringArrayOption : public ObjectOption
+{
+public:
+  StringArrayOption(const std::string& text, const std::string& key, std::vector<std::string>& items);
+
+  virtual void save(Writer& write) const override;
+  virtual std::string to_string() const override { return "text-area"; }
+  virtual void add_to_menu(Menu& menu) const override;
+
+private:
+  std::vector<std::string>& m_items;
+
+private:
+  StringArrayOption(const StringArrayOption&) = delete;
+  StringArrayOption& operator=(const StringArrayOption&) = delete;
 };
 
 #endif

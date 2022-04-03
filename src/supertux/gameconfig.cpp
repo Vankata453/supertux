@@ -44,7 +44,12 @@ Config::Config() :
   fit_window(true),
 #endif
   magnification(0.0f),
+  // Ubuntu Touch supports windowed apps
+#ifdef __ANDROID__
+  use_fullscreen(true),
+#else
   use_fullscreen(false),
+#endif
   video(VideoSystem::VIDEO_AUTO),
   try_vsync(true),
   show_fps(false),
@@ -62,9 +67,7 @@ Config::Config() :
   locale(),
   keyboard_config(),
   joystick_config(),
-#ifdef ENABLE_TOUCHSCREEN_SUPPORT
-  mobile_controls(true),
-#endif
+  mobile_controls(SDL_GetNumTouchDevices() > 0),
   addons(),
   developer_mode(false),
   christmas_mode(false),
@@ -95,6 +98,16 @@ Config::Config() :
   editor_autotile_mode(false),
   editor_autotile_help(true),
   editor_autosave_frequency(5),
+  multiplayer_auto_manage_players(true),
+  multiplayer_multibind(false),
+#if SDL_VERSION_ATLEAST(2, 0, 9)
+  multiplayer_buzz_controllers(true),
+#else
+  // Will be loaded and saved anyways, to retain the setting. This is helpful
+  // for users who frequently switch between versions compiled with a newer SDL
+  // and those with an older SDL; they won't have to check the setting each time
+  multiplayer_buzz_controllers(false),
+#endif
   repository_url()
 {
 }
@@ -182,7 +195,7 @@ Config::load()
     editor_mapping->get("render_lighting", editor_render_lighting);
     editor_mapping->get("selected_snap_grid_size", editor_selected_snap_grid_size);
     editor_mapping->get("snap_to_grid", editor_snap_to_grid);
-  } else { log_warning << "!!!!" << std::endl; }
+  }
 
   if (is_christmas()) {
     config_mapping.get("christmas", christmas_mode, true);
@@ -191,6 +204,10 @@ Config::load()
   config_mapping.get("locale", locale);
   config_mapping.get("random_seed", random_seed);
   config_mapping.get("repository_url", repository_url);
+
+  config_mapping.get("multiplayer_auto_manage_players", multiplayer_auto_manage_players);
+  config_mapping.get("multiplayer_multibind", multiplayer_multibind);
+  config_mapping.get("multiplayer_buzz_controllers", multiplayer_buzz_controllers);
 
   boost::optional<ReaderMapping> config_video_mapping;
   if (config_mapping.get("video", config_video_mapping))
@@ -254,13 +271,7 @@ Config::load()
       joystick_config.read(*joystick_mapping);
     }
 
-#ifdef ENABLE_TOUCHSCREEN_SUPPORT
-#ifdef SHOW_TOUCHSCREEN_CONTROLS
-    config_control_mapping->get("mobile_controls", mobile_controls, true);
-#else
-    config_control_mapping->get("mobile_controls", mobile_controls, false);
-#endif
-#endif
+    config_control_mapping->get("mobile_controls", mobile_controls, SDL_GetNumTouchDevices() > 0);
   }
 
   boost::optional<ReaderCollection> config_addons_mapping;
@@ -321,6 +332,9 @@ Config::save()
   writer.write("transitions_enabled", transitions_enabled);
   writer.write("locale", locale);
   writer.write("repository_url", repository_url);
+  writer.write("multiplayer_auto_manage_players", multiplayer_auto_manage_players);
+  writer.write("multiplayer_multibind", multiplayer_multibind);
+  writer.write("multiplayer_buzz_controllers", multiplayer_buzz_controllers);
 
   writer.start_list("interface_colors");
   writer.write("menubackcolor", menubackcolor.toVector());
@@ -385,9 +399,7 @@ Config::save()
     joystick_config.write(writer);
     writer.end_list("joystick");
 
-#ifdef ENABLE_TOUCHSCREEN_SUPPORT
     writer.write("mobile_controls", mobile_controls);
-#endif
   }
   writer.end_list("control");
 

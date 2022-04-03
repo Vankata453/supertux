@@ -48,6 +48,7 @@ class ItemScriptLine;
 class ItemStringSelect;
 class ItemTextField;
 class ItemToggle;
+class ItemStringArray;
 class MenuItem;
 class PathObject;
 
@@ -88,7 +89,7 @@ public:
   ItemFloatField& add_floatfield(const std::string& text, float* input, int id = -1);
   ItemBadguySelect& add_badguy_select(const std::string& text, std::vector<std::string>* badguys, int id = -1);
   ItemFile& add_file(const std::string& text, std::string* input, const std::vector<std::string>& extensions,
-                     const std::string& basedir, int id = -1);
+                     const std::string& basedir, bool path_relative_to_basedir, int id = -1);
 
   ItemColor& add_color(const std::string& text, Color* color, int id = -1);
   ItemColorDisplay& add_color_display(Color* color, int id = -1);
@@ -96,6 +97,7 @@ public:
     bool is_linear = false);
   ItemColorChannelOKLab& add_color_channel_oklab(Color* color, int channel);
   ItemPaths& add_path_settings(const std::string& text, PathObject& target, const std::string& path_ref);
+  ItemStringArray& add_string_array(const std::string& text, std::vector<std::string>& items, int id = -1);
 
   void process_input(const Controller& controller);
 
