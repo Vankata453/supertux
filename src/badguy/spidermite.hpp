@@ -31,8 +31,10 @@ public:
   virtual void freeze() override;
   virtual void unfreeze() override;
   virtual bool is_freezable() const override;
-  virtual std::string get_class() const override { return "spidermite"; }
-  virtual std::string get_display_name() const override { return _("Spider"); }
+  static std::string class_name() { return "spidermite"; }
+  virtual std::string get_class_name() const override { return class_name(); }
+  static std::string display_name() { return _("Spider"); }
+  virtual std::string get_display_name() const override { return display_name(); }
 
 protected:
   enum SpiderMiteMode {

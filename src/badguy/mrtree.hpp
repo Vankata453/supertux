@@ -25,8 +25,10 @@ public:
   MrTree(const ReaderMapping& reader);
 
   virtual bool is_freezable() const override;
-  virtual std::string get_class() const override { return "mrtree"; }
-  virtual std::string get_display_name() const override { return _("Walking Tree"); }
+  static std::string class_name() { return "mrtree"; }
+  virtual std::string get_class_name() const override { return class_name(); }
+  static std::string display_name() { return _("Walking Tree"); }
+  virtual std::string get_display_name() const override { return display_name(); }
 
 protected:
   virtual bool collision_squished(GameObject& object) override;

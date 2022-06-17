@@ -26,8 +26,10 @@ public:
   PoisonIvy(const Vector& pos, Direction d);
   
   virtual bool is_freezable() const override;
-  virtual std::string get_class() const override { return "poisonivy"; }
-  virtual std::string get_display_name() const override { return _("Spring Leaf"); }
+  static std::string class_name() { return "poisonivy"; }
+  virtual std::string get_class_name() const override { return class_name(); }
+  static std::string display_name() { return _("Spring Leaf"); }
+  virtual std::string get_display_name() const override { return display_name(); }
 
 protected:
   virtual bool collision_squished(GameObject& object) override;

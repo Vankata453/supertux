@@ -34,8 +34,10 @@ public:
   /* Inherited from Portable */
   virtual void grab(MovingObject& object, const Vector& pos, Direction dir) override;
   virtual void ungrab(MovingObject& object, Direction dir) override;
-  virtual std::string get_class() const override { return "skydive"; }
-  virtual std::string get_display_name() const override { return _("Skydive"); }
+  static std::string class_name() { return "skydive"; }
+  virtual std::string get_class_name() const override { return class_name(); }
+  static std::string display_name() { return _("Skydive"); }
+  virtual std::string get_display_name() const override { return display_name(); }
 
 private:
   virtual HitResponse collision_player(Player& player, const CollisionHit& hit) override;

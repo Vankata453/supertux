@@ -58,8 +58,10 @@ public:
   virtual void update(float dt_sec) override;
   virtual void draw(DrawingContext& context) override;
   virtual bool is_sideways() const;
-  virtual std::string get_class() const override { return "icecrusher"; }
-  virtual std::string get_display_name() const override { return _("Icecrusher"); }
+  static std::string class_name() { return "icecrusher"; }
+  virtual std::string get_class_name() const override { return class_name(); }
+  static std::string display_name() { return _("Icecrusher"); }
+  virtual std::string get_display_name() const override { return display_name(); }
 
   virtual void after_editor_set() override;
   

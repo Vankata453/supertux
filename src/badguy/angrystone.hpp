@@ -30,8 +30,10 @@ public:
   virtual void kill_fall() override;
   virtual bool is_freezable() const override;
   virtual bool is_flammable() const override;
-  virtual std::string get_class() const override { return "angrystone"; }
-  virtual std::string get_display_name() const override { return _("Angry Stone"); }
+  static std::string class_name() { return "angrystone"; }
+  virtual std::string get_class_name() const override { return class_name(); }
+  static std::string display_name() { return _("Angry Stone"); }
+  virtual std::string get_display_name() const override { return display_name(); }
 
 protected:
   enum AngryStoneState {

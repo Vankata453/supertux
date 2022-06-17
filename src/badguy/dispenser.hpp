@@ -44,8 +44,10 @@ public:
   virtual void unfreeze() override;
   virtual bool is_freezable() const override;
   virtual bool is_flammable() const override;
-  virtual std::string get_class() const override { return "dispenser"; }
-  virtual std::string get_display_name() const override { return _("Dispenser"); }
+  static std::string class_name() { return "dispenser"; }
+  virtual std::string get_class_name() const override { return class_name(); }
+  static std::string display_name() { return _("Dispenser"); }
+  virtual std::string get_display_name() const override { return display_name(); }
 
   virtual ObjectSettings get_settings() override;
   virtual void after_editor_set() override;

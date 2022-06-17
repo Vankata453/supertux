@@ -26,8 +26,10 @@ public:
   WalkingLeaf(const ReaderMapping& reader);
 
   virtual bool is_freezable() const override;
-  virtual std::string get_class() const override { return "walkingleaf"; }
-  virtual std::string get_display_name() const override { return _("Autumn Leaf"); }
+  static std::string class_name() { return "walkingleaf"; }
+  virtual std::string get_class_name() const override { return class_name(); }
+  static std::string display_name() { return _("Autumn Leaf"); }
+  virtual std::string get_display_name() const override { return display_name(); }
 
 protected:
   virtual bool collision_squished(GameObject& object) override;

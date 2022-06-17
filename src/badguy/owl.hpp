@@ -35,8 +35,10 @@ public:
   virtual void unfreeze() override;
   virtual bool is_freezable() const override;
   virtual void ignite() override;
-  virtual std::string get_class() const override { return "owl"; }
-  virtual std::string get_display_name() const override { return _("Owl"); }
+  static std::string class_name() { return "owl"; }
+  virtual std::string get_class_name() const override { return class_name(); }
+  static std::string display_name() { return _("Owl"); }
+  virtual std::string get_display_name() const override { return display_name(); }
   virtual ObjectSettings get_settings() override;
 
 protected:
