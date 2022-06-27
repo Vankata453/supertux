@@ -379,6 +379,25 @@ Editor::get_tileselect_move_mode() const
 }
 
 void
+Editor::show_level_license_info() const
+{
+  if (m_level.is_worldmap())
+  {
+    Dialog::show_message(_("Share this worldmap under license CC-BY-SA 4.0 International (advised).\n"
+                          "It allows modifications and redistribution by third-parties.\nIf you don't "
+                          "agree with this license, change it in worldmap properties.\nDISCLAIMER: The "
+                          "SuperTux authors take no responsibility for your choice of license."));
+  }
+  else
+  {
+    Dialog::show_message(_("Share this level under license CC-BY-SA 4.0 International (advised).\n"
+                          "It allows modifications and redistribution by third-parties.\nIf you don't "
+                          "agree with this license, change it in level properties.\nDISCLAIMER: The "
+                          "SuperTux authors take no responsibility for your choice of license."));
+  }
+}
+
+void
 Editor::scroll(const Vector& velocity)
 {
   if (!m_levelloaded) return;

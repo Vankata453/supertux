@@ -106,6 +106,7 @@ public:
     m_levelfile = levelfile_;
     m_reload_request = true;
   }
+  void show_level_license_info() const;
 
   std::string get_level_directory() const;
 

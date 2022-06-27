@@ -92,22 +92,34 @@ LevelParser::from_nothing(const std::string& basedir)
 }
 
 std::unique_ptr<Level>
-LevelParser::from_nothing_worldmap(const std::string& basedir, const std::string& name)
+LevelParser::from_nothing_worldmap(const std::string& basedir, const std::string& name, const std::string& worldmap_name)
 {
   auto level = std::make_unique<Level>(true);
   LevelParser parser(*level, true, false);
 
   // Find a free level filename
   std::string level_file = basedir + "/worldmap.stwm";
-  if (PHYSFS_exists(level_file.c_str())) {
-    int num = 0;
-    do {
-      num++;
-      level_file = basedir + "/worldmap" + std::to_string(num) + ".stwm";
-    } while ( PHYSFS_exists(level_file.c_str()) );
-    level_file = "worldmap" + std::to_string(num) + ".stwm";
-  } else {
-    level_file = "worldmap.stwm";
+  if (!worldmap_name.empty())
+  {
+    level_file = basedir + "/" + worldmap_name + ".stwm";
+    if (PHYSFS_exists(level_file.c_str()))
+    {
+      throw std::runtime_error("Worldmap with the given name already exists.");
+    }
+    level_file = worldmap_name + ".stwm";
+  }
+  else
+  {
+    if (PHYSFS_exists(level_file.c_str())) {
+      int num = 0;
+      do {
+        num++;
+        level_file = basedir + "/worldmap" + std::to_string(num) + ".stwm";
+      } while ( PHYSFS_exists(level_file.c_str()) );
+      level_file = "worldmap" + std::to_string(num) + ".stwm";
+    } else {
+      level_file = "worldmap.stwm";
+    }
   }
 
   parser.create(level_file, name);

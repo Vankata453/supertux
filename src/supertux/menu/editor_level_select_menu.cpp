@@ -28,19 +28,22 @@
 #include "supertux/menu/editor_levelset_menu.hpp"
 #include "supertux/menu/editor_delete_level_menu.hpp"
 #include "supertux/menu/editor_levelset_select_menu.hpp"
+#include "supertux/menu/menu_storage.hpp"
 #include "supertux/world.hpp"
 #include "util/file_system.hpp"
 
 EditorLevelSelectMenu::EditorLevelSelectMenu() :
   m_levelset(),
-  m_levelset_select_menu()
+  m_levelset_select_menu(),
+  m_worldmaps()
 {
   initialize();
 }
 
 EditorLevelSelectMenu::EditorLevelSelectMenu(std::unique_ptr<World> world,EditorLevelsetSelectMenu* levelset_select_menu) :
   m_levelset(),
-  m_levelset_select_menu(levelset_select_menu)
+  m_levelset_select_menu(levelset_select_menu),
+  m_worldmaps()
 {
   Editor::current()->set_world(std::move(world));
   initialize();
@@ -75,17 +78,47 @@ void EditorLevelSelectMenu::initialize() {
   add_hl();
   
   add_entry(-1, _("Create Level"));
+  add_entry(-4,_("Delete level"));
+  add_hl();
 
-  std::string worldmap_file = FileSystem::join(basedir, "worldmap.stwm");
-  if (PHYSFS_exists(worldmap_file.c_str())) {
-    add_entry(-4, _("Edit Worldmap"));
-  } else {
-    add_entry(-6, _("Create Worldmap"));
+  const std::string main_worldmap = "worldmap.stwm";
+
+  char **rc = PHYSFS_enumerateFiles(basedir.c_str());
+  char **i;
+  for (i = rc; *i != NULL; i++)
+  {
+    const std::string file_name = std::string(*i);
+    if (FileSystem::extension(file_name) == ".stwm")
+    {
+      if (file_name == main_worldmap)
+      {
+        m_worldmaps.insert(m_worldmaps.begin(), file_name);
+        continue;
+      }
+      m_worldmaps.push_back(file_name);
+    }
   }
-  add_entry(-5,_("Delete level"));
+  PHYSFS_freeList(rc);
+
+  for (int y = 0; y < static_cast<int>(m_worldmaps.size()); y++)
+  {
+    std::string file_name = m_worldmaps[y];
+    if (file_name == main_worldmap) file_name += " [MAIN]";
+    add_entry(num_levels + y, file_name);
+  }
+
+  std::string worldmap_file = FileSystem::join(basedir, );
+  if (!PHYSFS_exists(worldmap_file.c_str()))
+  {
+    add_entry(-5, _("Create Main Worldmap"));
+  }
+  else
+  {
+    add_entry(-6, _("New Worldmap"));
+  }
   add_hl();
   add_entry(-3, _("World Settings"));
-  add_back(_("Back"),-2);
+  add_back(_("Back"), -2);
 }
 
 EditorLevelSelectMenu::~EditorLevelSelectMenu()
@@ -104,7 +137,7 @@ EditorLevelSelectMenu::create_level()
 }
 
 void
-EditorLevelSelectMenu::create_worldmap()
+EditorLevelSelectMenu::create_main_worldmap()
 {
   create_item(true);
 }
@@ -120,22 +153,8 @@ EditorLevelSelectMenu::create_item(bool worldmap)
       LevelParser::from_nothing(basedir);
   new_item->save(basedir + "/" + new_item->m_filename);
   editor->set_level(new_item->m_filename);
+  editor->show_level_license_info();
   MenuManager::instance().clear_menu_stack();
-
-  if (worldmap)
-  {
-    Dialog::show_message(_("Share this worldmap under license CC-BY-SA 4.0 International (advised).\n"
-                           "It allows modifications and redistribution by third-parties.\nIf you don't "
-                           "agree with this license, change it in worldmap properties.\nDISCLAIMER: The "
-                           "SuperTux authors take no responsibility for your choice of license."));
-  }
-  else
-  {
-    Dialog::show_message(_("Share this level under license CC-BY-SA 4.0 International (advised).\n"
-                           "It allows modifications and redistribution by third-parties.\nIf you don't "
-                           "agree with this license, change it in level properties.\nDISCLAIMER: The "
-                           "SuperTux authors take no responsibility for your choice of license."));
-  }
 }
 
 void
@@ -151,33 +170,45 @@ EditorLevelSelectMenu::menu_action(MenuItem& item)
 {
   auto editor = Editor::current();
   World* world = editor->get_world();
-  if (item.get_id() >= 0)
+  int id = item.get_id();
+  if (id >= 0)
   {
+    auto num_levels = m_levelset->get_num_levels();
+    if (id < num_levels) //A level was chosen.
+    {
+      std::string file_name = m_levelset->get_level_filename(id);
+      std::string file_name_full = FileSystem::join(editor->get_level_directory(), file_name);
 
-    std::string file_name = m_levelset->get_level_filename(item.get_id());
-    std::string file_name_full = FileSystem::join(editor->get_level_directory(), file_name);
-
-    if (PHYSFS_exists((file_name_full + "~").c_str())) {
-      auto dialog = std::make_unique<Dialog>(/* passive = */ false, /* auto_clear_dialogs = */ false);
-      dialog->set_text(_("An auto-save recovery file was found. Would you like to restore the recovery\nfile and resume where you were before the editor crashed?"));
-      dialog->clear_buttons();
-      dialog->add_default_button(_("Yes"), [this, file_name] {
-        open_level(file_name + "~");
-        MenuManager::instance().set_dialog({});
-      });
-      dialog->add_button(_("No"), [this, file_name] {
-        Dialog::show_confirmation(_("This will delete the auto-save file. Are you sure?"), [this, file_name] {
-          open_level(file_name);
+      if (PHYSFS_exists((file_name_full + "~").c_str())) {
+        auto dialog = std::make_unique<Dialog>(/* passive = */ false, /* auto_clear_dialogs = */ false);
+        dialog->set_text(_("An auto-save recovery file was found. Would you like to restore the recovery\nfile and resume where you were before the editor crashed?"));
+        dialog->clear_buttons();
+        dialog->add_default_button(_("Yes"), [this, file_name] {
+          open_level(file_name + "~");
+          MenuManager::instance().set_dialog({});
         });
-      });
-      dialog->add_cancel_button(_("Cancel"));
-      MenuManager::instance().set_dialog(std::move(dialog));
-    } else {
-      open_level(file_name);
+        dialog->add_button(_("No"), [this, file_name] {
+          Dialog::show_confirmation(_("This will delete the auto-save file. Are you sure?"), [this, file_name] {
+            open_level(file_name);
+          });
+        });
+        dialog->add_cancel_button(_("Cancel"));
+        MenuManager::instance().set_dialog(std::move(dialog));
+      }
+      else
+      {
+        open_level(file_name);
+      }
     }
-
-  } else {
-    switch (item.get_id()) {
+    else //A worldmap was chosen.
+    {
+      editor->set_level(m_worldmaps[id - num_levels]);
+      MenuManager::instance().clear_menu_stack();
+    }
+  }
+  else
+  {
+    switch (id) {
       case -1:
         create_level();
         break;
@@ -188,11 +219,7 @@ EditorLevelSelectMenu::menu_action(MenuItem& item)
         auto menu = std::unique_ptr<Menu>(new EditorLevelsetMenu(world));
         MenuManager::instance().push_menu(std::move(menu));
       } break;
-      case -4:
-        editor->set_level("worldmap.stwm");
-        MenuManager::instance().clear_menu_stack();
-        break;
-      case -5: {
+      case -4: {
         if (m_levelset->get_num_levels() > 0)
         {
           auto delete_menu = std::unique_ptr<Menu>(new EditorDeleteLevelMenu(m_levelset, this, m_levelset_select_menu));
@@ -200,8 +227,11 @@ EditorLevelSelectMenu::menu_action(MenuItem& item)
         }
         break;
       }
+      case -5:
+        create_main_worldmap();
+        break;
       case -6:
-        create_worldmap();
+        MenuManager::instance().push_menu(MenuStorage::EDITOR_NEW_WORLDMAP_MENU);
         break;
       default:
         break;

@@ -28,6 +28,7 @@ class EditorLevelSelectMenu final : public Menu
 private:
   std::unique_ptr<Levelset> m_levelset;
   EditorLevelsetSelectMenu* m_levelset_select_menu;
+  std::vector<std::string> m_worldmaps;
 
 public:
   EditorLevelSelectMenu();
@@ -43,7 +44,7 @@ public:
 private:
   void initialize();
   void create_level();
-  void create_worldmap();
+  void create_main_worldmap();
   void create_item(bool worldmap);
 
 private:
