@@ -19,9 +19,11 @@
 #include <physfs.h>
 
 #include "addon/addon_manager.hpp"
+#include "editor/editor.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
 #include "physfs/util.hpp"
+#include "supertux/menu/menu_storage.hpp"
 #include "util/file_system.hpp"
 #include "util/log.hpp"
 #include "util/gettext.hpp"
@@ -111,6 +113,11 @@ FileSystemMenu::refresh_items()
 
   add_hl();
   add_entry(-2, _("Open Directory"));
+  if (Editor::current().get_level() != nullptr)
+  {
+    // Add the ability to import custom assets, if a level is loaded in the editor.
+    add_entry(-3, _("Import custom assets"));
+  }
   add_hl();
   add_back(_("Cancel"));
 
@@ -167,6 +174,10 @@ FileSystemMenu::menu_action(MenuItem& item)
   else if (item.get_id() == -2)
   {
     FileSystem::open_path(FileSystem::join(PHYSFS_getRealDir(m_directory.c_str()), m_directory));
+  }
+  else if (item.get_id() == -3)
+  {
+    MenuManager::instance().push_menu(MenuStorage::EDITOR_CUSTOM_ASSET_MENU);
   }
 }
 

@@ -24,6 +24,7 @@
 #include "supertux/menu/debug_menu.hpp"
 #include "supertux/menu/contrib_menu.hpp"
 #include "supertux/menu/custom_menu_menu.hpp"
+#include "supertux/menu/editor_custom_asset_menu.hpp"
 #include "supertux/menu/editor_menu.hpp"
 #include "supertux/menu/editor_level_menu.hpp"
 #include "supertux/menu/editor_level_select_menu.hpp"
@@ -140,6 +141,9 @@ MenuStorage::create(MenuId menu_id)
 
     case LANGPACK_AUTO_UPDATE_MENU:
       return std::unique_ptr<Menu>(new AddonBrowseMenu(true, true));
+
+    case EDITOR_CUSTOM_ASSET_MENU:
+      return std::make_unique<EditorCustomAssetMenu>();
 
     case EDITOR_LEVEL_SELECT_MENU:
       return std::make_unique<EditorLevelSelectMenu>();
