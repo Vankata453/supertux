@@ -105,6 +105,8 @@ Config::Config() :
   editor_autotile_mode(false),
   editor_autotile_help(true),
   editor_autosave_frequency(5),
+  editor_undo_manager(true),
+  editor_undo_stack_size(20),
   multiplayer_auto_manage_players(true),
   multiplayer_multibind(false),
 #if SDL_VERSION_ATLEAST(2, 0, 9)
@@ -250,6 +252,13 @@ Config::load()
     editor_mapping->get("render_lighting", editor_render_lighting);
     editor_mapping->get("selected_snap_grid_size", editor_selected_snap_grid_size);
     editor_mapping->get("snap_to_grid", editor_snap_to_grid);
+    editor_mapping->get("undo_manager", editor_undo_manager);
+    editor_mapping->get("undo_stack_size", editor_undo_stack_size);
+    if (editor_undo_stack_size < 1)
+    {
+      log_warning << "Undo stack size could not be lower than 1. Setting to lowest possible value (1)." << std::endl;
+      editor_undo_stack_size = 1;
+    }
   }
 
   if (is_christmas()) {
@@ -500,6 +509,8 @@ Config::save()
     writer.write("render_lighting", editor_render_lighting);
     writer.write("selected_snap_grid_size", editor_selected_snap_grid_size);
     writer.write("snap_to_grid", editor_snap_to_grid);
+    writer.write("undo_manager", editor_undo_manager);
+    writer.write("undo_stack_size", editor_undo_stack_size);
   }
   writer.end_list("editor");
 

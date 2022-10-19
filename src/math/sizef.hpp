@@ -121,7 +121,7 @@ inline Sizef operator-(const Sizef& lhs, const Sizef& rhs)
 
 inline bool operator==(const Sizef& lhs, const Sizef& rhs)
 {
-  return (lhs.width == rhs.width) && (rhs.height == rhs.height);
+  return (lhs.width == rhs.width) && (lhs.height == rhs.height);
 }
 
 inline bool operator!=(const Sizef& lhs, const Sizef& rhs)

@@ -39,6 +39,40 @@ std::string fmt_to_string(const T& v)
   return out.str();
 }
 
+template<typename T>
+std::string vector_to_string(std::vector<T>& v, char delimiter = '\n')
+{
+  std::stringstream stream;
+  for (auto& val : v)
+  {
+    stream << val << delimiter;
+  }
+
+  std::string result = stream.str();
+  if (result.size() > 0 && !std::isblank(delimiter)) result.pop_back(); // Remove last delimiter character.
+  return result;
+}
+
+std::vector<std::string> string_to_vector(std::string str, char delimiter = '\n')
+{
+  std::vector<std::string> values;
+  std::string current;
+
+  str += delimiter;
+  for (auto& ch : str)
+  {
+    if (ch == delimiter)
+    {
+      values.push_back(current);
+      current.clear();
+      continue;
+    }
+    current += ch;
+  }
+
+  return values;
+}
+
 } // namespace
 
 ObjectOption::ObjectOption(const std::string& text, const std::string& key, unsigned int flags) :
@@ -85,6 +119,12 @@ BoolObjectOption::to_string() const
   return *m_pointer ? _("true") : _("false");
 }
 
+void
+BoolObjectOption::from_string(std::string& str)
+{
+  *m_pointer = str == _("true");
+}
+
 IntObjectOption::IntObjectOption(const std::string& text, int* pointer, const std::string& key,
                                  boost::optional<int> default_value,
                                  unsigned int flags) :
@@ -110,6 +150,12 @@ std::string
 IntObjectOption::to_string() const
 {
   return fmt_to_string(*m_pointer);
+}
+
+void
+IntObjectOption::from_string(std::string& str)
+{
+  *m_pointer = std::stoi(str);
 }
 
 void
@@ -168,6 +214,12 @@ RectfObjectOption::to_string() const
 }
 
 void
+RectfObjectOption::from_string(std::string& str)
+{
+  m_pointer->from_string(str);
+}
+
+void
 RectfObjectOption::add_to_menu(Menu& menu) const
 {
   menu.add_floatfield(_("Width"), const_cast<float*>(&m_width));
@@ -199,6 +251,12 @@ std::string
 FloatObjectOption::to_string() const
 {
   return fmt_to_string(*m_pointer);
+}
+
+void
+FloatObjectOption::from_string(std::string& str)
+{
+  *m_pointer = std::stof(str);
 }
 
 void
@@ -235,6 +293,12 @@ StringObjectOption::to_string() const
 }
 
 void
+StringObjectOption::from_string(std::string& str)
+{
+  *m_pointer = str;
+}
+
+void
 StringObjectOption::add_to_menu(Menu& menu) const
 {
   menu.add_textfield(get_text(), m_pointer);
@@ -264,10 +328,13 @@ StringMultilineObjectOption::save(Writer& writer) const
 std::string
 StringMultilineObjectOption::to_string() const
 {
-  if (!m_pointer->empty()) {
-    return "...";
-  }
-  return "";
+  return *m_pointer;
+}
+
+void
+StringMultilineObjectOption::from_string(std::string& str)
+{
+  *m_pointer = str;
 }
 
 void
@@ -303,11 +370,19 @@ std::string
 StringSelectObjectOption::to_string() const
 {
   int* selected_id = static_cast<int*>(m_pointer);
-  if (*selected_id >= int(m_select.size()) || *selected_id < 0) {
+  if (*selected_id >= static_cast<int>(m_select.size()) || *selected_id < 0) {
     return _("invalid"); //Test whether the selected ID is valid
   } else {
     return m_select[*selected_id];
   }
+}
+
+void
+StringSelectObjectOption::from_string(std::string& str)
+{
+  if (str == _("invalid")) return;
+
+  *m_pointer = std::distance(m_select.begin(), std::find(m_select.begin(), m_select.end(), str));
 }
 
 void
@@ -358,6 +433,14 @@ EnumObjectOption::to_string() const
 }
 
 void
+EnumObjectOption::from_string(std::string& str)
+{
+  if (str == _("invalid")) return;
+
+  *m_pointer = std::distance(m_labels.begin(), std::find(m_labels.begin(), m_labels.end(), str));
+}
+
+void
 EnumObjectOption::add_to_menu(Menu& menu) const
 {
   if (*m_pointer >= static_cast<int>(m_labels.size()) || *m_pointer < 0 ) {
@@ -389,10 +472,13 @@ ScriptObjectOption::save(Writer& writer) const
 std::string
 ScriptObjectOption::to_string() const
 {
-  if (!m_pointer->empty()) {
-    return "...";
-  }
-  return "";
+  return *m_pointer;
+}
+
+void
+ScriptObjectOption::from_string(std::string& str)
+{
+  *m_pointer = str;
 }
 
 void
@@ -440,6 +526,12 @@ FileObjectOption::to_string() const
 }
 
 void
+FileObjectOption::from_string(std::string& str)
+{
+  *m_pointer = str;
+}
+
+void
 FileObjectOption::add_to_menu(Menu& menu) const
 {
   menu.add_file(get_text(), m_pointer, m_filter, m_basedir, m_path_relative_to_basedir);
@@ -478,6 +570,12 @@ ColorObjectOption::to_string() const
 }
 
 void
+ColorObjectOption::from_string(std::string& str)
+{
+  m_pointer->from_string(str);
+}
+
+void
 ColorObjectOption::add_to_menu(Menu& menu) const
 {
   menu.add_color(get_text(), m_pointer);
@@ -501,7 +599,13 @@ BadGuySelectObjectOption::save(Writer& writer) const
 std::string
 BadGuySelectObjectOption::to_string() const
 {
-  return fmt_to_string(m_pointer->size());
+  return vector_to_string(*m_pointer);
+}
+
+void
+BadGuySelectObjectOption::from_string(std::string& str)
+{
+  *m_pointer = string_to_vector(str);
 }
 
 void
@@ -579,7 +683,14 @@ PathRefObjectOption::save(Writer& writer) const
 std::string
 PathRefObjectOption::to_string() const
 {
-  return m_path_ref;
+  return m_target.get_path_ref();
+}
+
+void
+PathRefObjectOption::from_string(std::string& str)
+{
+  m_path_ref = str;
+  m_target.editor_set_path_by_ref(str);
 }
 
 void
@@ -640,6 +751,28 @@ PathHandleOption::to_string() const
         + std::to_string(m_target.m_scalar_pos.y) + "), ("
         + std::to_string(m_target.m_pixel_offset.x) + ", "
         + std::to_string(m_target.m_pixel_offset.y) + ")";
+}
+
+void
+PathHandleOption::from_string(std::string& str)
+{
+  std::string mod_str;
+  for (auto& ch : str)
+  {
+    if (ch == '(' || ch == ')' || std::isspace(ch))
+      continue;
+
+    mod_str.push_back(ch);
+  }
+
+  const auto data = string_to_vector(mod_str, ',');
+
+  assert(data.size() >= 4);
+
+  m_target.m_scalar_pos.x = std::stof(data[0]);
+  m_target.m_scalar_pos.y = std::stof(data[1]);
+  m_target.m_pixel_offset.x = std::stof(data[2]);
+  m_target.m_pixel_offset.y = std::stof(data[3]);
 }
 
 void
@@ -731,6 +864,18 @@ StringArrayOption::save(Writer& write) const
   write.write("strings", m_items);
 }
 
+std::string
+StringArrayOption::to_string() const
+{
+  return vector_to_string(m_items);
+}
+
+void
+StringArrayOption::from_string(std::string& str)
+{
+  m_items = string_to_vector(str);
+}
+
 void
 StringArrayOption::add_to_menu(Menu& menu) const
 {
@@ -747,6 +892,12 @@ void
 ListOption::save(Writer& writer) const
 {
   writer.write(get_key(), *m_value_ptr);
+}
+
+void
+ListOption::from_string(std::string& str)
+{
+  *m_value_ptr = str;
 }
 
 void

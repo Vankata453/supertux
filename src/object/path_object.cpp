@@ -112,6 +112,11 @@ void
 PathObject::editor_set_path_by_ref(const std::string& new_ref)
 {
   auto* path_obj = Editor::current()->get_sector()->get_object_by_name<PathGameObject>(new_ref);
+  if (!path_obj)
+  {
+    log_warning << "Path '" << new_ref << "' does not exist." << std::endl;
+    return;
+  }
   m_path_uid = path_obj->get_uid();
 }
 

@@ -307,7 +307,7 @@ TileMap::after_editor_set()
   if ((m_new_size_x != m_width || m_new_size_y != m_height ||
       m_new_offset_x || m_new_offset_y) &&
       m_new_size_x > 0 && m_new_size_y > 0) {
-    resize(m_new_size_x, m_new_size_y, 0, m_new_offset_x, m_new_offset_y);
+    resize(m_new_size_x, m_new_size_y, 0, m_new_offset_x, m_new_offset_y, true);
   }
 
   if (get_walker() && get_path() && get_path()->is_valid()) {
@@ -539,8 +539,14 @@ TileMap::set(int newwidth, int newheight, const std::vector<unsigned int>&newt,
 
 void
 TileMap::resize(int new_width, int new_height, int fill_id,
-                int xoffset, int yoffset)
+                int xoffset, int yoffset, bool save_action)
 {
+  if (Editor::is_active() && save_action)
+  {
+    Editor::current()->save_action(std::make_unique<TileMapResizeAction>(Editor::current()->get_sector()->get_name(),
+      get_uid()));
+  }
+
   bool offset_finished_x = false;
   bool offset_finished_y = false;
   if (xoffset < 0 && new_width - m_width < 0)

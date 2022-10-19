@@ -55,6 +55,7 @@ public:
 
   virtual void save(Writer& write) const = 0;
   virtual std::string to_string() const = 0;
+  virtual void from_string(std::string& str) = 0;
   virtual void add_to_menu(Menu& menu) const = 0;
 
   const std::string& get_key() const { return m_key; }
@@ -80,6 +81,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -100,6 +102,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -119,6 +122,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override {}
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -134,6 +138,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -155,6 +160,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -175,6 +181,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -195,6 +202,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -215,6 +223,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -238,6 +247,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -259,6 +269,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -282,6 +293,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -305,6 +317,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -325,6 +338,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -343,6 +357,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override {}
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -361,6 +376,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override {}
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -379,6 +395,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -397,6 +414,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override {};
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -415,6 +433,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -432,6 +451,7 @@ public:
 
   virtual void save(Writer& write) const override {}
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override {}
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -446,6 +466,7 @@ public:
 
   virtual void save(Writer& write) const override {}
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override {}
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -460,6 +481,7 @@ public:
 
   virtual void save(Writer& write) const override {}
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override {}
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -474,6 +496,7 @@ public:
 
   virtual void save(Writer& write) const override {}
   virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override {}
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -490,7 +513,8 @@ public:
   StringArrayOption(const std::string& text, const std::string& key, std::vector<std::string>& items);
 
   virtual void save(Writer& write) const override;
-  virtual std::string to_string() const override { return "text-area"; }
+  virtual std::string to_string() const override;
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:
@@ -508,6 +532,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override { return *m_value_ptr; }
+  virtual void from_string(std::string& str) override;
   virtual void add_to_menu(Menu& menu) const override;
 
 private:

@@ -35,7 +35,9 @@
 #include <emscripten/html5.h>
 #endif
 
-EditorMenu::EditorMenu()
+EditorMenu::EditorMenu() :
+  m_undo_manager_enabled(g_config->editor_undo_manager),
+  m_undo_stack_size(g_config->editor_undo_stack_size)
 {
   bool worldmap = Editor::current()->get_level()->is_worldmap();
   bool is_world = Editor::current()->get_world() != nullptr;
@@ -77,6 +79,8 @@ EditorMenu::EditorMenu()
   add_toggle(-1, _("Render Light"), &(Compositor::s_render_lighting));
   add_toggle(-1, _("Autotile Mode"), &(g_config->editor_autotile_mode));
   add_toggle(-1, _("Enable Autotile Help"), &(g_config->editor_autotile_help));
+  add_toggle(-1, _("Enable Undo Manager"), &m_undo_manager_enabled);
+  if (m_undo_manager_enabled) add_intfield(_("Undo Stack Size"), &m_undo_stack_size, -1, true);
   add_intfield(_("Autosave Frequency"), &(g_config->editor_autosave_frequency));
 
   add_submenu(worldmap ? _("Worldmap Settings") : _("Level Settings"),
@@ -190,6 +194,35 @@ EditorMenu::menu_action(MenuItem& item)
     default:
       break;
   }
+}
+
+bool
+EditorMenu::on_back_action()
+{
+  auto editor = Editor::current();
+
+  if (editor == nullptr)
+    return true;
+
+  if (g_config->editor_undo_manager != m_undo_manager_enabled)
+  {
+    g_config->editor_undo_manager = m_undo_manager_enabled;
+    editor->toggle_undo_manager();
+  }
+
+  if (g_config->editor_undo_stack_size != m_undo_stack_size)
+  {
+    if (m_undo_stack_size < 1 || m_undo_stack_size > 50)
+    {
+      Dialog::show_message(_("Invalid undo stack size provided:\nMinimum allowed is 50, maximum is 1."));
+      return false;
+    }
+    g_config->editor_undo_stack_size = m_undo_stack_size;
+    auto* undo_manager = editor->get_undo_manager();
+    if (undo_manager) undo_manager->cleanup();
+  }
+
+  return true;
 }
 
 /* EOF */

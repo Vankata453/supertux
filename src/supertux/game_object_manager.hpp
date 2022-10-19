@@ -48,8 +48,12 @@ public:
   GameObjectManager();
   virtual ~GameObjectManager();
 
-  /** Queue an object up to be added to the object list */
-  GameObject& add_object(std::unique_ptr<GameObject> object);
+  /**
+   * Queue an object up to be added to the object list 
+   * @param object The object to be added.
+   * @param force_uid Forces a specific UID for the object. Should only be used for redo operations!
+  */
+  GameObject& add_object(std::unique_ptr<GameObject> object, const UID* force_uid = nullptr);
   void clear_objects();
 
   template<typename T, typename... Args>
@@ -141,6 +145,8 @@ public:
 #endif
     }
   }
+
+  GameObject* get_object_by_uid(UID& uid) { return get_object_by_uid<GameObject>(uid); }
 
   /** Register a callback to be called once the given name can be
       resolsed to a UID. Note that this function is only valid in the

@@ -19,6 +19,7 @@
 
 #include <assert.h>
 #include <iosfwd>
+#include <string>
 
 #include "math/anchor_point.hpp"
 #include "math/sizef.hpp"
@@ -68,10 +69,19 @@ public:
 
   Rectf(const Rect& rect);
 
-  bool operator==(const Rectf& other) const
+  bool compare(const Rectf& other) const
   {
     return (m_p1 == other.m_p1 &&
             m_size == other.m_size);
+  }
+
+  bool operator==(const Rectf& other) const
+  {
+    return compare(other);
+  }
+  bool operator!=(const Rectf& other) const
+  {
+    return !compare(other);
   }
 
   // This is a temporary hack to pass x/y to ReaderMapping
@@ -155,6 +165,9 @@ public:
     m_size = Sizef(p.x - m_p1.x,
                    p.y - m_p1.y);
   }
+
+  /** Parse a human-readable string representation of a Rectf object back to values */
+  void from_string(std::string& str);
 
 private:
   /// upper left edge

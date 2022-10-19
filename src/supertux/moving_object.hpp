@@ -57,6 +57,11 @@ public:
     m_col.set_pos(pos);
   }
 
+  virtual void set_size(float w, float h)
+  {
+    m_col.set_size(w, h);
+  }
+
   virtual void move_to(const Vector& pos)
   {
     m_col.move_to(pos);

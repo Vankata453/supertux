@@ -101,12 +101,12 @@ GameObjectManager::get_objects() const
 }
 
 GameObject&
-GameObjectManager::add_object(std::unique_ptr<GameObject> object)
+GameObjectManager::add_object(std::unique_ptr<GameObject> object, const UID* force_uid)
 {
   assert(object);
   assert(!object->get_uid());
 
-  object->set_uid(m_uid_generator.next());
+  object->set_uid(force_uid != nullptr ? *force_uid : m_uid_generator.next());
 
   // make sure the object isn't already in the list
 #ifndef NDEBUG

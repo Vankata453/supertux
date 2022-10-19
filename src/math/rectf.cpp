@@ -28,6 +28,36 @@ Rectf::Rectf(const Rect& rect) :
 {
 }
 
+void
+Rectf::from_string(std::string& str)
+{
+  str.erase(0, 6); // Remove "Rectf(".
+  str.pop_back(); // Remove ")".
+
+  std::vector<float> values;
+  std::string current_num;
+
+  str += ", ";
+  for (auto& ch : str)
+  {
+    if (std::isspace(ch))
+    {
+      current_num.pop_back(); // Remove the comma before the space (", ").
+      values.push_back(std::stof(current_num));
+      current_num.clear();
+      continue;
+    }
+    current_num += ch;
+  }
+
+  assert(values.size() >= 4);
+
+  set_left(values[0]);
+  set_top(values[1]);
+  set_right(values[2]);
+  set_bottom(values[3]);
+}
+
 std::ostream& operator<<(std::ostream& out, const Rectf& rect)
 {
   out << "Rectf("

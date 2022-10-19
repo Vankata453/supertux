@@ -1,5 +1,5 @@
 //  SuperTux
-//  Copyright (C) 2015 Hume2 <teratux.mail@gmail.com>
+//  Copyright (C) 2022 Vankata453
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -14,43 +14,40 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADER_SUPERTUX_SUPERTUX_MENU_EDITOR_MENU_HPP
-#define HEADER_SUPERTUX_SUPERTUX_MENU_EDITOR_MENU_HPP
+#ifndef HEADER_SUPERTUX_SUPERTUX_MENU_EDITOR_UNDO_STACK_MENU_HPP
+#define HEADER_SUPERTUX_SUPERTUX_MENU_EDITOR_UNDO_STACK_MENU_HPP
 
 #include "gui/menu.hpp"
 
-class EditorMenu final : public Menu
+#include "gui/menu_item.hpp"
+
+class EditorUndoStackMenu final : public Menu
 {
-private:
-  enum MenuIDs {
-    MNID_RETURNTOEDITOR,
-    MNID_SAVELEVEL,
-    MNID_SAVEASLEVEL,
-    MNID_SAVECOPYLEVEL,
-    MNID_TESTLEVEL,
-    MNID_PACK,
-    MNID_OPEN_DIR,
-    MNID_SHARE,
-    MNID_LEVELSEL,
-    MNID_LEVELSETSEL,
-	  MNID_HELP,
-    MNID_QUITEDITOR
+public:
+  enum
+  {
+    UNDO_STACK,
+    REDO_STACK
   };
 
 private:
-  bool m_undo_manager_enabled;
-  int m_undo_stack_size;
-
-public:
-  EditorMenu();
-  ~EditorMenu() override;
-
-  void menu_action(MenuItem& item) override;
-  bool on_back_action() override;
+  static const int s_actions_on_page;
 
 private:
-  EditorMenu(const EditorMenu&) = delete;
-  EditorMenu& operator=(const EditorMenu&) = delete;
+  const int m_stack_type;
+  int m_current_page;
+  int m_stack_size;
+
+public:
+  EditorUndoStackMenu(int stack_type = UNDO_STACK);
+  ~EditorUndoStackMenu() override;
+
+  void rebuild_menu();
+  void menu_action(MenuItem& item) override;
+
+private:
+  EditorUndoStackMenu(const EditorUndoStackMenu&) = delete;
+  EditorUndoStackMenu& operator=(const EditorUndoStackMenu&) = delete;
 };
 
 #endif

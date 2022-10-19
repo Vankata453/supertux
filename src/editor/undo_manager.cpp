@@ -1,5 +1,6 @@
 //  SuperTux
 //  Copyright (C) 2018 Ingo Ruhnke <grumbel@gmail.com>
+//                2022 Vankata453
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -16,125 +17,124 @@
 
 #include "editor/undo_manager.hpp"
 
-#include <sstream>
-#include <iostream>
-
-#include "editor/editor.hpp"
-#include "supertux/level.hpp"
-#include "supertux/level_parser.hpp"
+#include "supertux/gameconfig.hpp"
+#include "supertux/globals.hpp"
 #include "util/log.hpp"
-#include "util/reader_mapping.hpp"
 
 UndoManager::UndoManager() :
-  m_max_snapshots(100),
-  m_index_pos(),
+  m_index_pos(0),
   m_undo_stack(),
   m_redo_stack()
 {
 }
 
 void
-UndoManager::try_snapshot(Level& level)
+UndoManager::push_action(std::unique_ptr<EditorAction> action)
 {
-  std::ostringstream out;
-  level.save(out);
-  std::string level_snapshot = out.str();
-
   if (m_undo_stack.empty())
   {
-    push_undo_stack(std::move(level_snapshot));
+    push_undo_stack(std::move(action));
   }
-  else if (level_snapshot == m_undo_stack.back())
+  else if (action == m_undo_stack.back())
   {
-    log_debug << "skipping snapshot as nothing has changed" << std::endl;
+    log_debug << "Skipping action save, because nothing has changed." << std::endl;
   }
-  else // level_snapshot changed
+  else // Level_snapshot changed
   {
-    push_undo_stack(std::move(level_snapshot));
+    push_undo_stack(std::move(action));
   }
 }
 
 void
-UndoManager::debug_print(const char* action)
+UndoManager::push_undo_stack(std::unique_ptr<EditorAction> action)
 {
-#if 0
-  std::cout << action << std::endl;
-  std::cout << "undo_stack: ";
-  for(size_t i = 0; i < m_undo_stack.size(); ++i) {
-    std::cout << static_cast<const void*>(m_undo_stack[i].data()) << " ";
-  }
-  std::cout << std::endl;
-
-  std::cout << "redo_stack: ";
-  for(size_t i = 0; i < m_redo_stack.size(); ++i) {
-    std::cout << static_cast<const void*>(m_redo_stack[i].data()) << " ";
-  }
-  std::cout << std::endl;
-  std::cout << std::endl;
-#endif
-}
-
-void
-UndoManager::push_undo_stack(std::string&& level_snapshot)
-{
-  log_info << "doing snapshot" << std::endl;
-
   m_redo_stack.clear();
-  m_undo_stack.push_back(std::move(level_snapshot));
+  m_undo_stack.push_back(std::move(action));
   m_index_pos += 1;
 
   cleanup();
-
-  debug_print("snapshot");
 }
 
 void
 UndoManager::cleanup()
 {
-  while (m_undo_stack.size() > m_max_snapshots) {
-    m_undo_stack.erase(m_undo_stack.end() - m_max_snapshots,
-                       m_undo_stack.end());
+  const int& max_snapshots = g_config->editor_undo_stack_size;
+  while (m_undo_stack.size() > max_snapshots)
+  {
+    m_undo_stack.erase(m_undo_stack.begin());
   }
 }
 
-std::unique_ptr<Level>
-UndoManager::undo()
+void
+UndoManager::reset_index()
 {
-  if (m_undo_stack.size() < 2) return {};
-
-  m_redo_stack.push_back(std::move(m_undo_stack.back()));
-  m_undo_stack.pop_back();
-
-  std::istringstream in(m_undo_stack.back());
-  ReaderMapping::s_translations_enabled = false;
-  auto level = LevelParser::from_stream(in, "<undo_stack>", Editor::current()->get_level()->is_worldmap(), true);
-  ReaderMapping::s_translations_enabled = true;
-
-  m_index_pos -= 1;
-
-  debug_print("undo");
-
-  return level;
+  m_index_pos = 0;
+  m_undo_stack.clear();
+  m_redo_stack.clear();
 }
 
-std::unique_ptr<Level>
-UndoManager::redo()
+void
+UndoManager::undo(int steps)
 {
-  if (m_redo_stack.empty()) return {};
+  if (m_undo_stack.empty()) return;
+  if (steps > m_undo_stack.size() || steps < 1)
+  {
+    log_warning << "Cannot perform " << steps << " undo steps." << std::endl;
+    return;
+  }
 
-  m_undo_stack.push_back(std::move(m_redo_stack.back()));
-  m_redo_stack.pop_back();
+  for (int i = 1; i <= steps; i++)
+  {
+    try
+    {
+      m_undo_stack.back()->undo(); // Undo the action.
+    }
+    catch (std::exception& err)
+    {
+      log_warning << "Undo failed at step " << i << ": " << err.what() << std::endl;
+      return;
+    }
 
-  m_index_pos += 1;
+    m_redo_stack.push_back(std::move(m_undo_stack.back()));
+    m_undo_stack.pop_back();
 
-  std::istringstream in(m_undo_stack.back());
-  ReaderMapping::s_translations_enabled = false;
-  auto level = LevelParser::from_stream(in, "<redo_stack>", Editor::current()->get_level()->is_worldmap(), true);
-  ReaderMapping::s_translations_enabled = true;
+    m_index_pos -= 1;
+  }
+}
 
-  debug_print("redo");
+void
+UndoManager::redo(int steps)
+{
+  if (m_redo_stack.empty()) return;
+  if (steps > m_redo_stack.size() || steps < 1)
+  {
+    log_warning << "Cannot perform " << steps << " redo steps." << std::endl;
+    return;
+  }
 
-  return level;
+  for (int i = 1; i <= steps; i++)
+  {
+    try
+    {
+      m_redo_stack.back()->redo(); // Redo the action.
+    }
+    catch (std::exception& err)
+    {
+      log_warning << "Redo failed at step " << i << ": " << err.what() << std::endl;
+      return;
+    }
+
+    m_undo_stack.push_back(std::move(m_redo_stack.back()));
+    m_redo_stack.pop_back();
+
+    m_index_pos += 1;
+  }
+}
+
+bool
+UndoManager::has_unsaved_changes() const
+{
+  return m_index_pos > 0;
 }
 
 /* EOF */

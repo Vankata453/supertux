@@ -19,8 +19,7 @@
 
 #include "math/size.hpp"
 #include "gui/menu.hpp"
-
-class Sector;
+#include "supertux/sector.hpp"
 
 class EditorSectorMenu final : public Menu
 {
@@ -37,7 +36,7 @@ private:
   };
 
   Sector* sector;
-  std::string original_name;
+  Sector::Properties m_original_properties;
 
   Size size;
   Size new_size;

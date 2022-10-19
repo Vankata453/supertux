@@ -127,6 +127,8 @@ public:
   {
     return std::to_string(red) + " " + std::to_string(green) + " " + std::to_string(blue);
   }
+  /** Parse a human-readable string representation for this color back to color values */
+  void from_string(std::string& str);
 
   SDL_Color to_sdl_color() const
   {

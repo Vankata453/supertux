@@ -76,7 +76,7 @@ EditorSectorsMenu::create_sector()
   new_sector->set_name(sector_name);
 
   level->add_sector(std::move(new_sector));
-  Editor::current()->load_sector(sector_name);
+  Editor::current()->load_sector(sector_name, true);
   MenuManager::instance().clear_menu_stack();
   Editor::current()->m_reactivate_request = true;
 }

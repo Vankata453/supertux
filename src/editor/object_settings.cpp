@@ -352,6 +352,32 @@ ObjectSettings::add_list(const std::string& text, const std::string& key, const 
   add_option(std::make_unique<ListOption>(text, key, items, value_ptr));
 }
 
+ObjectOption*
+ObjectSettings::get_option_by_key(const std::string& key) const
+{
+  auto it = std::find_if(m_options.begin(), m_options.end(),
+                           [&key](const std::unique_ptr<ObjectOption>& option) {
+                             return option && option->get_key() == key;
+                           });
+  if (it != m_options.end())
+    return it->get();
+
+  return nullptr;
+}
+
+std::map<std::string, std::string>
+ObjectSettings::get_option_values() const
+{
+  std::map<std::string, std::string> values;
+
+  for (auto& option : m_options)
+  {
+    values.insert({ option->get_key(), option->to_string() });
+  }
+
+  return values;
+}
+
 void
 ObjectSettings::reorder(const std::vector<std::string>& order)
 {

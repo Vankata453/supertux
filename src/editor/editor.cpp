@@ -29,7 +29,6 @@
 
 #include "audio/sound_manager.hpp"
 #include "control/input_manager.hpp"
-#include "editor/button_widget.hpp"
 #include "editor/layer_icon.hpp"
 #include "editor/object_info.hpp"
 #include "editor/particle_editor.hpp"
@@ -37,7 +36,6 @@
 #include "editor/tile_selection.hpp"
 #include "editor/tip.hpp"
 #include "editor/tool_icon.hpp"
-#include "editor/undo_manager.hpp"
 #include "gui/dialog.hpp"
 #include "gui/menu_manager.hpp"
 #include "gui/mousecursor.hpp"
@@ -54,6 +52,7 @@
 #include "supertux/globals.hpp"
 #include "supertux/level.hpp"
 #include "supertux/level_parser.hpp"
+#include "supertux/menu/editor_undo_stack_menu.hpp"
 #include "supertux/menu/menu_storage.hpp"
 #include "supertux/savegame.hpp"
 #include "supertux/screen_fade.hpp"
@@ -108,14 +107,14 @@ Editor::Editor() :
   m_after_setup(false),
   m_tileset(nullptr),
   m_widgets(),
+  m_undo_widget(),
+  m_redo_widget(),
   m_overlay_widget(),
   m_toolbox_widget(),
   m_layers_widget(),
   m_enabled(false),
   m_bgr_surface(Surface::from_file("images/engine/menu/bg_editor.png")),
-  m_undo_manager(new UndoManager),
-  m_ignore_sector_change(false),
-  m_level_first_loaded(false),
+  m_undo_manager(nullptr),
   m_time_since_last_save(0.f),
   m_scroll_speed(32.0f)
 {
@@ -127,13 +126,9 @@ Editor::Editor() :
   m_layers_widget = layers_widget.get();
   m_overlay_widget = overlay_widget.get();
 
-  auto undo_button_widget = std::make_unique<ButtonWidget>("images/engine/editor/undo.png",
-    Vector(10, 10), [this]{ undo(); });
-  auto redo_button_widget = std::make_unique<ButtonWidget>("images/engine/editor/redo.png",
-    Vector(60, 10), [this]{ redo(); });
+  if (g_config->editor_undo_manager)
+    toggle_undo_manager();
 
-  m_widgets.push_back(std::move(undo_button_widget));
-  m_widgets.push_back(std::move(redo_button_widget));
   m_widgets.push_back(std::move(toolbox_widget));
   m_widgets.push_back(std::move(layers_widget));
   m_widgets.push_back(std::move(overlay_widget));
@@ -292,7 +287,7 @@ Editor::save_level(const std::string& filename, bool switch_file)
   if (switch_file)
     m_levelfile = filename;
 
-  m_undo_manager->reset_index();
+  if (m_undo_manager) m_undo_manager->reset_index();
   m_level->save(m_world ? FileSystem::join(m_world->get_basedir(), file) : file);
   m_time_since_last_save = 0.f;
   remove_autosave_file();
@@ -437,13 +432,18 @@ Editor::update_keyboard(const Controller& controller)
 }
 
 void
-Editor::load_sector(const std::string& name)
+Editor::load_sector(const std::string& name, bool new_sector)
 {
   Sector* sector = m_level->get_sector(name);
   if (!sector) {
     sector = m_level->get_sector(0);
   }
   set_sector(sector);
+  if (new_sector)
+  {
+    const int last_idx = static_cast<int>(m_level->m_sectors.size()) - 1;
+    save_action(std::make_unique<SectorCreateAction>(last_idx, sector->get_name()));
+  }
 }
 
 void
@@ -465,6 +465,18 @@ Editor::set_sector(Sector* sector)
 }
 
 void
+Editor::set_sector(int index)
+{
+  set_sector(m_level->m_sectors[index].get());
+}
+
+void
+Editor::set_sector(const std::string& name)
+{
+  set_sector(m_level->get_sector(name));
+}
+
+void
 Editor::delete_current_sector()
 {
   if (m_level->m_sectors.size() <= 1) {
@@ -473,6 +485,8 @@ Editor::delete_current_sector()
 
   for (auto i = m_level->m_sectors.begin(); i != m_level->m_sectors.end(); ++i) {
     if ( i->get() == get_sector() ) {
+      const int idx = std::distance(m_level->m_sectors.begin(), i);
+      save_action(std::make_unique<SectorDeleteAction>(idx, std::move(*i)));
       m_level->m_sectors.erase(i);
       break;
     }
@@ -525,13 +539,8 @@ Editor::set_level(std::unique_ptr<Level> level, bool reset)
   m_layers_widget->refresh_sector_text();
   m_toolbox_widget->update_mouse_icon();
   m_overlay_widget->on_level_change();
-  
-  if (!m_level_first_loaded)
-  {
-    m_undo_manager->try_snapshot(*m_level);
-    m_undo_manager->reset_index();
-    m_level_first_loaded = true;
-  }
+
+  if (m_undo_manager) m_undo_manager->reset_index();
 }
 
 void
@@ -584,11 +593,11 @@ Editor::quit_editor()
 void
 Editor::check_unsaved_changes(const std::function<void ()>& action)
 {
-  if (m_undo_manager->has_unsaved_changes() && m_levelloaded)
+  if ((!m_undo_manager || m_undo_manager->has_unsaved_changes()) && m_levelloaded)
   {
     m_enabled = false;
     auto dialog = std::make_unique<Dialog>();
-    dialog->set_text(_("This level contains unsaved changes, do you want to save?"));
+    dialog->set_text(m_undo_manager ? _("This level contains unsaved changes, do you want to save?") : _("This level may contain unsaved changes, do you want to save?"));
     dialog->add_default_button(_("Yes"), [this, action] {
       check_save_prerequisites([this, action] {
         save_level();
@@ -728,35 +737,16 @@ Editor::event(const SDL_Event& ev)
     }
   }
 
-  
-
     if (ev.type == SDL_KEYDOWN && ev.key.keysym.sym == SDLK_F6) {
       Compositor::s_render_lighting = !Compositor::s_render_lighting;
       return;
     }
-
-    m_ignore_sector_change = false;
 
     BIND_SECTOR(*m_sector);
 
     for(const auto& widget : m_widgets) {
       if (widget->event(ev))
         break;
-    }
-
-    // unreliable heuristic to snapshot the current state for future undo
-    if (((ev.type == SDL_KEYUP && ev.key.repeat == 0 &&
-         ev.key.keysym.sym != SDLK_LSHIFT &&
-         ev.key.keysym.sym != SDLK_RSHIFT &&
-         ev.key.keysym.sym != SDLK_LCTRL &&
-         ev.key.keysym.sym != SDLK_RCTRL) ||
-         ev.type == SDL_MOUSEBUTTONUP))
-    {
-      if (!m_ignore_sector_change) {
-        if (m_level) {
-          m_undo_manager->try_snapshot(*m_level);
-        }
-      }
     }
 
     // Scroll with mouse wheel, if the mouse is not over the toolbox.
@@ -872,29 +862,70 @@ Editor::check_save_prerequisites(const std::function<void ()>& callback) const
 }
 
 void
-Editor::undo()
+Editor::toggle_undo_manager()
 {
-  log_info << "attempting undo" << std::endl;
-  auto level = m_undo_manager->undo();
-  if (level) {
-    set_level(std::move(level), false);
-    m_ignore_sector_change = true;
-  } else {
-    log_info << "undo failed" << std::endl;
+  if (m_undo_manager)
+  {
+    // Re-remove undo manager.
+    m_undo_manager = nullptr;
+
+    // Remove undo and redo button widgets.
+    m_widgets.erase(std::remove_if(
+              m_widgets.begin(), m_widgets.end(),
+              [this](const std::unique_ptr<Widget>& widget) {
+                  const auto* ptr = widget.get();
+                  return ptr == m_undo_widget || ptr == m_redo_widget;
+              }), m_widgets.end());
+    m_undo_widget = nullptr;
+    m_redo_widget = nullptr;
+  }
+  else
+  {
+    // Re-add undo manager.
+    m_undo_manager = std::make_unique<UndoManager>();
+
+    // Re-add undo and redo button widgets.
+    auto undo_button_widget = std::make_unique<ButtonWidget>("images/engine/editor/undo.png",
+      Vector(10, 10), [this]{ undo(); },
+      [this]{
+        m_deactivate_request = true;
+        MenuManager::instance().push_menu(std::make_unique<EditorUndoStackMenu>(EditorUndoStackMenu::UNDO_STACK));
+      },
+      _("Right-click to view undo stack"));
+    auto redo_button_widget = std::make_unique<ButtonWidget>("images/engine/editor/redo.png",
+      Vector(60, 10), [this]{ redo(); },
+      [this]{
+        m_deactivate_request = true;
+        MenuManager::instance().push_menu(std::make_unique<EditorUndoStackMenu>(EditorUndoStackMenu::REDO_STACK));
+      },
+      _("Right-click to view redo stack"));
+
+    m_widgets.insert(m_widgets.begin(), std::move(undo_button_widget));
+    m_undo_widget = dynamic_cast<ButtonWidget*>(m_widgets.front().get());
+    m_widgets.insert(m_widgets.begin() + 1, std::move(redo_button_widget));
+    m_redo_widget = dynamic_cast<ButtonWidget*>(m_widgets[1].get());
   }
 }
 
 void
-Editor::redo()
+Editor::undo(int steps)
 {
-  log_info << "attempting redo" << std::endl;
-  auto level = m_undo_manager->redo();
-  if (level) {
-    set_level(std::move(level), false);
-    m_ignore_sector_change = true;
-  } else {
-    log_info << "redo failed" << std::endl;
-  }
+  if (!m_undo_manager) return;
+  m_undo_manager->undo(steps);
+}
+
+void
+Editor::redo(int steps)
+{
+  if (!m_undo_manager) return;
+  m_undo_manager->redo(steps);
+}
+
+void
+Editor::save_action(std::unique_ptr<EditorAction> action)
+{
+  if (!m_undo_manager) return;
+  m_undo_manager->push_action(std::move(action));
 }
 
 IntegrationStatus

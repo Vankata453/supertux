@@ -163,13 +163,16 @@ Level::save(Writer& writer)
 }
 
 void
-Level::add_sector(std::unique_ptr<Sector> sector)
+Level::add_sector(std::unique_ptr<Sector> sector, int index)
 {
   Sector* test = get_sector(sector->get_name());
   if (test != nullptr) {
     throw std::runtime_error("Trying to add 2 sectors with same name");
-  } else {
+  } else if (index < 0) {
     m_sectors.push_back(std::move(sector));
+  }
+  else {
+    m_sectors.insert(m_sectors.begin() + index, std::move(sector));
   }
 }
 

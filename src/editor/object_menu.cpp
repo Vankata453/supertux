@@ -21,17 +21,17 @@
 #include "gui/menu_manager.hpp"
 #include "supertux/d_scope.hpp"
 #include "supertux/sector.hpp"
-#include "supertux/game_object.hpp"
 #include "supertux/moving_object.hpp"
 
 ObjectMenu::ObjectMenu(Editor& editor, GameObject* go) :
   m_editor(editor),
-  m_object(go)
+  m_object(go),
+  m_object_settings(m_object->get_settings()),
+  m_initial_values(m_object_settings.get_option_values())
 {
-  ObjectSettings os = m_object->get_settings();
-  add_label(os.get_name());
+  add_label(m_object_settings.get_name());
   add_hl();
-  for (const auto& oo_ptr : os.get_options())
+  for (const auto& oo_ptr : m_object_settings.get_options())
   {
     const auto& oo = *oo_ptr;
 
@@ -56,7 +56,7 @@ ObjectMenu::menu_action(MenuItem& item)
       m_editor.delete_markers();
       m_editor.m_reactivate_request = true;
       MenuManager::instance().pop_menu();
-      m_object->remove_me();
+      m_editor.save_action(std::make_unique<ObjectDeleteAction>(m_editor.get_sector()->get_name(), *m_object, true));
       break;
 
     case MNID_TEST_FROM_HERE: {
@@ -83,6 +83,22 @@ ObjectMenu::on_back_action()
 {
   // FIXME: this is a bit fishy, menus shouldn't mess with editor internals
   BIND_SECTOR(*m_editor.get_sector());
+
+  // Get a map of modified options, containing their keys and old values.
+  std::map<std::string, std::string> modified_values;
+  for (auto& value : m_initial_values)
+  {
+    if (m_object_settings.get_option_by_key(value.first)->to_string() != value.second)
+    {
+      // Option has changed.
+      modified_values.insert(value);
+    }
+  }
+  if (modified_values.size() > 0)
+  {
+    m_editor.save_action(std::make_unique<ObjectOptionChangeAction>(m_editor.get_sector()->get_name(),
+        m_object->get_uid(), modified_values));
+  }
 
   m_object->after_editor_set();
 

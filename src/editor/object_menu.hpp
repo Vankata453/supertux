@@ -18,6 +18,7 @@
 #define HEADER_SUPERTUX_EDITOR_OBJECT_MENU_HPP
 
 #include "gui/menu.hpp"
+#include "supertux/game_object.hpp"
 
 class Editor;
 class GameObject;
@@ -41,6 +42,8 @@ public:
 private:
   Editor& m_editor;
   GameObject* m_object;
+  ObjectSettings m_object_settings;
+  std::map<std::string, std::string> m_initial_values;
 
 private:
   ObjectMenu(const ObjectMenu&) = delete;

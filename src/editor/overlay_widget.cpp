@@ -61,11 +61,14 @@ EditorOverlayWidget::EditorOverlayWidget(Editor& editor) :
   m_sector_pos(0, 0),
   m_mouse_pos(0, 0),
   m_previous_mouse_pos(0, 0),
+  m_previous_tiles(),
   m_dragging(false),
   m_dragging_right(false),
   m_scrolling(false),
   m_drag_start(0, 0),
+  m_init_drag_rect(0, 0, 0, 0),
   m_dragged_object(nullptr),
+  m_init_dragged_object(nullptr),
   m_hovered_object(nullptr),
   m_selected_object(nullptr),
   m_edited_path(nullptr),
@@ -163,6 +166,8 @@ EditorOverlayWidget::input_tile(const Vector& pos, uint32_t tile)
     return;
   }
 
+  if (m_previous_tiles.empty()) m_previous_tiles = tilemap->get_tiles();
+
   tilemap->change(static_cast<int>(pos.x), static_cast<int>(pos.y), tile);
 }
 
@@ -180,6 +185,8 @@ EditorOverlayWidget::autotile(const Vector& pos, uint32_t tile)
        pos.y >= static_cast<float>(tilemap->get_height())) {
     return;
   }
+
+  if (m_previous_tiles.empty()) m_previous_tiles = tilemap->get_tiles();
 
   tilemap->autotile(static_cast<int>(pos.x), static_cast<int>(pos.y), tile);
 }
@@ -219,6 +226,8 @@ EditorOverlayWidget::autotile_corner(const Vector& pos, uint32_t tile,
     return;
   }
 
+  if (m_previous_tiles.empty()) m_previous_tiles = tilemap->get_tiles();
+
   tilemap->autotile_corner(static_cast<int>(pos.x), static_cast<int>(pos.y), tile, op);
 }
 
@@ -245,6 +254,9 @@ EditorOverlayWidget::input_autotile_corner(const Vector& corner, uint32_t tile, 
 void
 EditorOverlayWidget::put_tile()
 {
+  if (m_previous_tiles.empty())
+    m_previous_tiles = m_editor.get_selected_tilemap()->get_tiles();
+
   auto tiles = m_editor.get_tiles();
   Vector add_tile(0.0f, 0.0f);
   for (add_tile.x = static_cast<float>(tiles->m_width) - 1.0f; add_tile.x >= 0.0f; add_tile.x--) {
@@ -553,13 +565,19 @@ EditorOverlayWidget::grab_object()
     }
     else
     {
+      if (!dynamic_cast<MarkerObject*>(m_dragged_object.get()))
+        m_init_dragged_object = m_dragged_object;
+
       m_dragged_object = m_hovered_object;
       m_obj_mouse_desync = m_sector_pos - m_hovered_object->get_pos();
 
       auto* pm = dynamic_cast<MarkerObject*>(m_hovered_object.get());
-      if (!pm) {
+      if (!pm)
+      {
         select_object();
+        m_init_dragged_object = m_dragged_object;
       }
+      if (m_init_dragged_object) m_init_drag_rect = m_init_dragged_object->get_bbox();
       m_last_node_marker = dynamic_cast<NodeMarker*>(pm);
     }
   }
@@ -593,19 +611,23 @@ EditorOverlayWidget::clone_object()
       m_obj_mouse_desync = m_sector_pos - m_hovered_object->get_pos();
 
       // clone the current object by means of saving and loading it
-      auto game_object_uptr = [this]{
+      auto object_doc = [this]
+      {
         std::stringstream stream;
         Writer writer(stream);
         writer.start_list(m_hovered_object->get_class_name());
         m_hovered_object->save(writer);
         writer.end_list(m_hovered_object->get_class_name());
 
-        auto doc = ReaderDocument::from_stream(stream);
-        auto object_sx = doc.get_root();
-        return GameObjectFactory::instance().create(object_sx.get_name(), object_sx.get_mapping());
+        return std::make_unique<ReaderDocument>(ReaderDocument::from_stream(stream));
       }();
+      auto object_sx = object_doc->get_root();
 
+      auto game_object_uptr = GameObjectFactory::instance().create(object_sx.get_name(), object_sx.get_mapping());
       GameObject& game_object = m_editor.get_sector()->add_object(std::move(game_object_uptr));
+
+      m_editor.save_action(std::make_unique<ObjectCreateAction>(m_editor.get_sector()->get_name(),
+          std::move(object_doc), game_object.get_uid()));
 
       m_dragged_object = dynamic_cast<MovingObject*>(&game_object);
       m_dragged_object->after_editor_set();
@@ -670,7 +692,7 @@ EditorOverlayWidget::rubber_object()
     delete_markers();
   }
   if (m_dragged_object) {
-    m_dragged_object->editor_delete();
+    m_editor.save_action(std::make_unique<ObjectDeleteAction>(m_editor.get_sector()->get_name(), *(m_dragged_object.get())));
   }
   m_last_node_marker = nullptr;
 }
@@ -683,7 +705,7 @@ EditorOverlayWidget::rubber_rect()
   for (auto& moving_object : m_editor.get_sector()->get_objects_by_type<MovingObject>()) {
     Rectf bbox = moving_object.get_bbox();
     if (dr.contains(bbox)) {
-      moving_object.editor_delete();
+      m_editor.save_action(std::make_unique<ObjectDeleteAction>(m_editor.get_sector()->get_name(), moving_object));
     }
   }
   m_last_node_marker = nullptr;
@@ -749,14 +771,17 @@ EditorOverlayWidget::put_object()
       auto& snap_grid_size = snap_grid_sizes[g_config->editor_selected_snap_grid_size];
       target_pos = glm::floor(m_sector_pos / static_cast<float>(snap_grid_size)) * static_cast<float>(snap_grid_size);
     }
+    const auto direction = Direction::LEFT;
 
-    auto object = GameObjectFactory::instance().create(object_class, target_pos, Direction::LEFT);
+    auto object = GameObjectFactory::instance().create(object_class, target_pos, direction);
     object->after_editor_set();
 
+    bool is_layer = false;
     auto* mo = dynamic_cast<MovingObject*> (object.get());
     if (!mo) {
       if (!dynamic_cast<PathGameObject*>(object.get())) {
         m_editor.add_layer(object.get());
+        is_layer = true;
       }
     } else if (!g_config->editor_snap_to_grid) {
       auto bbox = mo->get_bbox();
@@ -768,7 +793,10 @@ EditorOverlayWidget::put_object()
       wo->move_to(wo->get_pos() / 32.0f);
     }
 
-    m_editor.get_sector()->add_object(std::move(object));
+    const auto uid = m_editor.get_sector()->add_object(std::move(object)).get_uid();
+
+    m_editor.save_action(std::make_unique<ObjectCreateAction>(m_editor.get_sector()->get_name(),
+        object_class, uid, target_pos, direction, is_layer));
   }
 }
 
@@ -925,13 +953,31 @@ EditorOverlayWidget::on_mouse_button_up(const SDL_MouseButtonEvent& button)
 {
   if (button.button == SDL_BUTTON_LEFT)
   {
-    if (m_editor.get_tileselect_input_type() == EditorToolboxWidget::InputType::TILE
-        && m_editor.get_tileselect_select_mode() == 1)
+    const auto input_type = m_editor.get_tileselect_input_type();
+    if (input_type == EditorToolboxWidget::InputType::TILE)
     {
-      if (m_dragging)
+      if (m_dragging && m_editor.get_tileselect_select_mode() == 1)
       {
         draw_rectangle();
         m_rectangle_preview->m_tiles.clear();
+      }
+
+      if (m_editor.get_selected_tilemap()->get_tiles() != m_previous_tiles && !m_previous_tiles.empty())
+      {
+        m_editor.save_action(std::make_unique<TilePlaceAction>(m_editor.get_sector()->get_name(),
+            m_editor.get_selected_tilemap()->get_uid(), m_previous_tiles));
+        m_previous_tiles.clear();
+      }
+    }
+    else if (input_type == EditorToolboxWidget::InputType::OBJECT)
+    {
+      if (m_dragging && m_init_dragged_object)
+      {
+        if (m_init_dragged_object->get_bbox() != m_init_drag_rect)
+        {
+          m_editor.save_action(std::make_unique<ObjectMoveAction>(m_editor.get_sector()->get_name(),
+              m_init_dragged_object->get_uid(), m_init_drag_rect));
+        }
       }
     }
   }

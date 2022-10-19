@@ -63,6 +63,19 @@ public:
   static Sector& get() { assert(s_current != nullptr); return *s_current; }
   static Sector* current() { return s_current; }
 
+/** Store all sector properties.
+    Not used by the Sector class itself, but rather as a convenient parameter. */
+  struct Properties
+  {
+    std::string name;
+    std::string init_script;
+    float gravity;
+  };
+  static bool PropertiesEqual(Properties a, Properties b)
+  {
+    return a.name == b.name && a.init_script == b.init_script && a.gravity == b.gravity;
+  }
+
 public:
   Sector(Level& parent);
   ~Sector() override;
@@ -72,6 +85,9 @@ public:
   void finish_construction(bool editable);
 
   Level& get_level() const;
+
+  Properties get_properties() const;
+  void set_properties(Properties properties);
 
   /** activates this sector (change music, initialize player class, ...) */
   void activate(const std::string& spawnpoint);

@@ -44,6 +44,11 @@ Tip::Tip(GameObject& object) :
       auto value = oo.to_string();
       if (!value.empty())
       {
+        // Replace anything after potential new line character with "...".
+        auto new_line_char = value.find('\n');
+        if (new_line_char != std::string::npos)
+          value = value.substr(0, new_line_char) + "...";
+
         m_strings.push_back(oo.get_text() + ": " + value);
       }
     }

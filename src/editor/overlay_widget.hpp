@@ -124,11 +124,15 @@ private:
   Vector m_mouse_pos;
   Vector m_previous_mouse_pos;
 
+  std::vector<uint32_t> m_previous_tiles;
+
   bool m_dragging;
   bool m_dragging_right;
   bool m_scrolling;
   Vector m_drag_start;
+  Rectf m_init_drag_rect;
   TypedUID<MovingObject> m_dragged_object;
+  TypedUID<MovingObject> m_init_dragged_object; // Dragged object, assured to not be a marker.
 
   TypedUID<MovingObject> m_hovered_object;
   TypedUID<GameObject> m_selected_object;

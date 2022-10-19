@@ -1,5 +1,6 @@
 //  SuperTux
 //  Copyright (C) 2018 Ingo Ruhnke <grumbel@gmail.com>
+//                2022 Vankata453
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -19,41 +20,34 @@
 
 #include <vector>
 #include <string>
-#include <memory>
+
+#include "editor/action.hpp"
 
 class Level;
 
 class UndoManager
 {
-private:
+  friend class EditorUndoStackMenu;
+
 public:
   UndoManager();
 
-  void try_snapshot(Level& level);
-
-  std::unique_ptr<Level> undo();
-  std::unique_ptr<Level> redo();
-
-  bool has_unsaved_changes() const
-  {
-    return m_index_pos != 1;
-  }
-
-  void reset_index()
-  {
-    m_index_pos = 1;
-  }
-
-private:
-  void push_undo_stack(std::string&& level_snapshot);
+  void push_action(std::unique_ptr<EditorAction> action);
   void cleanup();
-  void debug_print(const char* action);
+  void reset_index();
+
+  void undo(int steps = 1);
+  void redo(int steps = 1);
+
+  bool has_unsaved_changes() const;
 
 private:
-  size_t m_max_snapshots;
+  void push_undo_stack(std::unique_ptr<EditorAction> action);
+
+private:
   int m_index_pos;
-  std::vector<std::string> m_undo_stack;
-  std::vector<std::string> m_redo_stack;
+  std::vector<std::unique_ptr<EditorAction>> m_undo_stack;
+  std::vector<std::unique_ptr<EditorAction>> m_redo_stack;
 
 private:
   UndoManager(const UndoManager&) = delete;

@@ -22,13 +22,18 @@
 #include "video/video_system.hpp"
 
 ButtonWidget::ButtonWidget(SpritePtr sprite, const Vector& pos,
-                           std::function<void()> sig_click) :
+                           std::function<void()> sig_left_click,
+                           std::function<void()> sig_right_click,
+                           std::string hover_text) :
   m_sprite(std::move(sprite)),
   m_rect(pos, Sizef(static_cast<float>(m_sprite->get_width()),
                     static_cast<float>(m_sprite->get_width()))),
   m_grab(false),
   m_hover(false),
-  m_sig_click(std::move(sig_click))
+  m_sig_left_click(std::move(sig_left_click)),
+  m_sig_right_click(std::move(sig_right_click)),
+  m_hover_tip(hover_text.empty() ? nullptr : std::make_unique<Tip>(hover_text)),
+  m_mouse_pos()
 {
 }
 
@@ -48,6 +53,7 @@ ButtonWidget::draw(DrawingContext& context)
   } else if (m_hover) {
     context.color().draw_filled_rect(m_rect, g_config->editorhovercolor, 4.0f,
                                      LAYER_GUI-5);
+    if (m_hover_tip) m_hover_tip->draw(context, m_mouse_pos);
   }
 }
 
@@ -69,14 +75,24 @@ ButtonWidget::resize()
 bool
 ButtonWidget::on_mouse_button_up(const SDL_MouseButtonEvent& button)
 {
-  if (button.button != SDL_BUTTON_LEFT) return false;
-
-  Vector mouse_pos = VideoSystem::current()->get_viewport().to_logical(button.x, button.y);
+  m_mouse_pos = VideoSystem::current()->get_viewport().to_logical(button.x, button.y);
 
   if (m_grab) {
-    if (m_rect.contains(mouse_pos)) {
-      if (m_sig_click) {
-        m_sig_click();
+    if (m_rect.contains(m_mouse_pos)) {
+      switch (button.button)
+      {
+        case SDL_BUTTON_LEFT:
+        {
+          if (m_sig_left_click) m_sig_left_click();
+          m_hover = !m_sig_left_click;
+          break;
+        }
+        case SDL_BUTTON_RIGHT:
+        {
+          if (m_sig_right_click) m_sig_right_click();
+          m_hover = !m_sig_right_click;
+          break;
+        }
       }
     }
     m_grab = false;
@@ -90,11 +106,11 @@ ButtonWidget::on_mouse_button_up(const SDL_MouseButtonEvent& button)
 bool
 ButtonWidget::on_mouse_button_down(const SDL_MouseButtonEvent& button)
 {
-  if (button.button != SDL_BUTTON_LEFT) return false;
+  if (button.button != SDL_BUTTON_LEFT && button.button != SDL_BUTTON_RIGHT) return false;
 
-  Vector mouse_pos = VideoSystem::current()->get_viewport().to_logical(button.x, button.y);
+  m_mouse_pos = VideoSystem::current()->get_viewport().to_logical(button.x, button.y);
 
-  if (m_rect.contains(mouse_pos)) {
+  if (m_rect.contains(m_mouse_pos)) {
     m_hover = true;
     m_grab = true;
     return true;
@@ -107,12 +123,12 @@ ButtonWidget::on_mouse_button_down(const SDL_MouseButtonEvent& button)
 bool
 ButtonWidget::on_mouse_motion(const SDL_MouseMotionEvent& motion)
 {
-  Vector mouse_pos = VideoSystem::current()->get_viewport().to_logical(motion.x, motion.y);
+  m_mouse_pos = VideoSystem::current()->get_viewport().to_logical(motion.x, motion.y);
 
   if (m_grab) {
-    m_hover = m_rect.contains(mouse_pos);
+    m_hover = m_rect.contains(m_mouse_pos);
     return true;
-  } else if (m_rect.contains(mouse_pos)) {
+  } else if (m_rect.contains(m_mouse_pos)) {
     m_hover = true;
     return false;
   } else {

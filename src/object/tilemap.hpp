@@ -83,7 +83,7 @@ public:
   /** resizes the tilemap to a new width and height (tries to not
       destroy the existing map) */
   void resize(int newwidth, int newheight, int fill_id = 0,
-              int xoffset = 0, int yoffset = 0);
+              int xoffset = 0, int yoffset = 0, bool save_action = false);
   void resize(const Size& newsize, const Size& resize_offset);
 
   int get_width() const { return m_width; }
@@ -207,6 +207,7 @@ public:
   void set_tileset(const TileSet* new_tileset);
 
   const std::vector<uint32_t>& get_tiles() const { return m_tiles; }
+  void set_tiles(std::vector<uint32_t>& tiles) { m_tiles = tiles; }
 
 private:
   void update_effective_solid();

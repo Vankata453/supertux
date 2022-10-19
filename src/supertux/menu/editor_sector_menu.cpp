@@ -19,12 +19,11 @@
 #include "gui/menu_item.hpp"
 #include "editor/editor.hpp"
 #include "supertux/level.hpp"
-#include "supertux/sector.hpp"
 #include "util/gettext.hpp"
 
 EditorSectorMenu::EditorSectorMenu() :
   sector(Editor::current()->get_sector()),
-  original_name(sector->get_name()),
+  m_original_properties(sector->get_properties()),
   size(sector->get_editor_size()),
   new_size(size),
   offset(0, 0)
@@ -59,13 +58,19 @@ EditorSectorMenu::~EditorSectorMenu()
     if (sector_->get_name() == sector->get_name()) {
       if (is_sector) {
         // Puts the name that was there before when the name is already used.
-        sector->set_name(original_name);
+        sector->set_name(m_original_properties.name);
         break;
       } else {
         is_sector = true;
       }
     }
   }
+
+  if (Sector::PropertiesEqual(m_original_properties, sector->get_properties()))
+    return; // If no properties have changed, do not proceed saving a level action.
+
+  Editor::current()->save_action(std::make_unique<SectorPropertyChangeAction>(
+    sector->get_properties(), m_original_properties));
 }
 
 void

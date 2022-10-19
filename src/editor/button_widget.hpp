@@ -21,6 +21,7 @@
 
 #include <functional>
 
+#include "editor/tip.hpp"
 #include "math/rectf.hpp"
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
@@ -29,9 +30,12 @@ class ButtonWidget : public Widget
 {
 private:
 public:
-  ButtonWidget(SpritePtr sprite, const Vector& pos, std::function<void()> m_sig_click = {});
-  ButtonWidget(const std::string& path, const Vector& pos, std::function<void()> callback = {}) :
-    ButtonWidget(SpriteManager::current()->create(path), pos, std::move(callback))
+  ButtonWidget(SpritePtr sprite, const Vector& pos, std::function<void()> sig_left_click = {},
+               std::function<void()> sig_right_click = {}, std::string hover_text = "");
+  ButtonWidget(const std::string& path, const Vector& pos, std::function<void()> callback_left = {},
+               std::function<void()> callback_right = {}, std::string hover_text = "") :
+    ButtonWidget(SpriteManager::current()->create(path), pos, std::move(callback_left),
+                 std::move(callback_right), hover_text)
   {
   }
 
@@ -50,7 +54,11 @@ private:
   Rectf m_rect;
   bool m_grab;
   bool m_hover;
-  std::function<void()> m_sig_click;
+  std::function<void()> m_sig_left_click;
+  std::function<void()> m_sig_right_click;
+  std::unique_ptr<Tip> m_hover_tip;
+
+  Vector m_mouse_pos;
 
 private:
   ButtonWidget(const ButtonWidget&) = delete;

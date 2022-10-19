@@ -116,4 +116,29 @@ Color::toVector()
   return result;
 }
 
+void
+Color::from_string(std::string& str)
+{
+  std::vector<float> values;
+  std::string current_num;
+
+  str += " ";
+  for (auto& ch : str)
+  {
+    if (std::isspace(ch))
+    {
+      values.push_back(std::stof(current_num));
+      current_num.clear();
+      continue;
+    }
+    current_num += ch;
+  }
+
+  assert(values.size() >= 3);
+
+  red = values[0];
+  green = values[1];
+  blue = values[2];
+}
+
 /* EOF */

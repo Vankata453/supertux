@@ -189,6 +189,20 @@ Sector::get_level() const
   return m_level;
 }
 
+Sector::Properties
+Sector::get_properties() const
+{
+  return { m_name, m_init_script, m_gravity };
+}
+
+void
+Sector::set_properties(Properties properties)
+{
+  m_name = properties.name;
+  m_init_script = properties.init_script;
+  m_gravity = properties.gravity;
+}
+
 void
 Sector::activate(const std::string& spawnpoint)
 {
@@ -572,6 +586,9 @@ Sector::get_editor_size() const
 void
 Sector::resize_sector(const Size& old_size, const Size& new_size, const Size& resize_offset)
 {
+  if (Editor::is_active())
+    Editor::current()->save_action(std::make_unique<SectorResizeAction>(m_name));
+
   BIND_SECTOR(*this);
 
   bool is_offset = resize_offset.width || resize_offset.height;

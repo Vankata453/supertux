@@ -23,10 +23,12 @@
 
 #include <physfs.h>
 
+#include "editor/button_widget.hpp"
 #include "editor/overlay_widget.hpp"
 #include "editor/toolbox_widget.hpp"
 #include "editor/layers_widget.hpp"
 #include "editor/scroller_widget.hpp"
+#include "editor/undo_manager.hpp"
 #include "supertux/screen.hpp"
 #include "supertux/world.hpp"
 #include "util/currenton.hpp"
@@ -123,7 +125,7 @@ public:
   void check_save_prerequisites(const std::function<void ()>& callback) const;
   void check_unsaved_changes(const std::function<void ()>& action);
 
-  void load_sector(const std::string& name);
+  void load_sector(const std::string& name, bool new_sector = false);
   void delete_current_sector();
 
   void update_node_iterators();
@@ -147,13 +149,20 @@ public:
   }
 
   void add_layer(GameObject* layer) { m_layers_widget->add_layer(layer); }
+  void refresh_layers() { m_layers_widget->refresh(); }
+  void update_layer_tip() { m_layers_widget->update_current_tip(); }
 
   TileMap* get_selected_tilemap() const { return m_layers_widget->get_selected_tilemap(); }
 
   Sector* get_sector() { return m_sector; }
+  void set_sector(int index);
+  void set_sector(const std::string& name);
 
-  void undo();
-  void redo();
+  UndoManager* get_undo_manager() const { return m_undo_manager.get(); }
+  void toggle_undo_manager();
+  void undo(int steps = 1);
+  void redo(int steps = 1);
+  void save_action(std::unique_ptr<EditorAction> action);
 
   void pack_addon();
 
@@ -205,6 +214,8 @@ private:
   TileSet* m_tileset;
 
   std::vector<std::unique_ptr<Widget> > m_widgets;
+  ButtonWidget* m_undo_widget;
+  ButtonWidget* m_redo_widget;
   EditorOverlayWidget* m_overlay_widget;
   EditorToolboxWidget* m_toolbox_widget;
   EditorLayersWidget* m_layers_widget;
@@ -213,10 +224,7 @@ private:
   SurfacePtr m_bgr_surface;
 
   std::unique_ptr<UndoManager> m_undo_manager;
-  bool m_ignore_sector_change;
-  
-  bool m_level_first_loaded;
-  
+
   float m_time_since_last_save;
 
   float m_scroll_speed;

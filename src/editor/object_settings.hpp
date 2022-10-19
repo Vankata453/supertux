@@ -19,6 +19,7 @@
 
 #include <vector>
 #include <memory>
+#include <map>
 
 #include "editor/object_option.hpp"
 #include "object/path_walker.hpp"
@@ -158,6 +159,10 @@ public:
   void add_button(const std::string& text, const std::function<void()>& callback);
 
   const std::vector<std::unique_ptr<ObjectOption> >& get_options() const { return m_options; }
+  ObjectOption* get_option_by_key(const std::string& key) const;
+
+  /** Get all saved values of options, identified by keys. */
+  std::map<std::string, std::string> get_option_values() const;
 
   /** Reorder the options in the given order, this is a hack to get
       saving identical to the other editor */
