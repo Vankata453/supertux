@@ -21,6 +21,7 @@
 #include "editor/bezier_marker.hpp"
 #include "editor/node_marker.hpp"
 #include "math/easing.hpp"
+#include "object/path_gameobject.hpp"
 #include "supertux/sector.hpp"
 #include "util/reader_mapping.hpp"
 #include "util/writer.hpp"
@@ -248,6 +249,20 @@ Path::on_flip(float height)
     node.bezier_before.y = height - node.bezier_before.y;
     node.bezier_after.y = height - node.bezier_after.y;
   }
+}
+
+PathGameObject*
+Path::get_path_gameobject() const
+{
+  const auto& path_game_objects = Sector::get().get_objects_by_type<PathGameObject>();
+
+  for (auto& path_game_obj : path_game_objects)
+  {
+    if (path_game_obj.get_path_ptr() == this)
+      return &path_game_obj;
+  }
+
+  return nullptr;
 }
 
 /* EOF */

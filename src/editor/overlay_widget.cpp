@@ -61,21 +61,25 @@ EditorOverlayWidget::EditorOverlayWidget(Editor& editor) :
   m_sector_pos(0, 0),
   m_mouse_pos(0, 0),
   m_previous_mouse_pos(0, 0),
-  m_previous_tiles(),
   m_dragging(false),
   m_dragging_right(false),
   m_scrolling(false),
   m_drag_start(0, 0),
-  m_init_drag_rect(0, 0, 0, 0),
   m_dragged_object(nullptr),
-  m_init_dragged_object(nullptr),
   m_hovered_object(nullptr),
   m_selected_object(nullptr),
   m_edited_path(nullptr),
   m_last_node_marker(nullptr),
+  m_last_bezier_marker(nullptr),
   m_object_tip(),
   m_obj_mouse_desync(0, 0),
-  m_rectangle_preview(new TileSelection())
+  m_rectangle_preview(new TileSelection()),
+  m_previous_tiles(),
+  m_previous_nodes(),
+  m_last_node_marker_pos(),
+  m_last_bezier_marker_pos(0, 0),
+  m_init_dragged_object(nullptr),
+  m_init_drag_rect(0, 0, 0, 0)
 {
 }
 
@@ -577,8 +581,21 @@ EditorOverlayWidget::grab_object()
         select_object();
         m_init_dragged_object = m_dragged_object;
       }
+
       if (m_init_dragged_object) m_init_drag_rect = m_init_dragged_object->get_bbox();
+
       m_last_node_marker = dynamic_cast<NodeMarker*>(pm);
+      m_last_bezier_marker = dynamic_cast<BezierMarker*>(pm);
+      if (m_last_bezier_marker)
+      {
+        m_last_node_marker = m_last_bezier_marker->get_parent();
+        m_last_bezier_marker_pos = m_last_bezier_marker->get_pos();
+      }
+      if (m_last_node_marker)
+      {
+        m_previous_nodes = m_last_node_marker->get_path()->get_nodes();
+        m_last_node_marker_pos = m_last_node_marker->m_node->position;
+      }
     }
   }
   else
@@ -626,8 +643,8 @@ EditorOverlayWidget::clone_object()
       auto game_object_uptr = GameObjectFactory::instance().create(object_sx.get_name(), object_sx.get_mapping());
       GameObject& game_object = m_editor.get_sector()->add_object(std::move(game_object_uptr));
 
-      m_editor.save_action(std::make_unique<ObjectCreateAction>(m_editor.get_sector()->get_name(),
-          std::move(object_doc), game_object.get_uid()));
+      m_editor.save_action<ObjectCreateAction>(m_editor.get_sector()->get_name(),
+          std::move(object_doc), game_object.get_uid());
 
       m_dragged_object = dynamic_cast<MovingObject*>(&game_object);
       m_dragged_object->after_editor_set();
@@ -692,7 +709,16 @@ EditorOverlayWidget::rubber_object()
     delete_markers();
   }
   if (m_dragged_object) {
-    m_editor.save_action(std::make_unique<ObjectDeleteAction>(m_editor.get_sector()->get_name(), *(m_dragged_object.get())));
+    auto* node_marker = dynamic_cast<NodeMarker*>(m_dragged_object.get());
+    if (node_marker)
+    {
+      m_editor.save_action<PathNodeModifyAction>(m_editor.get_sector()->get_name(), node_marker);
+      node_marker->editor_delete();
+    }
+    else if (dynamic_cast<PathObject*>(m_dragged_object.get()))
+      m_editor.save_action<PathObjectDeleteAction>(m_editor.get_sector()->get_name(), *(m_dragged_object.get()));
+    else
+      m_editor.save_action<ObjectDeleteAction>(m_editor.get_sector()->get_name(), *(m_dragged_object.get()));
   }
   m_last_node_marker = nullptr;
 }
@@ -705,7 +731,7 @@ EditorOverlayWidget::rubber_rect()
   for (auto& moving_object : m_editor.get_sector()->get_objects_by_type<MovingObject>()) {
     Rectf bbox = moving_object.get_bbox();
     if (dr.contains(bbox)) {
-      m_editor.save_action(std::make_unique<ObjectDeleteAction>(m_editor.get_sector()->get_name(), moving_object));
+      m_editor.save_action<ObjectDeleteAction>(m_editor.get_sector()->get_name(), moving_object);
     }
   }
   m_last_node_marker = nullptr;
@@ -729,6 +755,8 @@ EditorOverlayWidget::update_node_iterators()
 void
 EditorOverlayWidget::add_path_node()
 {
+  m_editor.save_action<PathNodeModifyAction>(m_editor.get_sector()->get_name(), m_last_node_marker.get());
+
   Path::Node new_node;
   new_node.position = m_sector_pos;
   new_node.bezier_before = new_node.position;
@@ -795,8 +823,8 @@ EditorOverlayWidget::put_object()
 
     const auto uid = m_editor.get_sector()->add_object(std::move(object)).get_uid();
 
-    m_editor.save_action(std::make_unique<ObjectCreateAction>(m_editor.get_sector()->get_name(),
-        object_class, uid, target_pos, direction, is_layer));
+    m_editor.save_action<ObjectCreateAction>(m_editor.get_sector()->get_name(),
+        object_class, uid, target_pos, direction, is_layer);
   }
 }
 
@@ -964,19 +992,25 @@ EditorOverlayWidget::on_mouse_button_up(const SDL_MouseButtonEvent& button)
 
       if (m_editor.get_selected_tilemap()->get_tiles() != m_previous_tiles && !m_previous_tiles.empty())
       {
-        m_editor.save_action(std::make_unique<TilePlaceAction>(m_editor.get_sector()->get_name(),
-            m_editor.get_selected_tilemap()->get_uid(), m_previous_tiles));
+        m_editor.save_action<TilePlaceAction>(m_editor.get_sector()->get_name(),
+            m_editor.get_selected_tilemap()->get_uid(), m_previous_tiles);
         m_previous_tiles.clear();
       }
     }
     else if (input_type == EditorToolboxWidget::InputType::OBJECT)
     {
-      if (m_dragging && m_init_dragged_object)
+      if (m_dragging)
       {
-        if (m_init_dragged_object->get_bbox() != m_init_drag_rect)
+        if ((m_last_node_marker && m_last_node_marker->m_node->position != m_last_node_marker_pos) ||
+            (m_last_bezier_marker && m_last_bezier_marker->get_pos() != m_last_bezier_marker_pos))
         {
-          m_editor.save_action(std::make_unique<ObjectMoveAction>(m_editor.get_sector()->get_name(),
-              m_init_dragged_object->get_uid(), m_init_drag_rect));
+          m_editor.save_action<PathNodeMoveAction>(m_editor.get_sector()->get_name(),
+              m_last_node_marker.get(), m_previous_nodes);
+        }
+        else if (m_init_dragged_object && m_init_dragged_object->get_bbox() != m_init_drag_rect)
+        {
+          m_editor.save_action<ObjectMoveAction>(m_editor.get_sector()->get_name(),
+              m_init_dragged_object->get_uid(), m_init_drag_rect);
         }
       }
     }

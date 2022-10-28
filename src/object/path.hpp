@@ -27,6 +27,7 @@
 #include "math/easing.hpp"
 
 class ObjectOption;
+class PathGameObject;
 class ReaderMapping;
 class Writer;
 
@@ -92,6 +93,8 @@ public:
   bool is_valid() const;
 
   const std::vector<Node>& get_nodes() const { return m_nodes; }
+
+  PathGameObject* get_path_gameobject() const;
 
 public:
   std::vector<Node> m_nodes;

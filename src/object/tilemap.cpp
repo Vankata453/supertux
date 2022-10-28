@@ -543,8 +543,8 @@ TileMap::resize(int new_width, int new_height, int fill_id,
 {
   if (Editor::is_active() && save_action)
   {
-    Editor::current()->save_action(std::make_unique<TileMapResizeAction>(Editor::current()->get_sector()->get_name(),
-      get_uid()));
+    Editor::current()->save_action<TileMapResizeAction>(Editor::current()->get_sector()->get_name(),
+        get_uid());
   }
 
   bool offset_finished_x = false;

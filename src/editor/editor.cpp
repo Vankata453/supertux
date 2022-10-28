@@ -442,7 +442,7 @@ Editor::load_sector(const std::string& name, bool new_sector)
   if (new_sector)
   {
     const int last_idx = static_cast<int>(m_level->m_sectors.size()) - 1;
-    save_action(std::make_unique<SectorCreateAction>(last_idx, sector->get_name()));
+    save_action<SectorCreateAction>(last_idx, sector->get_name());
   }
 }
 
@@ -486,7 +486,7 @@ Editor::delete_current_sector()
   for (auto i = m_level->m_sectors.begin(); i != m_level->m_sectors.end(); ++i) {
     if ( i->get() == get_sector() ) {
       const int idx = std::distance(m_level->m_sectors.begin(), i);
-      save_action(std::make_unique<SectorDeleteAction>(idx, std::move(*i)));
+      save_action<SectorDeleteAction>(idx, std::move(*i));
       m_level->m_sectors.erase(i);
       break;
     }
@@ -919,13 +919,6 @@ Editor::redo(int steps)
 {
   if (!m_undo_manager) return;
   m_undo_manager->redo(steps);
-}
-
-void
-Editor::save_action(std::unique_ptr<EditorAction> action)
-{
-  if (!m_undo_manager) return;
-  m_undo_manager->push_action(std::move(action));
 }
 
 IntegrationStatus

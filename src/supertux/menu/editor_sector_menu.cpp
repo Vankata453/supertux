@@ -69,8 +69,8 @@ EditorSectorMenu::~EditorSectorMenu()
   if (Sector::PropertiesEqual(m_original_properties, sector->get_properties()))
     return; // If no properties have changed, do not proceed saving a level action.
 
-  Editor::current()->save_action(std::make_unique<SectorPropertyChangeAction>(
-    sector->get_properties(), m_original_properties));
+  Editor::current()->save_action<SectorPropertyChangeAction>(sector->get_properties(),
+      m_original_properties);
 }
 
 void

@@ -414,7 +414,7 @@ public:
 
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
-  virtual void from_string(std::string& str) override {};
+  virtual void from_string(std::string& str) override {}
   virtual void add_to_menu(Menu& menu) const override;
 
 private:

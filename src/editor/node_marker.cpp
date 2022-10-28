@@ -121,8 +121,8 @@ NodeMarker::get_settings()
 {
   ObjectSettings result(_("Path Node"));
   result.add_label(_("Press CTRL to move Bezier handles"));
-  result.add_float(_("Time"), &(m_node->time));
-  result.add_float(_("Speed"), &(m_node->speed));
+  result.add_float(_("Time"), &(m_node->time), "time");
+  result.add_float(_("Speed"), &(m_node->speed), "speed");
   
   result.add_enum(_("Easing"), reinterpret_cast<int*>(&(m_node->easing)),
                   {

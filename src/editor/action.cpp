@@ -18,7 +18,6 @@
 
 #include "editor/editor.hpp"
 #include "editor/worldmap_objects.hpp"
-#include "object/path.hpp"
 #include "object/tilemap.hpp"
 #include "supertux/game_object_factory.hpp"
 #include "supertux/level.hpp"
@@ -28,19 +27,8 @@
 #include "util/reader_object.hpp"
 #include "util/writer.hpp"
 
+// Base class for all editor actions.
 EditorAction::EditorAction()
-{
-}
-
-// Operations
-
-void
-EditorAction::undo()
-{
-}
-
-void
-EditorAction::redo()
 {
 }
 
@@ -156,10 +144,34 @@ SectorPropertyChangeAction::redo()
 }
 
 
-TilePlaceAction::TilePlaceAction(std::string sector, UID tilemap_uid, std::vector<uint32_t> old_tiles) :
+// Base class for all object actions.
+ObjectAction::ObjectAction(std::string sector, UID uid) :
   EditorAction(),
   m_sector(sector),
-  m_uid(tilemap_uid),
+  m_uid(uid)
+{
+}
+
+void
+ObjectAction::undo()
+{
+}
+
+void
+ObjectAction::redo()
+{
+  undo(); // Mirror the undo action.
+}
+
+GameObject*
+ObjectAction::get_object_by_uid()
+{
+  return get_sector(m_sector)->get_object_by_uid(m_uid);
+}
+
+
+TilePlaceAction::TilePlaceAction(std::string sector, UID tilemap_uid, std::vector<uint32_t> old_tiles) :
+  ObjectAction(sector, tilemap_uid),
   m_tilemap_tiles(old_tiles)
 {
 }
@@ -167,7 +179,7 @@ TilePlaceAction::TilePlaceAction(std::string sector, UID tilemap_uid, std::vecto
 void
 TilePlaceAction::undo()
 {
-  auto* tilemap = dynamic_cast<TileMap*>(get_sector(m_sector)->get_object_by_uid(m_uid));
+  auto* tilemap = dynamic_cast<TileMap*>(get_object_by_uid());
 
   const auto current_tiles = tilemap->get_tiles();
   tilemap->set_tiles(m_tilemap_tiles);
@@ -176,17 +188,9 @@ TilePlaceAction::undo()
   go_to_sector(m_sector);
 }
 
-void
-TilePlaceAction::redo()
-{
-  undo(); // Mirror the undo action.
-}
-
 
 ObjectCreateAction::ObjectCreateAction(std::string sector, std::string object_class, UID uid, Vector target_pos, Direction direction, bool layer) :
-  EditorAction(),
-  m_sector(sector),
-  m_uid(uid),
+  ObjectAction(sector, uid),
   m_layer(layer),
   m_create_mode(CREATE_ATTRIBUTES),
   m_object_class(object_class),
@@ -196,9 +200,7 @@ ObjectCreateAction::ObjectCreateAction(std::string sector, std::string object_cl
 }
 
 ObjectCreateAction::ObjectCreateAction(std::string sector, std::unique_ptr<ReaderDocument> object_reader, UID uid, bool layer) :
-  EditorAction(),
-  m_sector(sector),
-  m_uid(uid),
+  ObjectAction(sector, uid),
   m_layer(layer),
   m_create_mode(CREATE_READER),
   m_object_reader(std::move(object_reader))
@@ -208,7 +210,7 @@ ObjectCreateAction::ObjectCreateAction(std::string sector, std::unique_ptr<Reade
 void
 ObjectCreateAction::undo()
 {
-  get_sector(m_sector)->get_object_by_uid(m_uid)->editor_delete();
+  get_object_by_uid()->editor_delete();
   go_to_sector(m_sector);
   if (m_layer) Editor::current()->refresh_layers();
   Editor::current()->delete_markers();
@@ -217,6 +219,8 @@ ObjectCreateAction::undo()
 void
 ObjectCreateAction::redo()
 {
+  BIND_SECTOR(*get_sector(m_sector));
+
   std::unique_ptr<GameObject> object = nullptr;
 
   if (m_create_mode == CREATE_ATTRIBUTES)
@@ -245,12 +249,10 @@ ObjectCreateAction::redo()
 }
 
 
-ObjectDeleteAction::ObjectDeleteAction(std::string sector, GameObject& object, bool layer, bool auto_delete) :
-  EditorAction(),
-  m_sector(sector),
-  m_uid(object.get_uid()),
+ObjectDeleteAction::ObjectDeleteAction(std::string sector, GameObject& object, bool layer, bool auto_delete, bool auto_save) :
+  ObjectAction(sector, object.get_uid()),
   m_layer(layer),
-  m_object_reader(std::make_unique<ReaderDocument>(save_object_to_reader(&object)))
+  m_object_reader(auto_save ? std::make_unique<ReaderDocument>(save_object_to_reader(&object)) : nullptr)
 {
   // Delete objects within the delete action constructor to make sure writer has saved the object beforehand.
   if (auto_delete) object.editor_delete();
@@ -278,7 +280,7 @@ ObjectDeleteAction::undo()
 void
 ObjectDeleteAction::redo()
 {
-  get_sector(m_sector)->get_object_by_uid(m_uid)->editor_delete();
+  get_object_by_uid()->editor_delete();
 
   go_to_sector(m_sector);
   if (m_layer) Editor::current()->refresh_layers();
@@ -300,9 +302,7 @@ ObjectDeleteAction::save_object_to_reader(GameObject* object)
 
 
 ObjectOptionChangeAction::ObjectOptionChangeAction(std::string sector, UID uid, std::map<std::string, std::string> old_values) :
-  EditorAction(),
-  m_sector(sector),
-  m_uid(uid),
+  ObjectAction(sector, uid),
   m_old_values(old_values)
 {
 }
@@ -312,34 +312,36 @@ ObjectOptionChangeAction::undo()
 {
   BIND_SECTOR(*get_sector(m_sector));
 
-  auto* object = get_sector(m_sector)->get_object_by_uid(m_uid);
-  const auto settings = object->get_settings();
+  auto* object = get_object_by_uid();
 
-  for (auto& value : m_old_values)
-  {
-    auto* option = settings.get_option_by_key(value.first);
-
-    const std::string current_value = option->to_string();
-    option->from_string(value.second);
-    value.second = current_value; // Swap values to allow for redo.
-  }
+  swap_option_values(object, m_old_values); // Swap values to allow for redo.
 
   go_to_sector(m_sector);
   object->after_editor_set();
   Editor::current()->update_layer_tip();
 }
 
+// Static utilities
+
+// Perform a swap between old and new option values.
 void
-ObjectOptionChangeAction::redo()
+ObjectOptionChangeAction::swap_option_values(GameObject* object, std::map<std::string, std::string>& values)
 {
-  undo(); // Mirror the undo action.
+  const auto settings = object->get_settings();
+
+  for (auto& value : values)
+  {
+    auto* option = settings.get_option_by_key(value.first);
+
+    const std::string current_value = option->to_string();
+    option->from_string(value.second);
+    value.second = current_value;
+  }
 }
 
 
 ObjectMoveAction::ObjectMoveAction(std::string sector, UID uid, Rectf old_rect):
-  EditorAction(),
-  m_sector(sector),
-  m_uid(uid),
+  ObjectAction(sector, uid),
   m_rect(old_rect)
 {
 }
@@ -347,23 +349,19 @@ ObjectMoveAction::ObjectMoveAction(std::string sector, UID uid, Rectf old_rect):
 void
 ObjectMoveAction::undo()
 {
-  auto* object = dynamic_cast<MovingObject*>(get_sector(m_sector)->get_object_by_uid(m_uid));
+  BIND_SECTOR(*get_sector(m_sector));
+
+  auto* object = dynamic_cast<MovingObject*>(get_object_by_uid());
 
   if (!object)
     throw std::runtime_error("Cannot find moving object to undo/redo move action.");
 
   auto current_rect = object->get_bbox();
-  object->set_pos(m_rect.p1());
+  object->move_to(m_rect.p1());
   object->set_size(m_rect.get_width(), m_rect.get_height());
   m_rect = current_rect; // Swap values to allow for redo.
 
   go_to_sector(m_sector);
-}
-
-void
-ObjectMoveAction::redo()
-{
-  undo(); // Mirror the undo action.
 }
 
 
@@ -375,7 +373,7 @@ TileMapResizeAction::TileMapResizeAction(std::string sector, UID tilemap_uid) :
 void
 TileMapResizeAction::undo()
 {
-  auto* tilemap = get_sector(m_sector)->get_object_by_uid(m_uid);
+  auto* tilemap = get_object_by_uid();
   const auto current_tilemap = save_object_to_reader(tilemap);
 
   tilemap->editor_delete();
@@ -393,7 +391,7 @@ TileMapResizeAction::undo()
 void
 TileMapResizeAction::redo()
 {
-  undo(); // Mirror the undo action.
+  ObjectAction::redo();
 }
 
 
@@ -418,7 +416,7 @@ SectorResizeAction::undo()
     }
     catch (std::exception& err)
     {
-      log_warning << "Couldn't undo resize action for a tilemap." << std::endl;
+      log_warning << "Couldn't undo resize action for a tilemap: " << err.what() << std::endl;
     }
   }
 }
@@ -434,9 +432,76 @@ SectorResizeAction::redo()
     }
     catch (std::exception& err)
     {
-      log_warning << "Couldn't redo resize action for a tilemap." << std::endl;
+      log_warning << "Couldn't redo resize action for a tilemap: " << err.what() << std::endl;
     }
   }
+}
+
+
+PathObjectDeleteAction::PathObjectDeleteAction(std::string sector, GameObject& object, bool layer, bool auto_delete) :
+  ObjectDeleteAction(sector, object, layer, false),
+  m_path_delete_action()
+{
+  auto* path_game_object = dynamic_cast<PathObject*>(&object)->get_path_gameobject();
+
+  // Delete objects within the delete action constructor to make sure writer has saved the object beforehand.
+  if (auto_delete) object.editor_delete();
+
+  m_path_delete_action = std::make_unique<ObjectDeleteAction>(m_sector, *path_game_object, false, false);
+}
+
+void
+PathObjectDeleteAction::undo()
+{
+  try
+  {
+    m_path_delete_action->undo();
+  }
+  catch (std::exception& err)
+  {
+    log_warning << "Couldn't undo path delete action." << std::endl;
+  }
+
+  ObjectDeleteAction::undo();
+
+  auto* path_object = dynamic_cast<PathObject*>(get_object_by_uid());
+  path_object->editor_set_path_by_uid(m_path_delete_action->get_uid());
+}
+
+
+PathNodeModifyAction::PathNodeModifyAction(std::string sector, NodeMarker* node_marker, bool auto_save) :
+  ObjectAction(sector, node_marker->get_path()->get_path_gameobject()->get_uid()),
+  m_path_nodes()
+{
+  if (auto_save) m_path_nodes = node_marker->get_path()->get_nodes();
+}
+
+void
+PathNodeModifyAction::undo()
+{
+  auto& path = dynamic_cast<PathGameObject*>(get_object_by_uid())->get_path();
+
+  auto current_nodes = path.get_nodes();
+  path.m_nodes = m_path_nodes;
+  m_path_nodes = current_nodes; // Swap values to allow for redo.
+
+  Editor::current()->update_node_iterators();
+}
+
+
+PathNodeOptionChangeAction::PathNodeOptionChangeAction(std::string sector, NodeMarker* node_marker, std::map<std::string, std::string> old_values) :
+  PathNodeModifyAction(sector, node_marker, false)
+{
+  ObjectOptionChangeAction::swap_option_values(node_marker, old_values); // Temporarily apply old values to save object data.
+  m_path_nodes = node_marker->get_path()->get_nodes();
+  ObjectOptionChangeAction::swap_option_values(node_marker, old_values); // Revert to current object values.
+}
+
+
+PathNodeMoveAction::PathNodeMoveAction(std::string sector, NodeMarker* node_marker, std::vector<Path::Node> old_nodes) :
+  PathNodeModifyAction(sector, node_marker, false)
+{
+  m_path_nodes = old_nodes;
 }
 
 /* EOF */

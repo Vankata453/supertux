@@ -43,6 +43,7 @@ public:
 
   std::string get_path_ref() const;
   void editor_set_path_by_ref(const std::string& new_ref);
+  void editor_set_path_by_uid(const UID& new_uid);
 
 protected:
   void on_flip();

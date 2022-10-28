@@ -17,6 +17,7 @@
 #include "editor/object_menu.hpp"
 
 #include "editor/editor.hpp"
+#include "editor/node_marker.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
 #include "supertux/d_scope.hpp"
@@ -56,7 +57,10 @@ ObjectMenu::menu_action(MenuItem& item)
       m_editor.delete_markers();
       m_editor.m_reactivate_request = true;
       MenuManager::instance().pop_menu();
-      m_editor.save_action(std::make_unique<ObjectDeleteAction>(m_editor.get_sector()->get_name(), *m_object, true));
+      if (dynamic_cast<PathObject*>(m_object))
+        m_editor.save_action<PathObjectDeleteAction>(m_editor.get_sector()->get_name(), *m_object, true);
+      else
+        m_editor.save_action<ObjectDeleteAction>(m_editor.get_sector()->get_name(), *m_object, true);
       break;
 
     case MNID_TEST_FROM_HERE: {
@@ -96,8 +100,13 @@ ObjectMenu::on_back_action()
   }
   if (modified_values.size() > 0)
   {
-    m_editor.save_action(std::make_unique<ObjectOptionChangeAction>(m_editor.get_sector()->get_name(),
-        m_object->get_uid(), modified_values));
+    auto* node_marker = dynamic_cast<NodeMarker*>(m_object);
+    if (node_marker)
+      m_editor.save_action<PathNodeOptionChangeAction>(m_editor.get_sector()->get_name(),
+          node_marker, modified_values);
+    else
+      m_editor.save_action<ObjectOptionChangeAction>(m_editor.get_sector()->get_name(),
+          m_object->get_uid(), modified_values);
   }
 
   m_object->after_editor_set();

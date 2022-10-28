@@ -196,14 +196,6 @@ PathGameObject::editor_deselect()
 void
 PathGameObject::remove_me()
 {
-  if (Sector::current())
-  {
-    auto handles = Sector::get().get_objects_by_type<NodeMarker>();
-
-    for (auto& handle : handles)
-      handle.remove_me(); // Removing a node handle also removes its bezier handles
-  }
-
   const auto& path_objects = Sector::get().get_objects_by_type<PathObject>();
 
   for (const auto& path_obj : path_objects)
@@ -215,6 +207,20 @@ PathGameObject::remove_me()
     }
   }
 
+  force_remove();
+}
+
+void
+PathGameObject::force_remove()
+{
+  if (Sector::current())
+  {
+    auto handles = Sector::get().get_objects_by_type<NodeMarker>();
+
+    for (auto& handle : handles)
+      handle.remove_me(); // Removing a node handle also removes its bezier handles
+  }
+
   GameObject::remove_me();
 }
 
@@ -222,6 +228,18 @@ void
 PathGameObject::copy_into(PathGameObject& other)
 {
   other.get_path().m_nodes = get_path().m_nodes;
+}
+
+PathObject*
+PathGameObject::get_path_object() const
+{
+  const auto& path_objects = Sector::get().get_objects_by_type<PathObject>();
+
+  for (auto& path_obj : path_objects)
+    if (path_obj.get_path_gameobject() == this)
+      return &path_obj;
+
+  return nullptr;
 }
 
 void
@@ -234,11 +252,8 @@ PathGameObject::check_references()
   if (MenuManager::instance().is_active())
     return;
 
-  const auto& path_objects = Sector::get().get_objects_by_type<PathObject>();
-
-  for (const auto& path_obj : path_objects)
-    if (path_obj.get_path_gameobject() == this)
-      return;
+  if (get_path_object())
+    return;
 
   remove_me();
 }

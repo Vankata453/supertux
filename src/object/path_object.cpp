@@ -121,6 +121,13 @@ PathObject::editor_set_path_by_ref(const std::string& new_ref)
 }
 
 void
+PathObject::editor_set_path_by_uid(const UID& new_uid)
+{
+  m_path_uid = new_uid;
+  m_walker.reset(new PathWalker(new_uid, m_walker ? m_walker->m_running : false));
+}
+
+void
 PathObject::on_flip()
 {
   m_path_handle.m_scalar_pos.y = 1 - m_path_handle.m_scalar_pos.y;

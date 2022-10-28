@@ -19,10 +19,13 @@
 
 #include <memory>
 
+#include "editor/node_marker.hpp"
+#include "object/path.hpp"
 #include "supertux/sector.hpp"
 #include "util/gettext.hpp"
 #include "util/reader_document.hpp"
 
+// Base class for all editor actions.
 class EditorAction
 {
 public:
@@ -30,8 +33,8 @@ public:
   virtual ~EditorAction() = default;
 
   // Operations
-  virtual void undo();
-  virtual void redo();
+  virtual void undo() {}
+  virtual void redo() {}
 
   // Property functions
   virtual std::string get_name() const { return _("Unknown action"); }
@@ -111,11 +114,34 @@ private:
 };
 
 
-class TilePlaceAction : public EditorAction
+// Base class for all object actions.
+class ObjectAction : public EditorAction
 {
-private:
+public:
+  ObjectAction(std::string sector, UID uid);
+  virtual ~ObjectAction() override = default;
+
+  virtual void undo() override;
+  virtual void redo() override;
+
+  virtual std::string get_name() const override { return _("Modify object"); }
+  UID get_uid() const { return m_uid; }
+
+protected:
+  GameObject* get_object_by_uid();
+
   const std::string m_sector;
   UID m_uid;
+
+private:
+  ObjectAction(const ObjectAction&) = delete;
+  ObjectAction& operator=(const ObjectAction&) = delete;
+};
+
+
+class TilePlaceAction : public ObjectAction
+{
+private:
   std::vector<uint32_t> m_tilemap_tiles;
 
 public:
@@ -123,7 +149,6 @@ public:
   virtual ~TilePlaceAction() override = default;
 
   virtual void undo() override;
-  virtual void redo() override;
 
   virtual std::string get_name() const override { return _("Place tile/s"); }
 
@@ -133,7 +158,7 @@ private:
 };
 
 
-class ObjectCreateAction : public EditorAction
+class ObjectCreateAction : public ObjectAction
 {
 private:
   enum // Ways in which the object can be created, based on arguments.
@@ -142,8 +167,6 @@ private:
     CREATE_READER
   };
 
-  const std::string m_sector;
-  UID m_uid;
   const bool m_layer;
 
   const int m_create_mode;
@@ -172,24 +195,22 @@ private:
 };
 
 
-class ObjectDeleteAction : public EditorAction
+class ObjectDeleteAction : public ObjectAction
 {
 public:
-  ObjectDeleteAction(std::string sector, GameObject& object, bool layer = false, bool auto_delete = true);
+  ObjectDeleteAction(std::string sector, GameObject& object, bool layer = false, bool auto_delete = true, bool auto_save = true);
   virtual ~ObjectDeleteAction() override = default;
 
   virtual void undo() override;
   virtual void redo() override;
 
-protected:
-  virtual ReaderDocument save_object_to_reader(GameObject* object);
+  virtual std::string get_name() const override { return _("Delete object"); }
 
-  const std::string m_sector;
-  UID m_uid;
+protected:
+  ReaderDocument save_object_to_reader(GameObject* object);
+
   const bool m_layer;
   std::unique_ptr<ReaderDocument> m_object_reader;
-
-  virtual std::string get_name() const override { return _("Delete object"); }
 
 private:
   ObjectDeleteAction(const ObjectDeleteAction&) = delete;
@@ -197,11 +218,9 @@ private:
 };
 
 
-class ObjectOptionChangeAction : public EditorAction
+class ObjectOptionChangeAction : public ObjectAction
 {
 private:
-  const std::string m_sector;
-  UID m_uid;
   std::map<std::string, std::string> m_old_values;
 
 public:
@@ -209,9 +228,11 @@ public:
   virtual ~ObjectOptionChangeAction() override = default;
 
   virtual void undo() override;
-  virtual void redo() override;
 
   virtual std::string get_name() const override { return _("Change object option/s"); }
+
+  // Static utilities
+  static void swap_option_values(GameObject* object, std::map<std::string, std::string>& values);
 
 private:
   ObjectOptionChangeAction(const ObjectOptionChangeAction&) = delete;
@@ -219,11 +240,9 @@ private:
 };
 
 
-class ObjectMoveAction : public EditorAction
+class ObjectMoveAction : public ObjectAction
 {
 private:
-  const std::string m_sector;
-  UID m_uid;
   Rectf m_rect;
 
 public:
@@ -231,7 +250,6 @@ public:
   virtual ~ObjectMoveAction() override = default;
 
   virtual void undo() override;
-  virtual void redo() override;
 
   virtual std::string get_name() const override { return _("Move/Resize object"); }
 
@@ -274,6 +292,73 @@ public:
 private:
   SectorResizeAction(const SectorResizeAction&) = delete;
   SectorResizeAction& operator=(const SectorResizeAction&) = delete;
+};
+
+
+class PathObjectDeleteAction : public ObjectDeleteAction
+{
+private:
+  // Deleted path objects need a backup of their path.
+  std::unique_ptr<ObjectDeleteAction> m_path_delete_action;
+
+public:
+  PathObjectDeleteAction(std::string sector, GameObject& object, bool layer = false, bool auto_delete = true);
+  virtual ~PathObjectDeleteAction() override = default;
+
+  virtual void undo() override;
+
+  virtual std::string get_name() const override { return _("Delete path object"); }
+
+private:
+  PathObjectDeleteAction(const PathObjectDeleteAction&) = delete;
+  PathObjectDeleteAction& operator=(const PathObjectDeleteAction&) = delete;
+};
+
+
+class PathNodeModifyAction : public ObjectAction
+{
+public:
+  PathNodeModifyAction(std::string sector, NodeMarker* node_marker, bool auto_save = true);
+  virtual ~PathNodeModifyAction() override = default;
+
+  virtual void undo() override;
+
+  virtual std::string get_name() const override { return _("Modify path node"); }
+
+protected:
+  std::vector<Path::Node> m_path_nodes;
+
+private:
+  PathNodeModifyAction(const PathNodeModifyAction&) = delete;
+  PathNodeModifyAction& operator=(const PathNodeModifyAction&) = delete;
+};
+
+
+class PathNodeOptionChangeAction : public PathNodeModifyAction
+{
+public:
+  PathNodeOptionChangeAction(std::string sector, NodeMarker* node_marker, std::map<std::string, std::string> old_values);
+  virtual ~PathNodeOptionChangeAction() override = default;
+
+  virtual std::string get_name() const override { return _("Modify path node option/s"); }
+
+private:
+  PathNodeOptionChangeAction(const PathNodeOptionChangeAction&) = delete;
+  PathNodeOptionChangeAction& operator=(const PathNodeOptionChangeAction&) = delete;
+};
+
+
+class PathNodeMoveAction : public PathNodeModifyAction
+{
+public:
+  PathNodeMoveAction(std::string sector, NodeMarker* node_marker, std::vector<Path::Node> old_nodes);
+  virtual ~PathNodeMoveAction() override = default;
+
+  virtual std::string get_name() const override { return _("Move path node"); }
+
+private:
+  PathNodeMoveAction(const PathNodeMoveAction&) = delete;
+  PathNodeMoveAction& operator=(const PathNodeMoveAction&) = delete;
 };
 
 #endif

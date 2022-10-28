@@ -162,7 +162,13 @@ public:
   void toggle_undo_manager();
   void undo(int steps = 1);
   void redo(int steps = 1);
-  void save_action(std::unique_ptr<EditorAction> action);
+
+  template<typename T, typename... Args>
+  void save_action(Args&&... args)
+  {
+    if (!m_undo_manager) return;
+    m_undo_manager->push_action(std::make_unique<T>(std::forward<Args>(args)...));
+  }
 
   void pack_addon();
 

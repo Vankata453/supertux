@@ -35,6 +35,8 @@ public:
   virtual void editor_update() override;
   virtual void remove_me() override;
 
+  Path* get_path() const { return m_path; }
+
   void update_iterator();
   void update_node_times();
 

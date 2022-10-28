@@ -20,6 +20,7 @@
 #include <SDL.h>
 
 #include "control/input_manager.hpp"
+#include "editor/bezier_marker.hpp"
 #include "editor/tile_selection.hpp"
 #include "editor/widget.hpp"
 #include "math/vector.hpp"
@@ -124,25 +125,30 @@ private:
   Vector m_mouse_pos;
   Vector m_previous_mouse_pos;
 
-  std::vector<uint32_t> m_previous_tiles;
-
   bool m_dragging;
   bool m_dragging_right;
   bool m_scrolling;
   Vector m_drag_start;
-  Rectf m_init_drag_rect;
   TypedUID<MovingObject> m_dragged_object;
-  TypedUID<MovingObject> m_init_dragged_object; // Dragged object, assured to not be a marker.
 
   TypedUID<MovingObject> m_hovered_object;
   TypedUID<GameObject> m_selected_object;
   TypedUID<PathGameObject> m_edited_path;
   TypedUID<NodeMarker> m_last_node_marker;
+  TypedUID<BezierMarker> m_last_bezier_marker;
 
   std::unique_ptr<Tip> m_object_tip;
   Vector m_obj_mouse_desync;
 
   std::unique_ptr<TileSelection> m_rectangle_preview;
+
+  // Related to tracking action data.
+  std::vector<uint32_t> m_previous_tiles;
+  std::vector<Path::Node> m_previous_nodes;
+  Vector m_last_node_marker_pos;
+  Vector m_last_bezier_marker_pos;
+  TypedUID<MovingObject> m_init_dragged_object; // Dragged object, assured to not be a marker.
+  Rectf m_init_drag_rect;
 
 private:
   EditorOverlayWidget(const EditorOverlayWidget&) = delete;

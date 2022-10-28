@@ -587,7 +587,7 @@ void
 Sector::resize_sector(const Size& old_size, const Size& new_size, const Size& resize_offset)
 {
   if (Editor::is_active())
-    Editor::current()->save_action(std::make_unique<SectorResizeAction>(m_name));
+    Editor::current()->save_action<SectorResizeAction>(m_name);
 
   BIND_SECTOR(*this);
 

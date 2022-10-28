@@ -54,14 +54,18 @@ public:
   virtual void editor_deselect() override;
 
   virtual void remove_me() override;
+  virtual void force_remove();
 
   virtual void on_flip(float height) override;
 
   virtual ObjectSettings get_settings() override;
 
-  Path& get_path() { return *m_path; }
+  Path& get_path() const { return *m_path; }
+  Path* get_path_ptr() const { return m_path.get(); }
 
   void copy_into(PathGameObject& other);
+
+  PathObject* get_path_object() const;
 
 private:
   /** Removes the object if the path is not referenced anywhere */
