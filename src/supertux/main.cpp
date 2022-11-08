@@ -80,6 +80,7 @@ public:
 
     // init random number stuff
     g_config->random_seed = gameRandom.srand(g_config->random_seed);
+    g_config->random_seed_history.push_back(g_config->random_seed);
     graphicsRandom.srand(0);
     //const char *how = config->random_seed? ", user fixed.": ", from time().";
     //log_info << "Using random seed " << config->random_seed << how << std::endl;

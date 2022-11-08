@@ -42,6 +42,7 @@ Config::Config() :
   sound_enabled(true),
   music_enabled(true),
   random_seed(0), // set by time(), by default (unless in config)
+  random_seed_history(),
   start_level(),
   enable_script_debugger(false),
   start_demo(),
@@ -87,6 +88,27 @@ Config::load()
   config_lisp.get("transitions_enabled", transitions_enabled);
   config_lisp.get("locale", locale);
   config_lisp.get("random_seed", random_seed);
+
+  ReaderCollection config_seed_history_lisp;
+  if (config_lisp.get("random_seed_history", config_seed_history_lisp))
+  {
+    for(auto const& seed_node : config_seed_history_lisp.get_objects())
+    {
+      if (seed_node.get_name() == "seed")
+      {
+        auto seed = seed_node.get_mapping();
+
+        int value;
+        if (seed.get("value", value))
+          random_seed_history.push_back(value);
+      }
+      else
+      {
+        log_warning << "Unknown token in config file: " << seed_node.get_name() << std::endl;
+      }
+    }
+  }
+
   config_lisp.get("repository_url", repository_url);
 
   ReaderMapping config_video_lisp;
@@ -174,6 +196,16 @@ Config::save()
   }
   writer.write("transitions_enabled", transitions_enabled);
   writer.write("locale", locale);
+
+  writer.start_list("random_seed_history");
+  for(const auto& seed : random_seed_history)
+  {
+    writer.start_list("seed");
+    writer.write("value", seed);
+    writer.end_list("seed");
+  }
+  writer.end_list("random_seed_history");
+
   writer.write("repository_url", repository_url);
 
   writer.start_list("video");

@@ -22,6 +22,7 @@
 #include "editor/editor.hpp"
 #include "gui/menu.hpp"
 #include "gui/menu_manager.hpp"
+#include "math/random_generator.hpp"
 #include "object/player.hpp"
 #include "scripting/scripting.hpp"
 #include "scripting/squirrel_util.hpp"
@@ -159,6 +160,13 @@ ScreenManager::draw_player_pos(DrawingContext& context)
 }
 
 void
+ScreenManager::draw_random_seed(DrawingContext& context)
+{
+  context.draw_text(Resources::normal_font, std::to_string(g_config->random_seed),
+                    Vector(40, 40), ALIGN_LEFT, LAYER_GUI);
+}
+
+void
 ScreenManager::draw(DrawingContext& context)
 {
   assert(!m_screen_stack.empty());
@@ -206,6 +214,8 @@ ScreenManager::draw(DrawingContext& context)
       fps_ticks = SDL_GetTicks();
     }
   }
+
+  draw_random_seed(context);
 }
 
 void
@@ -295,6 +305,17 @@ ScreenManager::process_events()
         {
           g_config->developer_mode = !g_config->developer_mode;
           log_info << "developer mode: " << g_config->developer_mode << std::endl;
+        }
+        else if (event.key.keysym.sym == SDLK_F3)
+        {
+          g_config->random_seed = gameRandom.srand(0);
+          g_config->random_seed_history.push_back(g_config->random_seed);
+          while (g_config->random_seed_history.size() > 100)
+            g_config->random_seed_history.erase(g_config->random_seed_history.begin());
+        }
+        else if (event.key.keysym.sym == SDLK_F4)
+        {
+          MenuManager::instance().push_menu(MenuStorage::RANDOM_SEED_MENU);
         }
         break;
     }

@@ -62,6 +62,7 @@ public:
 
   /** initial random seed.  0 ==> set from time() */
   int random_seed;
+  std::vector<int> random_seed_history;
 
   /** this variable is set if supertux should start in a specific level */
   std::string start_level;
