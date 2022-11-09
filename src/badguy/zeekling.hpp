@@ -26,6 +26,9 @@ public:
   Zeekling(const ReaderMapping& reader);
   Zeekling(const Vector& pos, Direction d);
 
+  ObjectSettings get_settings() override;
+  void after_editor_set() override;
+
   void initialize();
   void collision_solid(const CollisionHit& hit);
   void active_update(float elapsed_time);

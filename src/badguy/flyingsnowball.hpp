@@ -25,6 +25,9 @@ public:
   FlyingSnowBall(const ReaderMapping& reader);
   FlyingSnowBall(const Vector& pos);
 
+  ObjectSettings get_settings() override;
+  void after_editor_set() override;
+
   void initialize();
   void activate();
   void active_update(float elapsed_time);
@@ -40,6 +43,7 @@ protected:
   bool collision_squished(GameObject& object);
 private:
   float normal_propeller_speed;
+  float puff_timer_time;
   Timer puff_timer; /**< time until the next smoke puff is spawned */
 };
 

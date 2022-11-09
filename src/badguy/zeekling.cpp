@@ -23,6 +23,7 @@
 #include "object/player.hpp"
 #include "sprite/sprite.hpp"
 #include "supertux/object_factory.hpp"
+#include "util/reader_mapping.hpp"
 
 Zeekling::Zeekling(const ReaderMapping& reader) :
   BadGuy(reader, "images/creatures/zeekling/zeekling.sprite"),
@@ -34,7 +35,8 @@ Zeekling::Zeekling(const ReaderMapping& reader) :
   last_self_pos()
 {
   state = FLYING;
-  speed = gameRandom.rand(130, 171);
+  if (!reader.get("speed", speed)) speed = gameRandom.rand(130, 171);
+  log_warning << "Zeekling speed: " << speed << std::endl;
   physic.enable_gravity(false);
 }
 
@@ -50,6 +52,26 @@ Zeekling::Zeekling(const Vector& pos, Direction d) :
   state = FLYING;
   speed = gameRandom.rand(130, 171);
   physic.enable_gravity(false);
+}
+
+ObjectSettings
+Zeekling::get_settings()
+{
+  ObjectSettings result = BadGuy::get_settings();
+
+  result.options.push_back(ObjectOption(MN_NUMFIELD, _("Speed"), &speed,
+                                         "speed"));
+
+  return result;
+}
+
+void
+Zeekling::after_editor_set()
+{
+  BadGuy::after_editor_set();
+
+  if (!(speed >= 130 && speed <= 171))
+    log_warning << "Wrong zeekling speed property range." << std::endl;
 }
 
 void

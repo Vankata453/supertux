@@ -28,6 +28,9 @@ public:
   SkullyHop(const ReaderMapping& reader);
   SkullyHop(const Vector& pos, Direction d);
 
+  ObjectSettings get_settings() override;
+  void after_editor_set() override;
+
   void initialize();
   void collision_solid(const CollisionHit& hit);
   HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit);
@@ -43,8 +46,6 @@ public:
     return _("Skully hop");
   }
 
-  void after_editor_set();
-
 private:
   enum SkullyHopState {
     STANDING,
@@ -58,6 +59,12 @@ private:
 private:
   Timer recover_timer;
   SkullyHopState state;
+  int current_jump_time;
+  float jump_time_1;
+  float jump_time_2;
+  float jump_time_3;
+  float jump_time_4;
+  float jump_time_5;
 };
 
 #endif

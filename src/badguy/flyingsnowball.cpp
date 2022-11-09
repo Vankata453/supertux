@@ -21,6 +21,7 @@
 #include "object/player.hpp"
 #include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
+#include "util/reader_mapping.hpp"
 
 namespace {
 const float PUFF_INTERVAL_MIN = 4.0f; /**< spawn new puff of smoke at most that often */
@@ -29,18 +30,51 @@ const float PUFF_INTERVAL_MAX = 8.0f; /**< spawn new puff of smoke at least that
 
 FlyingSnowBall::FlyingSnowBall(const ReaderMapping& reader) :
   BadGuy(reader, "images/creatures/flying_snowball/flying_snowball.sprite"),
-  normal_propeller_speed(),
+  normal_propeller_speed(-100),
+  puff_timer_time(-100),
   puff_timer()
 {
+  if (!reader.get("normal_propeller_speed", normal_propeller_speed))
+    normal_propeller_speed = -100;
+  if (!reader.get("puff_timer", puff_timer_time))
+    puff_timer_time = -100;
   physic.enable_gravity(true);
 }
 
 FlyingSnowBall::FlyingSnowBall(const Vector& pos) :
   BadGuy(pos, "images/creatures/flying_snowball/flying_snowball.sprite"),
-  normal_propeller_speed(),
+  normal_propeller_speed(-100),
+  puff_timer_time(-100),
   puff_timer()
 {
   physic.enable_gravity(true);
+}
+
+ObjectSettings
+FlyingSnowBall::get_settings()
+{
+  ObjectSettings result = BadGuy::get_settings();
+
+  result.options.push_back(ObjectOption(MN_NUMFIELD, _("Normal propeller speed (Initial)"), &normal_propeller_speed,
+                                         "normal_propeller_speed"));
+  result.options.push_back(ObjectOption(MN_NUMFIELD, _("Puff timer (Initial)"), &puff_timer_time,
+                                         "puff_timer"));
+
+  return result;
+}
+
+void
+FlyingSnowBall::after_editor_set()
+{
+  BadGuy::after_editor_set();
+
+  std::vector<bool> are_valid;
+
+  are_valid.push_back((normal_propeller_speed >= 0.95 && normal_propeller_speed <= 1.05) || normal_propeller_speed == -100);
+  are_valid.push_back((puff_timer_time >= PUFF_INTERVAL_MIN && puff_timer_time <= PUFF_INTERVAL_MAX) || puff_timer_time == -100);
+
+  if (std::find(are_valid.begin(), are_valid.end(), false) != are_valid.end())
+    log_warning << "Wrong flying snowball property range." << std::endl;
 }
 
 void
@@ -52,8 +86,9 @@ FlyingSnowBall::initialize()
 void
 FlyingSnowBall::activate()
 {
-  puff_timer.start(gameRandom.randf(PUFF_INTERVAL_MIN, PUFF_INTERVAL_MAX));
-  normal_propeller_speed = gameRandom.randf(0.95, 1.05);
+  if (puff_timer_time == -100) puff_timer_time = gameRandom.randf(PUFF_INTERVAL_MIN, PUFF_INTERVAL_MAX);
+  puff_timer.start(puff_timer_time);
+  if (normal_propeller_speed == -100) normal_propeller_speed = gameRandom.randf(0.95, 1.05);
 }
 
 bool

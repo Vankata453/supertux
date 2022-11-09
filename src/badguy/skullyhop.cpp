@@ -20,6 +20,7 @@
 #include "math/random_generator.hpp"
 #include "sprite/sprite.hpp"
 #include "supertux/object_factory.hpp"
+#include "util/reader_mapping.hpp"
 
 namespace {
 const float MIN_RECOVER_TIME = 0.1f; /**< minimum time to stand still before starting a (new) jump */
@@ -30,17 +31,72 @@ static const std::string SKULLYHOP_SOUND = "sounds/hop.ogg";
 SkullyHop::SkullyHop(const ReaderMapping& reader) :
   BadGuy(reader, "images/creatures/skullyhop/skullyhop.sprite"),
   recover_timer(),
-  state()
+  state(),
+  current_jump_time(1),
+  jump_time_1(0),
+  jump_time_2(0),
+  jump_time_3(0),
+  jump_time_4(0),
+  jump_time_5(0)
 {
+  if (!reader.get("jump-time-1", jump_time_1)) jump_time_1 = 0;
+  if (!reader.get("jump-time-2", jump_time_2)) jump_time_2 = 0;
+  if (!reader.get("jump-time-3", jump_time_3)) jump_time_3 = 0;
+  if (!reader.get("jump-time-4", jump_time_4)) jump_time_4 = 0;
+  if (!reader.get("jump-time-5", jump_time_5)) jump_time_5 = 0;
   SoundManager::current()->preload( SKULLYHOP_SOUND );
 }
 
 SkullyHop::SkullyHop(const Vector& pos, Direction d) :
   BadGuy(pos, d, "images/creatures/skullyhop/skullyhop.sprite"),
   recover_timer(),
-  state()
+  state(),
+  current_jump_time(6),
+  jump_time_1(0),
+  jump_time_2(0),
+  jump_time_3(0),
+  jump_time_4(0),
+  jump_time_5(0)
 {
   SoundManager::current()->preload( SKULLYHOP_SOUND );
+}
+
+ObjectSettings
+SkullyHop::get_settings()
+{
+  ObjectSettings result = BadGuy::get_settings();
+
+  result.options.push_back(ObjectOption(MN_NUMFIELD, _("Jump time 1"), &jump_time_1,
+                                         "jump-time-1"));
+  result.options.push_back(ObjectOption(MN_NUMFIELD, _("Jump time 2"), &jump_time_2,
+                                         "jump-time-2"));
+  result.options.push_back(ObjectOption(MN_NUMFIELD, _("Jump time 3"), &jump_time_3,
+                                         "jump-time-3"));
+  result.options.push_back(ObjectOption(MN_NUMFIELD, _("Jump time 4"), &jump_time_4,
+                                         "jump-time-4"));
+  result.options.push_back(ObjectOption(MN_NUMFIELD, _("Jump time 5"), &jump_time_5,
+                                         "jump-time-5"));
+
+  return result;
+}
+
+void
+SkullyHop::after_editor_set()
+{
+  BadGuy::after_editor_set();
+  sprite->set_action(dir == LEFT ? "standing-left" : "standing-right");
+
+  std::vector<bool> are_valid;
+
+  // Watch for values above 0, so initial value of jump times (0) still gets accepted.
+  are_valid.push_back(jump_time_1 >= 0 && jump_time_1 <= MAX_RECOVER_TIME);
+  are_valid.push_back(jump_time_2 >= 0 && jump_time_2 <= MAX_RECOVER_TIME);
+  are_valid.push_back(jump_time_3 >= 0 && jump_time_3 <= MAX_RECOVER_TIME);
+  are_valid.push_back(jump_time_4 >= 0 && jump_time_4 <= MAX_RECOVER_TIME);
+  are_valid.push_back(jump_time_5 >= 0 && jump_time_5 <= MAX_RECOVER_TIME);
+
+  if (std::find(are_valid.begin(), are_valid.end(), false) != are_valid.end())
+    log_warning << "Wrong skullyhop property range." << std::endl;
 }
 
 void
@@ -59,7 +115,36 @@ SkullyHop::set_state(SkullyHopState newState)
     physic.set_velocity_y(0);
     sprite->set_action(dir == LEFT ? "standing-left" : "standing-right");
 
-    float recover_time = gameRandom.randf(MIN_RECOVER_TIME,MAX_RECOVER_TIME);
+    float recover_time;
+    if (current_jump_time <= 5)
+    {
+      switch (current_jump_time)
+      {
+        case 1:
+          recover_time = jump_time_1;
+          break;
+        case 2:
+          recover_time = jump_time_2;
+          break;
+        case 3:
+          recover_time = jump_time_3;
+          break;
+        case 4:
+          recover_time = jump_time_4;
+          break;
+        case 5:
+          recover_time = jump_time_5;
+          break;
+      }
+      if (recover_time < MIN_RECOVER_TIME)
+        recover_time = gameRandom.randf(MIN_RECOVER_TIME, MAX_RECOVER_TIME);
+      current_jump_time++;
+    }
+    else
+    {
+      recover_time = gameRandom.randf(MIN_RECOVER_TIME, MAX_RECOVER_TIME);
+    }
+
     recover_timer.start(recover_time);
   } else
     if (newState == CHARGING) {
@@ -165,13 +250,6 @@ bool
 SkullyHop::is_freezable() const
 {
   return true;
-}
-
-void
-SkullyHop::after_editor_set()
-{
-  BadGuy::after_editor_set();
-  sprite->set_action(dir == LEFT ? "standing-left" : "standing-right");
 }
 
 /* EOF */
