@@ -21,6 +21,7 @@
 
 enum GameMenuIDs {
   MNID_CONTINUE,
+  MNID_RESETLEVELANDSEED,
   MNID_RESETLEVEL,
   MNID_ABORTLEVEL
 };
@@ -32,6 +33,9 @@ public:
   GameMenu();
 
   void menu_action(MenuItem* item) override;
+
+private:
+  void restart_level();
 
 private:
   GameMenu(const GameMenu&);

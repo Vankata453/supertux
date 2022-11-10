@@ -162,8 +162,13 @@ ScreenManager::draw_player_pos(DrawingContext& context)
 void
 ScreenManager::draw_random_seed(DrawingContext& context)
 {
+  const Vector pos_text = Vector(40, 40);
+
   context.draw_text(Resources::normal_font, std::to_string(g_config->random_seed),
-                    Vector(40, 40), ALIGN_LEFT, LAYER_GUI);
+                    pos_text, ALIGN_LEFT, LAYER_GUI);
+  if (gameRandom.rand_count)
+    context.draw_text(Resources::small_font, "Randomizations performed: " + std::to_string(gameRandom.rand_count),
+                    Vector(pos_text.x, pos_text.y + 25), ALIGN_LEFT, LAYER_GUI, Color::CYAN);
 }
 
 void
@@ -308,6 +313,7 @@ ScreenManager::process_events()
         }
         else if (event.key.keysym.sym == SDLK_F3)
         {
+          if (GameSession::current() && GameSession::current()->is_active()) return;
           g_config->random_seed = gameRandom.srand(0);
           g_config->random_seed_history.push_back(g_config->random_seed);
           while (g_config->random_seed_history.size() > 100)
@@ -315,7 +321,8 @@ ScreenManager::process_events()
         }
         else if (event.key.keysym.sym == SDLK_F4)
         {
-          MenuManager::instance().push_menu(MenuStorage::RANDOM_SEED_MENU);
+          if (GameSession::current() && GameSession::current()->is_active()) return;
+          MenuManager::instance().set_menu(MenuStorage::RANDOM_SEED_MENU);
         }
         break;
     }

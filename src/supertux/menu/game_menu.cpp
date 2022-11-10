@@ -19,7 +19,10 @@
 #include "gui/menu.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
+#include "math/random_generator.hpp"
+#include "supertux/gameconfig.hpp"
 #include "supertux/game_session.hpp"
+#include "supertux/globals.hpp"
 #include "supertux/level.hpp"
 #include "supertux/menu/menu_storage.hpp"
 #include "supertux/menu/options_menu.hpp"
@@ -33,6 +36,10 @@ GameMenu::GameMenu()
   add_label(level->name);
   add_hl();
   add_entry(MNID_CONTINUE, _("Continue"));
+  add_entry(MNID_RESETLEVELANDSEED, _("Reload Seed And Restart Level"))
+    ->set_help(_("Reloads the current seed before restarting the level.")
+              + "\n \n"
+              + _("Required for valid IL speedruns."));
   add_entry(MNID_RESETLEVEL, _("Restart Level"));
   add_submenu(_("Options"), MenuStorage::INGAME_OPTIONS_MENU);
   add_hl();
@@ -49,16 +56,27 @@ GameMenu::menu_action(MenuItem* item)
       GameSession::current()->toggle_pause();
       break;
 
+    case MNID_RESETLEVELANDSEED:
+      assert(gameRandom.srand(g_config->random_seed) == g_config->random_seed);
+      restart_level();
+      break;
+
     case MNID_RESETLEVEL:
-      MenuManager::instance().clear_menu_stack();
-      GameSession::current()->toggle_pause();
-      GameSession::current()->reset_button = true;
+      restart_level();
       break;
 
     case MNID_ABORTLEVEL:
       GameSession::current()->abort_level();
       break;
   }
+}
+
+void
+GameMenu::restart_level()
+{
+  MenuManager::instance().clear_menu_stack();
+  GameSession::current()->toggle_pause();
+  GameSession::current()->reset_button = true;
 }
 
 /* EOF */
