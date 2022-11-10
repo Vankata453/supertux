@@ -53,7 +53,8 @@ RandomGenerator::RandomGenerator() :
   rand_deg(),
   rand_sep(),
   end_ptr(),
-  debug()
+  debug(),
+  rand_count(0)
 {
   assert(sizeof(int) >= 4);
   initialized = 0;
@@ -83,6 +84,7 @@ int RandomGenerator::rand() {
     ;
   if (debug > 0)
     printf("==== rand(): %10d =====\n", rv);
+  rand_count++;
   return rv;
 }
 
@@ -93,6 +95,7 @@ int RandomGenerator::rand(int v) {
   int rv, maxV =(RandomGenerator::rand_max / v) * v;
   while ((rv = RandomGenerator::random()) >= maxV)
     ;
+  rand_count++;
   return rv % v;                          // mod it down to 0..(maxV-1)
 }
 
@@ -109,6 +112,7 @@ double RandomGenerator::randf(double v) {
 
   if (debug > 0)
     printf("==== rand(): %f =====\n", rv);
+  rand_count++;
   return rv;
 }
 
@@ -359,6 +363,7 @@ void RandomGenerator::srandom(unsigned long x)
   }
 
   initialized = 1;
+  rand_count = 0;
   for (i = 0; i < lim; i++) random();
 }
 

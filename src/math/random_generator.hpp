@@ -83,6 +83,9 @@ private:
   static const int rand_max = 0x7fffffff;         // biggest signed Uint32
 
 public:
+  int rand_count;
+
+public:
   RandomGenerator();
   ~RandomGenerator();
 
