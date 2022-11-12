@@ -57,7 +57,8 @@ GameMenu::menu_action(MenuItem* item)
       break;
 
     case MNID_RESETLEVELANDSEED:
-      assert(gameRandom.srand(g_config->random_seed) == g_config->random_seed);
+      if (gameRandom.srand(g_config->random_seed) != g_config->random_seed)
+        log_fatal << "Reloading current seed failed." << std::endl;
       restart_level();
       break;
 
