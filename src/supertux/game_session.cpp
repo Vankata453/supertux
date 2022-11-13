@@ -55,6 +55,7 @@
 
 GameSession::GameSession(const std::string& levelfile_, Savegame& savegame, Statistics* statistics) :
   reset_button(false),
+  reset_seed(false),
   level(),
   old_level(),
   statistics_backdrop(Surface::create("images/engine/menu/score-backdrop.png")),
@@ -556,6 +557,12 @@ GameSession::update(float elapsed_time)
   if (reset_button) {
     reset_button = false;
     reset_level();
+    if (reset_seed)
+    {
+      reset_seed = false;
+      if (gameRandom.srand(g_config->random_seed) != g_config->random_seed)
+        log_fatal << "Reloading current seed failed." << std::endl;
+    }
     restart_level();
   }
 }

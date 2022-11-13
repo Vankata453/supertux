@@ -19,7 +19,6 @@
 #include "gui/menu.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
-#include "math/random_generator.hpp"
 #include "supertux/gameconfig.hpp"
 #include "supertux/game_session.hpp"
 #include "supertux/globals.hpp"
@@ -57,8 +56,7 @@ GameMenu::menu_action(MenuItem* item)
       break;
 
     case MNID_RESETLEVELANDSEED:
-      if (gameRandom.srand(g_config->random_seed) != g_config->random_seed)
-        log_fatal << "Reloading current seed failed." << std::endl;
+      GameSession::current()->reset_seed = true;
       restart_level();
       break;
 
