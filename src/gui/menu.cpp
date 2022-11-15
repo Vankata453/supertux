@@ -128,6 +128,18 @@ Menu::delete_item(int pos_)
   }
 }
 
+void
+Menu::delete_until_hl_from(int id)
+{
+  const int item_pos = get_item_pos(id);
+  ItemHorizontalLine* item_hl = nullptr;
+  while (!item_hl)
+  {
+    item_hl = dynamic_cast<ItemHorizontalLine*>(items[item_pos].get());
+    delete_item(item_pos);
+  }
+}
+
 MenuItem*
 Menu::add_hl()
 {
@@ -518,6 +530,20 @@ Menu::get_item_by_id(int id) const
   throw std::runtime_error("MenuItem not found");
 }
 
+bool
+Menu::has_item_with_id(int id) const
+{
+  try
+  {
+    get_item_by_id(id);
+  }
+  catch (...)
+  {
+    return false;
+  }
+  return true;
+}
+
 int Menu::get_active_item_id() const
 {
   return items[active_item]->id;
@@ -588,6 +614,17 @@ Menu::set_active_item(int id)
       break;
     }
   }
+}
+
+int
+Menu::get_item_pos(int id) const
+{
+  for (int i = 0; i < static_cast<int>(items.size()); i++)
+  {
+    if (items[i]->id != id) continue;
+    return i;
+  }
+  return -1;
 }
 
 bool

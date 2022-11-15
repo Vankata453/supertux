@@ -81,9 +81,12 @@ public:
 
   MenuItem& get_item_by_id(int id);
   const MenuItem& get_item_by_id(int id) const;
+  bool has_item_with_id(int id) const;
 
   int get_active_item_id() const;
   void set_active_item(int id);
+
+  int get_item_pos(int id) const;
 
   void draw(DrawingContext& context);
   Vector get_center_pos() const { return pos; }
@@ -100,6 +103,7 @@ protected:
   MenuItem* add_item(std::unique_ptr<MenuItem> menu_item);
   MenuItem* add_item(std::unique_ptr<MenuItem> menu_item, int pos_);
   void delete_item(int pos_);
+  void delete_until_hl_from(int id);
 
   ///returns true when the text is more important than action
   virtual bool is_sensitive() const;

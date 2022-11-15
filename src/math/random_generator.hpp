@@ -81,8 +81,10 @@ private:
   long *end_ptr;
   int debug;
   static const int rand_max = 0x7fffffff;         // biggest signed Uint32
+  bool log_disabled;
 
 public:
+  bool log;
   int rand_count;
 
 public:

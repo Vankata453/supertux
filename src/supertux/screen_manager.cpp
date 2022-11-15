@@ -169,6 +169,9 @@ ScreenManager::draw_random_seed(DrawingContext& context)
   if (gameRandom.rand_count)
     context.draw_text(Resources::small_font, "Randomizations performed: " + std::to_string(gameRandom.rand_count),
                     Vector(pos_text.x, pos_text.y + 25), ALIGN_LEFT, LAYER_GUI, Color::CYAN);
+  if (gameRandom.log)
+    context.draw_text(Resources::normal_font, "Randomization logging on",
+                    Vector(pos_text.x, pos_text.y + 50), ALIGN_LEFT, LAYER_GUI, Color::YELLOW);
 }
 
 void
@@ -323,6 +326,15 @@ ScreenManager::process_events()
         {
           if (GameSession::current() && GameSession::current()->is_active()) return;
           MenuManager::instance().set_menu(MenuStorage::RANDOM_SEED_MENU);
+        }
+        else if (event.key.keysym.sym == SDLK_F5)
+        {
+          if (GameSession::current() && GameSession::current()->is_active()) return;
+          MenuManager::instance().set_menu(MenuStorage::SEED_FINDER_MENU);
+        }
+        else if (event.key.keysym.sym == SDLK_F6)
+        {
+          gameRandom.log = !gameRandom.log;
         }
         break;
     }
