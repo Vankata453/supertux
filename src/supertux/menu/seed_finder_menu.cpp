@@ -32,6 +32,14 @@ SeedFinderMenu::SeedFinderMenu()
 {
   if (!s_seed_finder) s_seed_finder.reset(new SeedFinder(0));
 
+  rebuild_menu();
+}
+
+void
+SeedFinderMenu::rebuild_menu()
+{
+  clear();
+
   add_label(_("Seed Finder"));
   add_hl();
 
@@ -156,13 +164,8 @@ SeedFinderMenu::import_logged_randomizations()
 
   auto callback = [this](int selected)
     {
-      for (int i = 0; i < static_cast<int>(s_seed_finder->m_randomizations.size()); i++)
-        remove_last_randomization(true);
-
       s_seed_finder->import_logged_randomizations(selected);
-      import_randomizations();
-
-      delete_until_hl_from(MNID_IMPORTLOGGED);
+      rebuild_menu();
     };
   auto* select_menu = new MenuSelectItem(rand_strings, std::move(callback));
 
@@ -211,8 +214,8 @@ SeedFinderMenu::use_seed()
 void
 SeedFinderMenu::menu_action(MenuItem* item)
 {
-  // Negative item ID, odd and smaller than -10, indicates setting a desired value for a certain randomization.
-  if (item->id < -10 && item->id % 2 != 0)
+  // Negative ID of an ItemAction, odd and smaller than -10, indicates setting a desired value for a certain randomization.
+  if (item->id < -10 && item->id % 2 != 0 && dynamic_cast<ItemAction*>(item))
   {
     set_desired_value(item->id);
     return;
@@ -237,10 +240,6 @@ SeedFinderMenu::menu_action(MenuItem* item)
       break;
     case MNID_USESEED:
       use_seed();
-      break;
-    default:
-      if (!dynamic_cast<ItemStringSelect*>(item)) // Do not show this warning, if the item is a string selection.
-        log_warning << "Invalid menu item pressed in SeedFinderMenu: " << item->id << std::endl;
       break;
   }
 }
