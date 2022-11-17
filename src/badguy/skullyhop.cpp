@@ -16,6 +16,8 @@
 
 #include "badguy/skullyhop.hpp"
 
+#include <algorithm>
+
 #include "audio/sound_manager.hpp"
 #include "math/random_generator.hpp"
 #include "sprite/sprite.hpp"
@@ -39,11 +41,6 @@ SkullyHop::SkullyHop(const ReaderMapping& reader) :
   jump_time_4(0),
   jump_time_5(0)
 {
-  if (!reader.get("jump-time-1", jump_time_1)) jump_time_1 = 0;
-  if (!reader.get("jump-time-2", jump_time_2)) jump_time_2 = 0;
-  if (!reader.get("jump-time-3", jump_time_3)) jump_time_3 = 0;
-  if (!reader.get("jump-time-4", jump_time_4)) jump_time_4 = 0;
-  if (!reader.get("jump-time-5", jump_time_5)) jump_time_5 = 0;
   SoundManager::current()->preload( SKULLYHOP_SOUND );
 }
 
@@ -86,17 +83,20 @@ SkullyHop::after_editor_set()
   BadGuy::after_editor_set();
   sprite->set_action(dir == LEFT ? "standing-left" : "standing-right");
 
-  std::vector<bool> are_valid;
+  std::vector<EditorChange> changes;
 
   // Watch for values above 0, so initial value of jump times (0) still gets accepted.
-  are_valid.push_back(jump_time_1 >= 0 && jump_time_1 <= MAX_RECOVER_TIME);
-  are_valid.push_back(jump_time_2 >= 0 && jump_time_2 <= MAX_RECOVER_TIME);
-  are_valid.push_back(jump_time_3 >= 0 && jump_time_3 <= MAX_RECOVER_TIME);
-  are_valid.push_back(jump_time_4 >= 0 && jump_time_4 <= MAX_RECOVER_TIME);
-  are_valid.push_back(jump_time_5 >= 0 && jump_time_5 <= MAX_RECOVER_TIME);
+  changes.push_back({ jump_time_1 >= 0 && jump_time_1 <= MAX_RECOVER_TIME });
+  changes.push_back({ jump_time_2 >= 0 && jump_time_2 <= MAX_RECOVER_TIME });
+  changes.push_back({ jump_time_3 >= 0 && jump_time_3 <= MAX_RECOVER_TIME });
+  changes.push_back({ jump_time_4 >= 0 && jump_time_4 <= MAX_RECOVER_TIME });
+  changes.push_back({ jump_time_5 >= 0 && jump_time_5 <= MAX_RECOVER_TIME });
 
-  if (std::find(are_valid.begin(), are_valid.end(), false) != are_valid.end())
-    log_warning << "Wrong skullyhop property range." << std::endl;
+  if (std::find_if(changes.begin(), changes.end(),
+      [](const EditorChange& change) { return !change.valid; }) != changes.end())
+  {
+    log_warning << "Wrong " << get_class() << " property range." << std::endl;
+  }
 }
 
 void

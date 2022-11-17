@@ -16,6 +16,8 @@
 
 #include "badguy/flyingsnowball.hpp"
 
+#include <algorithm>
+
 #include "math/random_generator.hpp"
 #include "object/sprite_particle.hpp"
 #include "object/player.hpp"
@@ -34,10 +36,6 @@ FlyingSnowBall::FlyingSnowBall(const ReaderMapping& reader) :
   puff_timer_time(-100),
   puff_timer()
 {
-  if (!reader.get("normal_propeller_speed", normal_propeller_speed))
-    normal_propeller_speed = -100;
-  if (!reader.get("puff_timer", puff_timer_time))
-    puff_timer_time = -100;
   physic.enable_gravity(true);
 }
 
@@ -68,13 +66,16 @@ FlyingSnowBall::after_editor_set()
 {
   BadGuy::after_editor_set();
 
-  std::vector<bool> are_valid;
+  std::vector<EditorChange> changes;
 
-  are_valid.push_back((normal_propeller_speed >= 0.95 && normal_propeller_speed <= 1.05) || normal_propeller_speed == -100);
-  are_valid.push_back((puff_timer_time >= PUFF_INTERVAL_MIN && puff_timer_time <= PUFF_INTERVAL_MAX) || puff_timer_time == -100);
+  changes.push_back({ (normal_propeller_speed >= 0.95 && normal_propeller_speed <= 1.05) || normal_propeller_speed == -100 });
+  changes.push_back({ (puff_timer_time >= PUFF_INTERVAL_MIN && puff_timer_time <= PUFF_INTERVAL_MAX) || puff_timer_time == -100 });
 
-  if (std::find(are_valid.begin(), are_valid.end(), false) != are_valid.end())
-    log_warning << "Wrong flying snowball property range." << std::endl;
+  if (std::find_if(changes.begin(), changes.end(),
+      [](const EditorChange& change) { return !change.valid; }) != changes.end())
+  {
+    log_warning << "Wrong " << get_class() << " property range." << std::endl;
+  }
 }
 
 void

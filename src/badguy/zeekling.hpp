@@ -22,12 +22,17 @@
 
 class Zeekling : public BadGuy
 {
+private:
+  static const float s_status_shift;
+
 public:
   Zeekling(const ReaderMapping& reader);
   Zeekling(const Vector& pos, Direction d);
 
   ObjectSettings get_settings() override;
   void after_editor_set() override;
+
+  float draw_status(DrawingContext& context, const float& pos_x) override;
 
   void initialize();
   void collision_solid(const CollisionHit& hit);
@@ -56,13 +61,43 @@ private:
     CLIMBING
   };
 
+  struct DiveVariables {
+    DiveVariables() :
+      last_player_pos(),
+      last_self_pos(),
+      player_pos(),
+      player_mov(),
+      self_pos(),
+      self_mov(),
+      vy(),
+      height(),
+      relSpeed(),
+      estFrames(),
+      estPx(),
+      estBx()
+    {}
+
+    Vector last_player_pos; /**< position we last spotted the player at */
+    Vector last_self_pos; /**< position we last were at */
+    Vector player_pos;
+    Vector player_mov;
+    Vector self_pos;
+    Vector self_mov;
+    float vy;
+    float height;
+    float relSpeed;
+    float estFrames;
+    float estPx;
+    float estBx;
+  };
+
 private:
   float speed;
   Timer diveRecoverTimer;
   ZeeklingState state;
   const MovingObject* last_player; /**< last player we tracked */
-  Vector last_player_pos; /**< position we last spotted the player at */
-  Vector last_self_pos; /**< position we last were at */
+  DiveVariables dive_variables;
+  bool display_dive_variables;
 
 private:
   Zeekling(const Zeekling&);

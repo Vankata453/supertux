@@ -22,8 +22,12 @@
 #include "math/random_generator.hpp"
 #include "object/player.hpp"
 #include "sprite/sprite.hpp"
+#include "supertux/globals.hpp"
 #include "supertux/object_factory.hpp"
+#include "supertux/resources.hpp"
 #include "util/reader_mapping.hpp"
+
+const float Zeekling::s_status_shift = 40.0f;
 
 Zeekling::Zeekling(const ReaderMapping& reader) :
   BadGuy(reader, "images/creatures/zeekling/zeekling.sprite"),
@@ -31,12 +35,13 @@ Zeekling::Zeekling(const ReaderMapping& reader) :
   diveRecoverTimer(),
   state(),
   last_player(0),
-  last_player_pos(),
-  last_self_pos()
+  dive_variables(),
+  display_dive_variables(false)
 {
   state = FLYING;
-  if (!reader.get("speed", speed)) speed = gameRandom.rand(130, 171);
-  log_warning << "Zeekling speed: " << speed << std::endl;
+  speed = gameRandom.rand(130, 171);
+  if (!reader.get("display_dive_variables", display_dive_variables))
+    display_dive_variables = false;
   physic.enable_gravity(false);
 }
 
@@ -46,8 +51,8 @@ Zeekling::Zeekling(const Vector& pos, Direction d) :
   diveRecoverTimer(),
   state(),
   last_player(0),
-  last_player_pos(),
-  last_self_pos()
+  dive_variables(),
+  display_dive_variables(false)
 {
   state = FLYING;
   speed = gameRandom.rand(130, 171);
@@ -61,6 +66,8 @@ Zeekling::get_settings()
 
   result.options.push_back(ObjectOption(MN_NUMFIELD, _("Speed"), &speed,
                                          "speed"));
+  result.options.push_back(ObjectOption(MN_TOGGLE, _("Display dive variables"), &display_dive_variables,
+                                         "display_dive_variables"));
 
   return result;
 }
@@ -72,6 +79,49 @@ Zeekling::after_editor_set()
 
   if (!(speed >= 130 && speed <= 171))
     log_warning << "Wrong zeekling speed property range." << std::endl;
+}
+
+float
+Zeekling::draw_status(DrawingContext& context, const float& pos_x)
+{
+  if (!display_dive_variables) return 0.0f;
+
+  const float x_pos = pos_x + s_status_shift;
+
+  context.draw_text(Resources::small_font, "Zeekling:",
+                    Vector(x_pos, 15), ALIGN_LEFT, LAYER_GUI, Color::RED);
+  context.draw_text(Resources::small_font, "name: " + name,
+                    Vector(x_pos, 35), ALIGN_LEFT, LAYER_GUI, Color::YELLOW);
+  context.draw_text(Resources::small_font, "speed: " + std::to_string(speed),
+                    Vector(x_pos, 45), ALIGN_LEFT, LAYER_GUI);
+
+  context.draw_text(Resources::small_font, "last_player_pos: " + dive_variables.last_player_pos.to_string(),
+                    Vector(x_pos, 55), ALIGN_LEFT, LAYER_GUI);
+  context.draw_text(Resources::small_font, "last_self_pos: " + dive_variables.last_self_pos.to_string(),
+                    Vector(x_pos, 65), ALIGN_LEFT, LAYER_GUI);
+  context.draw_text(Resources::small_font, "player_pos: " + dive_variables.player_pos.to_string(),
+                    Vector(x_pos, 75), ALIGN_LEFT, LAYER_GUI);
+  context.draw_text(Resources::small_font, "player_mov: " + dive_variables.player_mov.to_string(),
+                    Vector(x_pos, 85), ALIGN_LEFT, LAYER_GUI);
+  context.draw_text(Resources::small_font, "self_pos: " + dive_variables.self_pos.to_string(),
+                    Vector(x_pos, 95), ALIGN_LEFT, LAYER_GUI);
+  context.draw_text(Resources::small_font, "self_mov: " + dive_variables.self_mov.to_string(),
+                    Vector(x_pos, 105), ALIGN_LEFT, LAYER_GUI);
+
+  context.draw_text(Resources::small_font, "vy: " + std::to_string(dive_variables.vy),
+                    Vector(x_pos, 115), ALIGN_LEFT, LAYER_GUI);
+  context.draw_text(Resources::small_font, "height: " + std::to_string(dive_variables.height),
+                    Vector(x_pos, 125), ALIGN_LEFT, LAYER_GUI);
+  context.draw_text(Resources::small_font, "relSpeed: " + std::to_string(dive_variables.relSpeed),
+                    Vector(x_pos, 135), ALIGN_LEFT, LAYER_GUI);
+  context.draw_text(Resources::small_font, "estFrames: " + std::to_string(dive_variables.estFrames),
+                    Vector(x_pos, 145), ALIGN_LEFT, LAYER_GUI);
+  context.draw_text(Resources::small_font, "estPx: " + std::to_string(dive_variables.estPx),
+                    Vector(x_pos, 155), ALIGN_LEFT, LAYER_GUI);
+  context.draw_text(Resources::small_font, "estBx: " + std::to_string(dive_variables.estBx),
+                    Vector(x_pos, 165), ALIGN_LEFT, LAYER_GUI);
+
+  return s_status_shift + 300.0f;
 }
 
 void
@@ -167,43 +217,43 @@ Zeekling::should_we_dive() {
   if (player && last_player && (player == last_player)) {
 
     // get positions, calculate movement
-    const Vector& player_pos = player->get_pos();
-    const Vector player_mov = (player_pos - last_player_pos);
-    const Vector self_pos = bbox.p1;
-    const Vector self_mov = (self_pos - last_self_pos);
+    dive_variables.player_pos = player->get_pos();
+    dive_variables.player_mov = (dive_variables.player_pos - dive_variables.last_player_pos);
+    dive_variables.self_pos = bbox.p1;
+    dive_variables.self_mov = (dive_variables.self_pos - dive_variables.last_self_pos);
 
     // new vertical speed to test with
-    float vy = 2*fabsf(self_mov.x);
+    dive_variables.vy = 2*fabsf(dive_variables.self_mov.x);
 
     // do not dive if we are not above the player
-    float height = player_pos.y - self_pos.y;
-    if (height <= 0) return false;
+    dive_variables.height = dive_variables.player_pos.y - dive_variables.self_pos.y;
+    if (dive_variables.height <= 0) return false;
 
     // do not dive if we are too far above the player
-    if (height > 512) return false;
+    if (dive_variables.height > 512) return false;
 
     // do not dive if we would not descend faster than the player
-    float relSpeed = vy - player_mov.y;
-    if (relSpeed <= 0) return false;
+    dive_variables.relSpeed = dive_variables.vy - dive_variables.player_mov.y;
+    if (dive_variables.relSpeed <= 0) return false;
 
     // guess number of frames to descend to same height as player
-    float estFrames = height / relSpeed;
+    dive_variables.estFrames = dive_variables.height / dive_variables.relSpeed;
 
     // guess where the player would be at this time
-    float estPx = (player_pos.x + (estFrames * player_mov.x));
+    dive_variables.estPx = (dive_variables.player_pos.x + (dive_variables.estFrames * dive_variables.player_mov.x));
 
     // guess where we would be at this time
-    float estBx = (self_pos.x + (estFrames * self_mov.x));
+    dive_variables.estBx = (dive_variables.self_pos.x + (dive_variables.estFrames * dive_variables.self_mov.x));
 
     // near misses are OK, too
-    if (fabsf(estPx - estBx) < 8) return true;
+    if (fabsf(dive_variables.estPx - dive_variables.estBx) < 8) return true;
   }
 
   // update last player tracked, as well as our positions
   last_player = player;
   if (player) {
-    last_player_pos = player->get_pos();
-    last_self_pos = bbox.p1;
+    dive_variables.last_player_pos = player->get_pos();
+    dive_variables.last_self_pos = bbox.p1;
   }
 
   return false;

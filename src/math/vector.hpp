@@ -17,6 +17,8 @@
 #ifndef HEADER_SUPERTUX_MATH_VECTOR_HPP
 #define HEADER_SUPERTUX_MATH_VECTOR_HPP
 
+#include <string>
+
 /** Simple two dimensional vector. */
 class Vector
 {
@@ -109,6 +111,8 @@ public:
 
   float norm() const;
   Vector unit() const;
+
+  std::string to_string() const;
 
   // ... add the other operators as needed, I'm too lazy now ...
 

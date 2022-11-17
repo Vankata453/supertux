@@ -132,6 +132,9 @@ void
 Menu::delete_until_hl_from(int id)
 {
   const int item_pos = get_item_pos(id);
+  if (item_pos < 0)
+    throw std::runtime_error("Position of menu item with ID " + std::to_string(id) + " not found.");
+
   ItemHorizontalLine* item_hl = nullptr;
   while (!item_hl)
   {

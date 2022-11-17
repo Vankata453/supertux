@@ -553,6 +553,14 @@ Sector::draw(DrawingContext& context)
 {
   context.set_ambient_color( ambient_light );
   context.push_transform();
+
+  // Draw GameObject statuses.
+  float status_pos_x = 250.0f;
+  for (const auto& object : gameobjects)
+  {
+    status_pos_x += object->draw_status(context, status_pos_x);
+  }
+
   context.set_translation(camera->get_translation());
 
   for(const auto& object : gameobjects) {

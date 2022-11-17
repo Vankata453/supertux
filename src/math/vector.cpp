@@ -28,4 +28,9 @@ float Vector::norm() const
   return sqrt(x*x + y*y);
 }
 
+std::string Vector::to_string() const
+{
+  return "{ " + std::to_string(x) + " " + std::to_string(y) + " }";
+}
+
 /* EOF */

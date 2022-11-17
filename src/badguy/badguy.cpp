@@ -141,6 +141,7 @@ BadGuy::BadGuy(const ReaderMapping& reader, const std::string& sprite_name_, int
   start_dir = str2dir( dir_str );
   dir = start_dir;
 
+  reader.get("name", name);
   reader.get("dead-script", dead_script);
 
   SoundManager::current()->preload("sounds/squish.wav");

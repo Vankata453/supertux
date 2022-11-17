@@ -59,6 +59,11 @@ public:
    */
   virtual void draw(DrawingContext& context) = 0;
 
+  /** The GameObject should draw its status info onto the provided DrawingContext if this
+   * function is called.
+   */
+  virtual float draw_status(DrawingContext& context, const float& pos_x);
+
   /** This function saves the object.
    *  Editor will use that.
    */
@@ -139,6 +144,11 @@ protected:
    * debugging, don't rely on names being set or being unique
    */
   std::string name;
+
+  struct EditorChange
+  {
+    bool valid;
+  };
 
 private:
   GameObject& operator=(const GameObject&);

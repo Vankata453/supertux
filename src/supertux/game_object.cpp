@@ -43,6 +43,13 @@ GameObject::~GameObject()
   }
 }
 
+float
+GameObject::draw_status(DrawingContext& context, const float& pos_x)
+{
+  // Returns the shift the object's status has added. Used for drawing other statuses after.
+  return 0.0f;
+}
+
 void
 GameObject::add_remove_listener(ObjectRemoveListener* listener)
 {
@@ -119,7 +126,7 @@ GameObject::save(Writer& writer) {
 ObjectSettings
 GameObject::get_settings() {
   ObjectSettings result(this->get_display_name());
-  result.options.push_back( ObjectOption(MN_TEXTFIELD, _("Name"), &name));
+  result.options.push_back( ObjectOption(MN_TEXTFIELD, _("Name"), &name, "name"));
   return result;
 }
 
