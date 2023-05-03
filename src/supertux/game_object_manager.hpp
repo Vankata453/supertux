@@ -116,13 +116,13 @@ public:
   T* get_object_by_uid(const UID& uid) const
   {
     auto it = m_objects_by_uid.find(uid);
-    if (it == m_objects_by_uid.end())
+    if (it == m_objects_by_uid.end() || !it->second->is_valid())
     {
       // FIXME: Is this a good idea? Should gameobjects be made
       // accessible even when not fully inserted into the manager?
       for (auto&& itnew : m_gameobjects_new)
       {
-        if (itnew->get_uid() == uid)
+        if (itnew->get_uid() == uid && itnew->is_valid())
           return static_cast<T*>(itnew.get());
       }
       return nullptr;
@@ -152,14 +152,10 @@ public:
   T* get_object_by_name(const std::string& name) const
   {
     auto it = m_objects_by_name.find(name);
-    if (it == m_objects_by_name.end())
-    {
+    if (it == m_objects_by_name.end() || !it->second->is_valid())
       return nullptr;
-    }
     else
-    {
       return dynamic_cast<T*>(it->second);
-    }
   }
 
   /** Get total number of GameObjects of given type */
@@ -169,10 +165,8 @@ public:
     int total = 0;
     for (const auto& obj : m_gameobjects) {
       auto object = dynamic_cast<T*>(obj.get());
-      if (object && (predicate == nullptr || predicate(*object)))
-      {
-        total += 1;
-      }
+      if (object && object->is_valid() && (predicate == nullptr || predicate(*object)))
+        total++;
     }
     return total;
   }
@@ -181,6 +175,15 @@ public:
   const std::vector<TileMap*>& get_all_tilemaps() const { return m_all_tilemaps; }
   
   void update_solid(TileMap* solid);
+
+  /** Undo/redo changes to GameObjects in the manager.
+      Utilized by the editor's UndoManager. */
+  virtual void undo();
+  virtual void redo();
+
+  /** Save object change in the undo stack with given data.
+      Used to save an object's previous state before a change had occured. */
+  void save_object_change(GameObject& object, const std::string& data);
 
 protected:
   void update_tilemaps();
@@ -202,11 +205,29 @@ protected:
   }
 
 private:
+  struct ObjectChange {
+    const std::string name;
+    const UID uid;
+    std::string data;
+  };
+
+  /** Process object change on undo/redo. */
+  void process_object_change(ObjectChange& change);
+
+  /** Save object change in the undo stack. */
+  void save_object_change(GameObject& object);
+
   void this_before_object_add(GameObject& object);
   void this_before_object_remove(GameObject& object);
 
 private:
+  /** An initial flush_game_objects() call has been initiated. */
+  bool m_initialized;
+
   UIDGenerator m_uid_generator;
+
+  std::vector<ObjectChange> m_undo_stack;
+  std::vector<ObjectChange> m_redo_stack;
 
   std::vector<std::unique_ptr<GameObject>> m_gameobjects;
 

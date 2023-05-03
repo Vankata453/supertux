@@ -114,8 +114,6 @@ Editor::Editor() :
   m_enabled(false),
   m_bgr_surface(Surface::from_file("images/engine/menu/bg_editor.png")),
   m_undo_manager(new UndoManager),
-  m_ignore_sector_change(false),
-  m_level_first_loaded(false),
   m_time_since_last_save(0.f),
   m_scroll_speed(32.0f)
 {
@@ -525,13 +523,6 @@ Editor::set_level(std::unique_ptr<Level> level, bool reset)
   m_layers_widget->refresh_sector_text();
   m_toolbox_widget->update_mouse_icon();
   m_overlay_widget->on_level_change();
-  
-  if (!m_level_first_loaded)
-  {
-    m_undo_manager->try_snapshot(*m_level);
-    m_undo_manager->reset_index();
-    m_level_first_loaded = true;
-  }
 }
 
 void
@@ -735,28 +726,11 @@ Editor::event(const SDL_Event& ev)
       return;
     }
 
-    m_ignore_sector_change = false;
-
     BIND_SECTOR(*m_sector);
 
     for(const auto& widget : m_widgets) {
       if (widget->event(ev))
         break;
-    }
-
-    // unreliable heuristic to snapshot the current state for future undo
-    if (((ev.type == SDL_KEYUP && ev.key.repeat == 0 &&
-         ev.key.keysym.sym != SDLK_LSHIFT &&
-         ev.key.keysym.sym != SDLK_RSHIFT &&
-         ev.key.keysym.sym != SDLK_LCTRL &&
-         ev.key.keysym.sym != SDLK_RCTRL) ||
-         ev.type == SDL_MOUSEBUTTONUP))
-    {
-      if (!m_ignore_sector_change) {
-        if (m_level) {
-          m_undo_manager->try_snapshot(*m_level);
-        }
-      }
     }
 
     // Scroll with mouse wheel, if the mouse is not over the toolbox.
@@ -874,27 +848,13 @@ Editor::check_save_prerequisites(const std::function<void ()>& callback) const
 void
 Editor::undo()
 {
-  log_info << "attempting undo" << std::endl;
-  auto level = m_undo_manager->undo();
-  if (level) {
-    set_level(std::move(level), false);
-    m_ignore_sector_change = true;
-  } else {
-    log_info << "undo failed" << std::endl;
-  }
+  m_sector->undo();
 }
 
 void
 Editor::redo()
 {
-  log_info << "attempting redo" << std::endl;
-  auto level = m_undo_manager->redo();
-  if (level) {
-    set_level(std::move(level), false);
-    m_ignore_sector_change = true;
-  } else {
-    log_info << "redo failed" << std::endl;
-  }
+  m_sector->redo();
 }
 
 IntegrationStatus

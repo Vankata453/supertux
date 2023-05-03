@@ -164,6 +164,7 @@ EditorOverlayWidget::input_tile(const Vector& pos, uint32_t tile)
     return;
   }
 
+  tilemap->save_state();
   tilemap->change(static_cast<int>(pos.x), static_cast<int>(pos.y), tile);
 }
 
@@ -182,6 +183,7 @@ EditorOverlayWidget::autotile(const Vector& pos, uint32_t tile)
     return;
   }
 
+  tilemap->save_state();
   tilemap->autotile(static_cast<int>(pos.x), static_cast<int>(pos.y), tile);
 }
 
@@ -220,6 +222,7 @@ EditorOverlayWidget::autotile_corner(const Vector& pos, uint32_t tile,
     return;
   }
 
+  tilemap->save_state();
   tilemap->autotile_corner(static_cast<int>(pos.x), static_cast<int>(pos.y), tile, op);
 }
 
@@ -246,6 +249,8 @@ EditorOverlayWidget::input_autotile_corner(const Vector& corner, uint32_t tile, 
 void
 EditorOverlayWidget::put_tile(const Vector& target_tile)
 {
+  m_editor.get_selected_tilemap()->save_state();
+
   Vector hovered_corner = target_tile + Vector(0.5f, 0.5f);
   auto tiles = m_editor.get_tiles();
   Vector add_tile(0.0f, 0.0f);
@@ -652,6 +657,7 @@ EditorOverlayWidget::grab_object()
       auto* pm = dynamic_cast<MarkerObject*>(m_hovered_object.get());
       if (!pm) {
         select_object();
+        m_dragged_object->save_state();
       }
       m_last_node_marker = dynamic_cast<NodeMarker*>(pm);
     }
@@ -1020,14 +1026,20 @@ EditorOverlayWidget::on_mouse_button_up(const SDL_MouseButtonEvent& button)
 {
   if (button.button == SDL_BUTTON_LEFT)
   {
-    if (m_editor.get_tileselect_input_type() == EditorToolboxWidget::InputType::TILE
-        && m_editor.get_tileselect_select_mode() == 1)
+    if (m_editor.get_tileselect_input_type() == EditorToolboxWidget::InputType::TILE)
     {
-      if (m_dragging)
+      if (m_dragging && m_editor.get_tileselect_select_mode() == 1)
       {
         draw_rectangle();
         m_rectangle_preview->m_tiles.clear();
       }
+
+      m_editor.get_selected_tilemap()->check_state();
+    }
+    else if (m_editor.get_tileselect_input_type() == EditorToolboxWidget::InputType::OBJECT)
+    {
+      if (m_dragging && m_dragged_object)
+        m_dragged_object->check_state();
     }
   }
   else if (button.button == SDL_BUTTON_MIDDLE)

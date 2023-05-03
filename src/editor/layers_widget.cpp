@@ -41,6 +41,7 @@ EditorLayersWidget::EditorLayersWidget(Editor& editor) :
   m_editor(editor),
   m_layer_icons(),
   m_selected_tilemap(),
+  m_last_object_count(),
   m_Ypos(448),
   m_Width(512),
   m_scroll(0),
@@ -126,15 +127,8 @@ EditorLayersWidget::draw(DrawingContext& context)
 void
 EditorLayersWidget::update(float dt_sec)
 {
-  auto it = m_layer_icons.begin();
-  while (it != m_layer_icons.end())
-  {
-    auto layer_icon = (*it).get();
-    if (!layer_icon->is_valid())
-      it = m_layer_icons.erase(it);
-    else
-      ++it;
-  }
+  if (m_last_object_count != m_editor.get_sector()->get_object_count<GameObject>())
+    refresh(false);
   
   if(m_scroll_speed < 0 && m_scroll > 0)
   {
@@ -172,11 +166,10 @@ EditorLayersWidget::on_mouse_button_down(const SDL_MouseButtonEvent& button)
         else
         {
           if (m_layer_icons[m_hovered_layer]->is_tilemap()) {
-            if (m_selected_tilemap) {
-              m_selected_tilemap->m_editor_active = false;
-            }
-            m_selected_tilemap = static_cast<TileMap*>(m_layer_icons[m_hovered_layer]->get_layer());
-            m_selected_tilemap->m_editor_active = true;
+            m_selected_tilemap->m_editor_active = false;
+            TileMap* tilemap = static_cast<TileMap*>(m_layer_icons[m_hovered_layer]->get_layer());
+            tilemap->m_editor_active = true;
+            update_selected_tilemap();
             m_editor.edit_path(m_selected_tilemap->get_path_gameobject(), m_selected_tilemap);
           } else {
             auto cam = dynamic_cast<Camera*>(m_layer_icons[m_hovered_layer]->get_layer());
@@ -306,9 +299,8 @@ EditorLayersWidget::setup()
 }
 
 void
-EditorLayersWidget::refresh()
+EditorLayersWidget::refresh(bool full)
 {
-  m_selected_tilemap = nullptr;
   m_layer_icons.clear();
 
   bool tsel = false;
@@ -322,6 +314,8 @@ EditorLayersWidget::refresh()
         add_layer(go);
       }
 
+      if (!full) continue;
+
       auto tm = dynamic_cast<TileMap*>(go);
       if (tm) {
         if (first_tm == nullptr)
@@ -329,7 +323,6 @@ EditorLayersWidget::refresh()
         if ( !tm->is_solid() || tsel ) {
           tm->m_editor_active = false;
         } else {
-          m_selected_tilemap = tm;
           tm->m_editor_active = true;
           tsel = true;
         }
@@ -339,9 +332,11 @@ EditorLayersWidget::refresh()
   if (!tsel && first_tm != nullptr)
   {
     first_tm->m_editor_active = true;
-    m_selected_tilemap = first_tm;
   }
 
+  m_last_object_count = m_editor.get_sector()->get_object_count<GameObject>();
+
+  update_selected_tilemap();
   sort_layers();
   refresh_sector_text();
 }
@@ -401,6 +396,21 @@ int
 EditorLayersWidget::get_layer_pos(const Vector& coords) const
 {
   return static_cast<int>((coords.x - static_cast<float>(m_Xpos - m_scroll) - static_cast<float>(m_sector_text_width)) / 35.0f);
+}
+
+void
+EditorLayersWidget::update_selected_tilemap()
+{
+  for (auto& layer_icon : m_layer_icons)
+  {
+    TileMap* tilemap = dynamic_cast<TileMap*>(layer_icon->get_layer());
+    if (tilemap && tilemap->m_editor_active)
+    {
+      m_selected_tilemap = tilemap;
+      return;
+    }
+  }
+  m_selected_tilemap = nullptr;
 }
 
 /* EOF */

@@ -74,7 +74,10 @@ Platform::get_settings()
   result.add_path_ref(_("Path"), *this, get_path_ref(), "path-ref");
   result.add_walk_mode(_("Path Mode"), &get_path()->m_mode, {}, {});
   result.add_bool(_("Adapt Speed"), &get_path()->m_adapt_speed, {}, {});
-  result.add_bool(_("Running"), &get_walker()->m_running, "running", true, 0);
+  if (get_walker())
+  {
+    result.add_bool(_("Running"), &get_walker()->m_running, "running", true, 0);
+  }
   result.add_int(_("Starting Node"), &m_starting_node, "starting-node", 0, 0U);
   result.add_path_handle(_("Handle"), m_path_handle, "handle");
 

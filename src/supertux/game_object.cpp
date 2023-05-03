@@ -25,24 +25,30 @@
 #include "video/color.hpp"
 
 GameObject::GameObject() :
+  m_parent(),
   m_name(),
   m_type(0),
   m_fade_helpers(),
   m_previous_type(-1),
   m_uid(),
   m_scheduled_for_removal(false),
+  m_track_undo(true),
+  m_last_state(),
   m_components(),
   m_remove_listeners()
 {
 }
 
 GameObject::GameObject(const std::string& name) :
+  m_parent(),
   m_name(name),
   m_type(0),
   m_fade_helpers(),
   m_previous_type(-1),
   m_uid(),
   m_scheduled_for_removal(false),
+  m_track_undo(true),
+  m_last_state(),
   m_components(),
   m_remove_listeners()
 {
@@ -88,6 +94,16 @@ GameObject::save(Writer& writer)
   }
 }
 
+std::string
+GameObject::save()
+{
+  std::ostringstream save_stream;
+  Writer writer(save_stream);
+  save(writer);
+
+  return save_stream.str();
+}
+
 ObjectSettings
 GameObject::get_settings()
 {
@@ -111,6 +127,28 @@ GameObject::get_settings()
   }
 
   return result;
+}
+
+void
+GameObject::save_state()
+{
+  if (m_last_state.empty())
+    m_last_state = save();
+}
+
+void
+GameObject::check_state()
+{
+  // If settings have changed, save the change.
+  if (!m_last_state.empty())
+  {
+    if (m_last_state != save())
+    {
+      log_warning << "change detected in " << get_class_name() << std::endl;
+      m_parent->save_object_change(*this, m_last_state);
+    }
+    m_last_state.clear();
+  }
 }
 
 void

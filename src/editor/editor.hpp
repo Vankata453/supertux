@@ -213,10 +213,7 @@ private:
   SurfacePtr m_bgr_surface;
 
   std::unique_ptr<UndoManager> m_undo_manager;
-  bool m_ignore_sector_change;
-  
-  bool m_level_first_loaded;
-  
+
   float m_time_since_last_save;
 
   float m_scroll_speed;

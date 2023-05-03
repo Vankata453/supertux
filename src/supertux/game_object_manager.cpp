@@ -20,11 +20,15 @@
 #include <algorithm>
 
 #include "object/tilemap.hpp"
+#include "supertux/game_object_factory.hpp"
 
 bool GameObjectManager::s_draw_solids_only = false;
 
 GameObjectManager::GameObjectManager() :
+  m_initialized(false),
   m_uid_generator(),
+  m_undo_stack(),
+  m_redo_stack(),
   m_gameobjects(),
   m_gameobjects_new(),
   m_solid_tilemaps(),
@@ -104,9 +108,11 @@ GameObject&
 GameObjectManager::add_object(std::unique_ptr<GameObject> object)
 {
   assert(object);
-  assert(!object->get_uid());
 
-  object->set_uid(m_uid_generator.next());
+  object->m_parent = this;
+
+  if (!object->get_uid())
+    object->set_uid(m_uid_generator.next());
 
   // make sure the object isn't already in the list
 #ifndef NDEBUG
@@ -193,6 +199,7 @@ GameObjectManager::flush_game_objects()
       {
         if (before_object_add(*object))
         {
+          if (!m_initialized) object->m_track_undo = false;
           this_before_object_add(*object);
           m_gameobjects.push_back(std::move(object));
         }
@@ -200,6 +207,8 @@ GameObjectManager::flush_game_objects()
     }
   }
   update_tilemaps();
+
+  m_initialized = true;
 }
 
 void 
@@ -227,6 +236,80 @@ GameObjectManager::update_tilemaps()
 }
 
 void
+GameObjectManager::undo()
+{
+  if (m_undo_stack.empty()) return;
+  ObjectChange& change = m_undo_stack.back();
+
+  process_object_change(change);
+
+  m_redo_stack.push_back(change);
+  m_undo_stack.pop_back();
+}
+
+void
+GameObjectManager::redo()
+{
+  if (m_redo_stack.empty()) return;
+  ObjectChange& change = m_redo_stack.back();
+
+  process_object_change(change);
+
+  m_undo_stack.push_back(change);
+  m_redo_stack.pop_back();
+}
+
+void
+GameObjectManager::process_object_change(ObjectChange& change)
+{
+  GameObject* object = get_object_by_uid<GameObject>(change.uid);
+  if (object) // Object exists.
+  {
+    object->m_track_undo = false;
+    object->remove_me();
+
+    const std::string data = object->save();
+
+    if (change.data != data) // Settings have changed, re-create object with the old settings.
+    {
+      auto new_object = GameObjectFactory::instance().create(change.name, change.data);
+      new_object->m_track_undo = false;
+      new_object->set_uid(change.uid);
+      new_object->after_editor_set();
+      add_object(std::move(new_object));
+
+      change.data = std::move(data);
+    }
+  }
+  else // Object doesn't exist, create it.
+  {
+    auto new_object = GameObjectFactory::instance().create(change.name, change.data);
+    new_object->m_track_undo = false;
+    new_object->set_uid(change.uid);
+    new_object->after_editor_set();
+    add_object(std::move(new_object));
+  }
+}
+
+void
+GameObjectManager::save_object_change(GameObject& object)
+{
+  if (object.m_track_undo)
+  {
+    m_undo_stack.push_back({ object.get_class_name(), object.get_uid(), object.save() });
+    m_redo_stack.clear();
+  }
+  object.m_track_undo = true;
+}
+
+void
+GameObjectManager::save_object_change(GameObject& object, const std::string& data)
+{
+  m_undo_stack.push_back({ object.get_class_name(), object.get_uid(), data });
+  m_redo_stack.clear();
+}
+
+void
 GameObjectManager::this_before_object_add(GameObject& object)
 {
   { // by_name
@@ -245,11 +328,15 @@ GameObjectManager::this_before_object_add(GameObject& object)
   { // by_type_index
     m_objects_by_type_index[std::type_index(typeid(object))].push_back(&object);
   }
+
+  save_object_change(object);
 }
 
 void
 GameObjectManager::this_before_object_remove(GameObject& object)
 {
+  save_object_change(object);
+
   { // by_name
     const std::string& name = object.get_name();
     if (!name.empty())

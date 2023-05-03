@@ -54,7 +54,7 @@ public:
   virtual void setup() override;
   virtual void resize() override;
 
-  void refresh();
+  void refresh(bool full = true);
 
   void refresh_sector_text();
   void sort_layers();
@@ -65,6 +65,8 @@ public:
   TileMap* get_selected_tilemap() const { return m_selected_tilemap; }
 
 private:
+  void update_selected_tilemap();
+
   Vector get_layer_coords(const int pos) const;
   int get_layer_pos(const Vector& coords) const;
   void update_tip();
@@ -73,6 +75,7 @@ private:
   Editor& m_editor;
   std::vector<std::unique_ptr<LayerIcon>> m_layer_icons;
   TileMap* m_selected_tilemap;
+  int m_last_object_count;
 
   int m_Ypos;
   const int m_Xpos = 32;
