@@ -1,39 +1,59 @@
 (supertux-sprite
   (action
     (name "left")
-    (hitbox 5 12 32 32)
+    (hitbox 8 13 32 32)
     (fps 14)
-    (images "captain-left-0.png"
-            "captain-left-1.png"
-            "captain-left-2.png"
-            "captain-left-3.png"
-            "captain-left-4.png"
-            "captain-left-5.png"
-            "captain-left-6.png"
-            "captain-left-7.png")
+    (images "captain_left-0.png"
+            "captain_left-1.png"
+            "captain_left-2.png"
+            "captain_left-3.png"
+            "captain_left-4.png"
+            "captain_left-5.png"
+            "captain_left-6.png"
+            "captain_left-7.png")
   )
   (action
     (name "right")
-    (hitbox 7 12 32 32)
+    (hitbox 8 13 32 32)
     (fps 14)
-    (images "captain-right-0.png"
-            "captain-right-1.png"
-            "captain-right-2.png"
-            "captain-right-3.png"
-            "captain-right-4.png"
-            "captain-right-5.png"
-            "captain-right-6.png"
-            "captain-right-7.png")
+    (images "captain_right-0.png"
+            "captain_right-1.png"
+            "captain_right-2.png"
+            "captain_right-3.png"
+            "captain_right-4.png"
+            "captain_right-5.png"
+            "captain_right-6.png"
+            "captain_right-7.png")
+  )
+  (action
+    (name "jump-left")
+    (hitbox 8 13 32 32)
+    (fps 20)
+	(loops 1)
+    (images "captain_jump-0.png"
+            "captain_jump-1.png"
+            "captain_jump-2.png"
+            "captain_jump-3.png")
+  )
+  (action
+    (name "jump-right")
+    (hitbox 8 13 32 32)
+    (fps 20)
+	(loops 1)
+    (images "captain_jump-4.png"
+            "captain_jump-5.png"
+            "captain_jump-6.png"
+            "captain_jump-7.png")
   )
   (action
     (name "squished-left")
-    (hitbox 1 -19 31.8 31.8)
-    (images "cpt-squished-left.png")
+    (hitbox 8 13 32 32)
+    (images "captain_left-squished.png")
   )
   (action
     (name "squished-right")
-    (hitbox 1 -19 31.8 31.8)
-    (images "cpt-squished-right.png")
+    (hitbox 8 13 32 32)
+    (images "captain_right-squished.png")
   )
  (action
   (name "melting-left")
