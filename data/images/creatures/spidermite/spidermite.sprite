@@ -26,7 +26,7 @@
 	(action
 	  (name "iced-left")
 	  (hitbox 14 14 37 43)
-	  (images "spidermite-frozen.png"))
+	  (images "spidermite1.png"))
 	(action
 	  (name "iced-right")
 	  (hitbox 14 14 37 43)
