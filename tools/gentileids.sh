@@ -13,7 +13,7 @@ for file in "$@"; do
     exit 1
   fi
 
-  IMG_FOLDER="$(dirname "$0")/data/images"
+  IMG_FOLDER="$(dirname "$0")/../data/images"
   TILES_FILE="$IMG_FOLDER/tiles.strf"
   NEXT_ID_LINE="$(grep 'next-id' "$TILES_FILE" | head -1)"
   REF_PATH="$(realpath --relative-to="$IMG_FOLDER" "$file")"
