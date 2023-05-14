@@ -18,9 +18,11 @@
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 //  02111-1307, USA.
 
+#include <assert.h>
 #include <sys/types.h>
 #include <ctype.h>
 
+#include "addon.hpp"
 #include "defines.h"
 #include "globals.h"
 #include "setup.h"
@@ -36,9 +38,20 @@
 
 int main(int argc, char * argv[])
 {
+  for (int i = 1; i < argc; i++)
+  {
+    if (strcmp(argv[i], "--datadir") == 0 ||
+        strcmp(argv[i], "-d") == 0) // Get datadir before setting up directories
+    {
+      assert(i+1 < argc);
+      datadir = argv[++i];
+    }
+  }
   st_directory_setup();
   parseargs(argc, argv);
-  
+
+  Addon::load_addons();
+
   st_audio_setup();
   st_video_setup();
   st_joystick_setup();

@@ -30,6 +30,9 @@ FileSystem::PhysfsError::PhysfsError(const std::string& message, const std::stri
               PHYSFS_getErrorByCode(code) + " (" + std::to_string(code) + ")";
 }
 
+std::string FileSystem::g_datadir;
+std::string FileSystem::g_userdir;
+
 // Initialize PhysicsFS.
 void
 FileSystem::init()
@@ -45,22 +48,16 @@ FileSystem::init()
     throw PhysfsError("Error setting user data directory as write directory", "setWriteDir");
 
   // Mount the default data directory.
-  if (!PHYSFS_mount(datadir.c_str(), NULL, 1))
+  if (!PHYSFS_mount(datadir.c_str(), NULL, 0))
     throw PhysfsError("Cannot mount 'data' directory", "mount");
 
+  g_datadir = datadir;
+  g_userdir = userdir;
   datadir.clear();
 
   // Mount the user directory.
-  if (!PHYSFS_mount(userdir, NULL, 1))
+  if (!PHYSFS_mount(userdir, NULL, 0))
     throw PhysfsError("Cannot mount user data directory", "mount");
-
-  // DEBUG
-  std::cout << "Found files: ";
-  for (const auto& file : get_files())
-  {
-    std::cout << file << ", ";
-  }
-  std::cout << "end" << std::endl;
 }
 
 // De-initialize PhysicsFS.

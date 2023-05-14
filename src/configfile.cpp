@@ -20,6 +20,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <string>
+#include "addon.hpp"
 #include "configfile.h"
 #include "globals.h"
 #include "reader/reader_document.hpp"
@@ -45,6 +46,8 @@ static void defaults ()
 
   use_sound = true;
   use_music = true;
+
+  g_init_enabled_addons.clear();
 }
 
 void loadconfig(void)
@@ -85,6 +88,8 @@ void loadconfig(void)
     reader.get ("keyboard-left", keymap.left);
     reader.get ("keyboard-right", keymap.right);
     reader.get ("keyboard-fire", keymap.fire);
+
+    reader.get("enabled-addons", g_init_enabled_addons);
   }
   catch (std::exception& err)
   {
@@ -120,6 +125,13 @@ void saveconfig (void)
   writer.write("keyboard-left", keymap.left);
   writer.write("keyboard-right", keymap.right);
   writer.write("keyboard-fire", keymap.fire);
+
+  std::vector<std::string> enabled_addons;
+  for (const auto& addon : g_addons)
+    if (addon->is_enabled())
+      enabled_addons.push_back(addon->get_filename());
+
+  writer.write("enabled-addons", enabled_addons);
 
   writer.end_list("supertux-config");
 }

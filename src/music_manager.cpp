@@ -63,7 +63,9 @@ MusicManager::exists_music(const std::string& file)
   Mix_Music* song = NULL;
   try
   {
-    song = Mix_LoadMUS_RW(get_physfs_SDLRWops(file));
+    SDL_RWops* ops = get_physfs_SDLRWops(file);
+    song = Mix_LoadMUS_RW(ops);
+    SDL_RWclose(ops);
   }
   catch (...)
   {

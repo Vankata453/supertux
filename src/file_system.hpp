@@ -36,6 +36,10 @@ namespace FileSystem
     const char* what() const throw() { return m_message.c_str(); }
   };
 
+  /** Variables */
+  extern std::string g_datadir;
+  extern std::string g_userdir;
+
   // General file system management functions.
   void init();
   void deinit();

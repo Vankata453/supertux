@@ -68,6 +68,9 @@ const char *st_save_dir = "save";
 
 SDL_Joystick * js;
 
+/* Add-ons, initially enabled in config */
+std::vector<std::string> g_init_enabled_addons = {};
+
 /* Returns 1 for every button event, 2 for a quit event and 0 for no event. */
 int wait_for_event(SDL_Event& event,unsigned int min_delay, unsigned int max_delay, bool empty_events)
 {

@@ -32,6 +32,7 @@
 enum MainMenuIDs {
   MNID_STARTGAME,
   MNID_CONTRIB,
+  MNID_ADDONS,
   MNID_OPTIONMENU,
   MNID_LEVELEDITOR,
   MNID_CREDITS,
@@ -239,6 +240,7 @@ extern Menu* options_joystick_menu;
 extern Menu* highscore_menu;
 extern Menu* load_game_menu;
 extern Menu* save_game_menu;
+extern Menu* addons_menu;
 
 #endif /*SUPERTUX_MENU_H*/
 

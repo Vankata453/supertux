@@ -32,6 +32,7 @@
 #include <ctype.h>
 #endif
 
+#include "addon.hpp"
 #include "defines.h"
 #include "globals.h"
 #include "title.h"
@@ -80,7 +81,7 @@ void free_contrib_menu()
 
 void generate_contrib_menu()
 {
-  std::vector<std::string> level_subsets = FileSystem::get_files("levels");
+  const std::vector<std::string> level_subsets = FileSystem::get_files("levels");
 
   free_contrib_menu();
 
@@ -162,6 +163,35 @@ void check_contrib_menu()
       }
 }
 
+void generate_addons_menu()
+{
+  addons_menu->clear();
+
+  addons_menu->additem(MN_LABEL,"Add-ons",0,0);
+  addons_menu->additem(MN_HL,"",0,0);
+
+  int i = 0;
+  for (const auto& addon : g_addons)
+  {
+    addons_menu->additem(MN_TOGGLE, addon->get_filename().c_str(), addon->is_enabled(),
+        nullptr, i); // Add addon to menu
+    i++;
+  }
+
+  addons_menu->additem(MN_HL,"",0,0);
+  addons_menu->additem(MN_BACK,"Back",0,0);
+}
+
+void check_addons_menu()
+{
+  int index = addons_menu->check();
+  if (index != -1 &&
+      addons_menu->get_item_by_id(index).kind == MN_TOGGLE)
+  {
+    g_addons[index]->toggle(); // Toggle addon
+  }
+}
+
 void check_contrib_subset_menu()
 {
   int index = contrib_subset_menu->check();
@@ -175,7 +205,7 @@ void check_contrib_subset_menu()
           player_status.reset();
           Menu::set_current(main_menu);
         }
-    }  
+    }
 }
 
 void draw_background()
@@ -332,6 +362,11 @@ void title(void)
                   puts("Entering contrib menu");
                   generate_contrib_menu();
                   break;
+                case MNID_ADDONS:
+                  // Addons Menu
+                  puts("Entering addons menu");
+                  generate_addons_menu();
+                  break;
                 case MNID_LEVELEDITOR:
                   leveleditor();
                   Menu::set_current(main_menu);
@@ -393,6 +428,10 @@ void title(void)
           else if (menu == contrib_subset_menu)
             {
               check_contrib_subset_menu();
+            }
+          else if(menu == addons_menu)
+            {
+              check_addons_menu();
             }
         }
 

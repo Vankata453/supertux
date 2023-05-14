@@ -33,8 +33,6 @@ ReaderDocument::from_stream(std::istream& stream, const std::string& filename)
 ReaderDocument
 ReaderDocument::from_file(const std::string& filename)
 {
-  log_debug << "ReaderDocument::parse: " << filename << std::endl;
-
   IFileStream in(filename);
   if (!in.good()) {
     std::stringstream msg;

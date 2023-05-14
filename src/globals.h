@@ -78,6 +78,9 @@ extern const char* st_save_dir;
 extern float game_speed;
 extern SDL_Joystick * js;
 
+/* Add-ons, initially enabled in config */
+extern std::vector<std::string> g_init_enabled_addons;
+
 int wait_for_event(SDL_Event& event,unsigned int min_delay = 0, unsigned int max_delay = 0, bool empty_events = false);
 
 #endif /* SUPERTUX_GLOBALS_H */

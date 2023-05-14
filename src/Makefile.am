@@ -1,6 +1,7 @@
 bin_PROGRAMS = supertux
 
 supertux_SOURCES = \
+addon.cpp \
 badguy.cpp \
 badguy.h \
 bitmask.cpp \
