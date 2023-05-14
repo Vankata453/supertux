@@ -20,6 +20,7 @@
 
 /* Open the highscore file: */
 
+#include <iostream>
 #include <string.h>
 #include <stdlib.h>
 
@@ -28,8 +29,9 @@
 #include "menu.h"
 #include "screen.h"
 #include "texture.h"
-#include "setup.h"
-#include "lispreader.h"
+#include "reader/reader_document.hpp"
+#include "reader/reader_mapping.hpp"
+#include "reader/writer.hpp"
 
 #ifdef WIN32
 const char * highscore_filename = "/st_highscore.dat";
@@ -47,34 +49,23 @@ void load_hs(void)
   hs_score = 100;
   hs_name  = "Grandma";
 
-  FILE * fi;
-  lisp_object_t* root_obj = 0;
-  fi = fopen(highscore_filename, "r");
-  if (fi == NULL)
+  try
+  {
+    ReaderDocument doc = ReaderDocument::from_file(highscore_filename);
+    ReaderObject root = doc.get_root();
+    if (root.get_name() != "supertux-highscore")
     {
-      perror(highscore_filename);
-      return;
+      throw std::runtime_error("File is not a supertux-highscore file");
     }
+    ReaderMapping reader = root.get_mapping();
 
-  lisp_stream_t stream;
-  lisp_stream_init_file (&stream, fi);
-  root_obj = lisp_read (&stream);
-
-  if (root_obj->type == LISP_TYPE_EOF || root_obj->type == LISP_TYPE_PARSE_ERROR)
-    {
-      printf("HighScore: Parse Error in file %s", highscore_filename);
-    }
-
-
-  if (strcmp(lisp_symbol(lisp_car(root_obj)), "supertux-highscore") == 0)
-    {
-      LispReader reader(lisp_cdr(root_obj));
-      reader.read_int("score",  &hs_score);
-      reader.read_string("name", &hs_name);
-    }
- 
-  fclose(fi);
-  lisp_free(root_obj);
+    reader.read_int("score",  &hs_score);
+    reader.read_string("name", &hs_name);
+  }
+  catch (std::exception& err)
+  {
+    std::cout << "Couldn't load highscore data from '" << highscore_filename << "': " << err.what() << std::endl;
+  }
 }
 
 void save_hs(int score)
@@ -84,7 +75,7 @@ void save_hs(int score)
   Surface* bkgd;
   SDL_Event event;
 
-  bkgd = new Surface(datadir + "/images/highscore/highscore.png", IGNORE_ALPHA);
+  bkgd = new Surface("images/highscore/highscore.png", IGNORE_ALPHA);
 
   hs_score = score;
 
@@ -127,47 +118,13 @@ void save_hs(int score)
 
 
   /* Save to file: */
+  Writer writer(highscore_filename);
 
-  FILE* fi;
-  std::string filename;
+  writer.write_comment("SuperTux HighScores");
+  writer.start_list("supertux-highscore");
 
-  /* Save data file: */
-  filename = highscore_filename;
+  writer.write("name", hs_name);
+  writer.write("score", hs_score);
 
-  fcreatedir(filename.c_str());
-  if(fwriteable(filename.c_str()))
-    {
-      fi = fopen(filename.c_str(), "w");
-      if (fi == NULL)
-        {
-          perror(filename.c_str());
-        }
-
-      /* Write header: */
-      fprintf(fi,";SuperTux HighScores\n");
-      fprintf(fi,"(supertux-highscore\n");
-
-      /* Save title info: */
-      fprintf(fi,"  (name \"%s\")\n", hs_name.c_str());
-
-      /* Save the description: */
-      fprintf(fi,"  (score \"%i\")\n", hs_score);
-
-      fprintf( fi,")");
-      fclose(fi);
-    }
-
-/*
-  fi = opendata(highscore_filename, "w");
-  if (fi != NULL)
-    {
-      fprintf(fi, "# Supertux highscore file\n\n");
-
-      fprintf(fi, "name=%s\n", hs_name);
-      fprintf(fi, "highscore=%d\n", hs_score);
-
-      fprintf(fi, "# (File automatically created.)\n");
-
-      fclose(fi);
-    }*/
+  writer.end_list("supertux-highscore");
 }

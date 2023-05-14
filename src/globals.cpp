@@ -63,7 +63,8 @@ char* level_startup_file = 0;
 bool launch_leveleditor_mode = false;
 
 /* SuperTux directory ($HOME/.supertux) and save directory($HOME/.supertux/save) */
-char *st_dir, *st_save_dir;
+const char *st_dir = "";
+const char *st_save_dir = "save";
 
 SDL_Joystick * js;
 

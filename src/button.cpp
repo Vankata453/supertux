@@ -24,6 +24,7 @@
 #include "screen.h"
 #include "globals.h"
 #include "button.h"
+#include "file_system.hpp"
 
 Timer Button::popup_timer;
 
@@ -54,7 +55,7 @@ void Button::add_icon(std::string icon_file, int mw, int mh)
   if(!icon_file.empty())
   {
     snprintf(filename, 1024, "%s/%s", datadir.c_str(), icon_file.c_str());
-    if(!faccessible(filename))
+    if(!FileSystem::file_exists(filename))
       snprintf(filename, 1024, "%s/images/icons/default-icon.png", datadir.c_str());
   }
   else

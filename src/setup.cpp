@@ -52,6 +52,8 @@
 #include "resources.h"
 #include "intro.h"
 #include "music_manager.h"
+#include "file_system.hpp"
+#include "reader/physfs/physfs_sdl.hpp"
 
 #include "player.h"
 
@@ -72,6 +74,8 @@
 void seticon(void);
 void usage(char * prog, int ret);
 
+namespace {
+
 /* Does the given file exist and is it accessible? */
 int faccessible(const char *filename)
 {
@@ -89,209 +93,7 @@ int faccessible(const char *filename)
     }
 }
 
-/* Can we write to this location? */
-int fwriteable(const char *filename)
-{
-  FILE* fi;
-  fi = fopen(filename, "wa");
-  if (fi == NULL)
-    {
-      return false;
-    }
-  fclose(fi);
-  return true;
-}
-
-/* Makes sure a directory is created in either the SuperTux home directory or the SuperTux base directory.*/
-int fcreatedir(const char* relative_dir)
-{
-  char path[1024];
-  snprintf(path, 1024, "%s/%s/", st_dir, relative_dir);
-  if(mkdir(path,0755) != 0)
-    {
-      snprintf(path, 1024, "%s/%s/", datadir.c_str(), relative_dir);
-      if(mkdir(path,0755) != 0)
-        {
-          return false;
-        }
-      else
-        {
-          return true;
-        }
-    }
-  else
-    {
-      return true;
-    }
-}
-
-FILE * opendata(const char * rel_filename, const char * mode)
-{
-  char * filename = NULL;
-  FILE * fi;
-
-  filename = (char *) malloc(sizeof(char) * (strlen(st_dir) +
-                                             strlen(rel_filename) + 1));
-
-  strcpy(filename, st_dir);
-  /* Open the high score file: */
-
-  strcat(filename, rel_filename);
-
-  /* Try opening the file: */
-  fi = fopen(filename, mode);
-
-  if (fi == NULL)
-    {
-      fprintf(stderr, "Warning: Unable to open the file \"%s\" ", filename);
-
-      if (strcmp(mode, "r") == 0)
-        fprintf(stderr, "for read!!!\n");
-      else if (strcmp(mode, "w") == 0)
-        fprintf(stderr, "for write!!!\n");
-    }
-  free( filename );
-
-  return(fi);
-}
-
-/* Get all names of sub-directories in a certain directory. */
-/* Returns the number of sub-directories found. */
-/* Note: The user has to free the allocated space. */
-string_list_type dsubdirs(const char *rel_path,const  char* expected_file)
-{
-  DIR *dirStructP;
-  struct dirent *direntp;
-  string_list_type sdirs;
-  char filename[1024];
-  char path[1024];
-
-  string_list_init(&sdirs);
-  sprintf(path,"%s/%s",st_dir,rel_path);
-  if((dirStructP = opendir(path)) != NULL)
-    {
-      while((direntp = readdir(dirStructP)) != NULL)
-        {
-          char absolute_filename[1024];
-          struct stat buf;
-
-          sprintf(absolute_filename, "%s/%s", path, direntp->d_name);
-
-          if (stat(absolute_filename, &buf) == 0 && S_ISDIR(buf.st_mode))
-            {
-              if(expected_file != NULL)
-                {
-                  sprintf(filename,"%s/%s/%s",path,direntp->d_name,expected_file);
-                  if(!faccessible(filename))
-                    continue;
-                }
-
-              string_list_add_item(&sdirs,direntp->d_name);
-            }
-        }
-      closedir(dirStructP);
-    }
-
-  sprintf(path,"%s/%s",datadir.c_str(),rel_path);
-  if((dirStructP = opendir(path)) != NULL)
-    {
-      while((direntp = readdir(dirStructP)) != NULL)
-        {
-          char absolute_filename[1024];
-          struct stat buf;
-
-          sprintf(absolute_filename, "%s/%s", path, direntp->d_name);
-
-          if (stat(absolute_filename, &buf) == 0 && S_ISDIR(buf.st_mode))
-            {
-              if(expected_file != NULL)
-                {
-                  sprintf(filename,"%s/%s/%s",path,direntp->d_name,expected_file);
-                  if(!faccessible(filename))
-                    {
-                      continue;
-                    }
-                  else
-                    {
-                      sprintf(filename,"%s/%s/%s/%s",st_dir,rel_path,direntp->d_name,expected_file);
-                      if(faccessible(filename))
-                        continue;
-                    }
-                }
-
-              string_list_add_item(&sdirs,direntp->d_name);
-            }
-        }
-      closedir(dirStructP);
-    }
-
-  return sdirs;
-}
-
-string_list_type dfiles(const char *rel_path, const  char* glob, const  char* exception_str)
-{
-  DIR *dirStructP;
-  struct dirent *direntp;
-  string_list_type sdirs;
-  char path[1024];
-
-  string_list_init(&sdirs);
-  sprintf(path,"%s/%s",st_dir,rel_path);
-  if((dirStructP = opendir(path)) != NULL)
-    {
-      while((direntp = readdir(dirStructP)) != NULL)
-        {
-          char absolute_filename[1024];
-          struct stat buf;
-
-          sprintf(absolute_filename, "%s/%s", path, direntp->d_name);
-
-          if (stat(absolute_filename, &buf) == 0 && S_ISREG(buf.st_mode))
-            {
-              if(exception_str != NULL)
-                {
-                  if(strstr(direntp->d_name,exception_str) != NULL)
-                    continue;
-                }
-              if(glob != NULL)
-                if(strstr(direntp->d_name,glob) == NULL)
-                  continue;
-
-              string_list_add_item(&sdirs,direntp->d_name);
-            }
-        }
-      closedir(dirStructP);
-    }
-
-  sprintf(path,"%s/%s",datadir.c_str(),rel_path);
-  if((dirStructP = opendir(path)) != NULL)
-    {
-      while((direntp = readdir(dirStructP)) != NULL)
-        {
-          char absolute_filename[1024];
-          struct stat buf;
-
-          sprintf(absolute_filename, "%s/%s", path, direntp->d_name);
-
-          if (stat(absolute_filename, &buf) == 0 && S_ISREG(buf.st_mode))
-            {
-              if(exception_str != NULL)
-                {
-                  if(strstr(direntp->d_name,exception_str) != NULL)
-                    continue;
-                }
-              if(glob != NULL)
-                if(strstr(direntp->d_name,glob) == NULL)
-                  continue;
-
-              string_list_add_item(&sdirs,direntp->d_name);
-            }
-        }
-      closedir(dirStructP);
-    }
-
-  return sdirs;
-}
+} // namespace
 
 void free_strings(char **strings, int num)
 {
@@ -304,39 +106,6 @@ void free_strings(char **strings, int num)
 /* Set SuperTux configuration and save directories */
 void st_directory_setup(void)
 {
-  char *home;
-  char str[1024];
-  /* Get home directory (from $HOME variable)... if we can't determine it,
-     use the current directory ("."): */
-  if (getenv("HOME") != NULL)
-    home = getenv("HOME");
-  else
-    home = ".";
-
-  st_dir = (char *) malloc(sizeof(char) * (strlen(home) +
-                                           strlen("/.supertux") + 1));
-  strcpy(st_dir, home);
-  strcat(st_dir, "/.supertux");
-
-  /* Remove .supertux config-file from old SuperTux versions */
-  if(faccessible(st_dir))
-    {
-      remove
-        (st_dir);
-    }
-
-  st_save_dir = (char *) malloc(sizeof(char) * (strlen(st_dir) + strlen("/save") + 1));
-
-  strcpy(st_save_dir,st_dir);
-  strcat(st_save_dir,"/save");
-
-  /* Create them. In the case they exist they won't destroy anything. */
-  mkdir(st_dir, 0755);
-  mkdir(st_save_dir, 0755);
-
-  sprintf(str, "%s/levels", st_dir);
-  mkdir(str, 0755);
-
   // User has not that a datadir, so we try some magic
   if (datadir.empty())
     {
@@ -367,6 +136,8 @@ void st_directory_setup(void)
 #endif
     }
   printf("Datadir: %s\n", datadir.c_str());
+
+  FileSystem::init();
 }
 
 /* Create and setup menus. */
@@ -501,10 +272,10 @@ bool process_load_game_menu()
       char slotfile[1024];
       snprintf(slotfile, 1024, "%s/slot%d.stsg", st_save_dir, slot);
 
-      if (access(slotfile, F_OK) != 0)
-        {
-          draw_intro();
-        }
+      if (!FileSystem::file_exists(slotfile))
+      {
+        draw_intro();
+      }
 
       fadeout();
       WorldMapNS::WorldMap worldmap;
@@ -586,26 +357,26 @@ void st_general_setup(void)
 
   /* Load global images: */
 
-  black_text  = new Text(datadir + "/images/status/letters-black.png", TEXT_TEXT, 16,18);
-  gold_text   = new Text(datadir + "/images/status/letters-gold.png", TEXT_TEXT, 16,18);
-  silver_text = new Text(datadir + "/images/status/letters-silver.png", TEXT_TEXT, 16,18);
-  blue_text   = new Text(datadir + "/images/status/letters-blue.png", TEXT_TEXT, 16,18);
-  red_text    = new Text(datadir + "/images/status/letters-red.png", TEXT_TEXT, 16,18);
-  green_text  = new Text(datadir + "/images/status/letters-green.png", TEXT_TEXT, 16,18);
-  white_text  = new Text(datadir + "/images/status/letters-white.png", TEXT_TEXT, 16,18);
-  white_small_text = new Text(datadir + "/images/status/letters-white-small.png", TEXT_TEXT, 8,9);
-  white_big_text   = new Text(datadir + "/images/status/letters-white-big.png", TEXT_TEXT, 20,22);
-  yellow_nums = new Text(datadir + "/images/status/numbers.png", TEXT_NUM, 32,32);
+  black_text  = new Text("images/status/letters-black.png", TEXT_TEXT, 16,18);
+  gold_text   = new Text("images/status/letters-gold.png", TEXT_TEXT, 16,18);
+  silver_text = new Text("images/status/letters-silver.png", TEXT_TEXT, 16,18);
+  blue_text   = new Text("images/status/letters-blue.png", TEXT_TEXT, 16,18);
+  red_text    = new Text("images/status/letters-red.png", TEXT_TEXT, 16,18);
+  green_text  = new Text("images/status/letters-green.png", TEXT_TEXT, 16,18);
+  white_text  = new Text("images/status/letters-white.png", TEXT_TEXT, 16,18);
+  white_small_text = new Text("images/status/letters-white-small.png", TEXT_TEXT, 8,9);
+  white_big_text   = new Text("images/status/letters-white-big.png", TEXT_TEXT, 20,22);
+  yellow_nums = new Text("images/status/numbers.png", TEXT_NUM, 32,32);
 
   /* Load GUI/menu images: */
-  checkbox = new Surface(datadir + "/images/status/checkbox.png", USE_ALPHA);
-  checkbox_checked = new Surface(datadir + "/images/status/checkbox-checked.png", USE_ALPHA);
-  back = new Surface(datadir + "/images/status/back.png", USE_ALPHA);
-  arrow_left = new Surface(datadir + "/images/icons/left.png", USE_ALPHA);
-  arrow_right = new Surface(datadir + "/images/icons/right.png", USE_ALPHA);
+  checkbox = new Surface("images/status/checkbox.png", USE_ALPHA);
+  checkbox_checked = new Surface("images/status/checkbox-checked.png", USE_ALPHA);
+  back = new Surface("images/status/back.png", USE_ALPHA);
+  arrow_left = new Surface("images/icons/left.png", USE_ALPHA);
+  arrow_right = new Surface("images/icons/right.png", USE_ALPHA);
 
   /* Load the mouse-cursor */
-  mouse_cursor = new MouseCursor( datadir + "/images/status/mousecursor.png",1);
+  mouse_cursor = new MouseCursor( "images/status/mousecursor.png",1);
   MouseCursor::set_current(mouse_cursor);
   
 }
@@ -878,6 +649,9 @@ void st_shutdown(void)
   close_audio();
   SDL_Quit();
   saveconfig();
+
+  /* De-initialize file system */
+  FileSystem::deinit();
 }
 
 /* --- ABORT! --- */
@@ -899,14 +673,13 @@ void seticon(void)
 
 
   /* Load icon into a surface: */
-
-  icon = IMG_Load((datadir + "/images/icon.xpm").c_str());
+  icon = IMG_Load_RW(get_physfs_SDLRWops("images/icon.xpm"), 1);
   if (icon == NULL)
     {
       fprintf(stderr,
               "\nError: I could not load the icon image: %s%s\n"
               "The Simple DirectMedia error that occured was:\n"
-              "%s\n\n", datadir.c_str(), "/images/icon.xpm", SDL_GetError());
+              "%s\n\n", datadir.c_str(), "images/icon.xpm", SDL_GetError());
       exit(1);
     }
 

@@ -24,9 +24,9 @@
 #include <string>
 #include "texture.h"
 #include "badguy.h"
-#include "lispreader.h"
 #include "musicref.h"
 
+class ReaderMapping;
 class Tile;
 
 /** This type holds meta-information about a level-subset. 
@@ -38,7 +38,7 @@ class LevelSubset
     ~LevelSubset();
 
     static void create(const std::string& subset_name);
-    void load(char *subset);
+    void load(const std::string& subset);
     void save();
 
     std::string name;
@@ -48,7 +48,7 @@ class LevelSubset
     int levels;
  
   private:
-    void parse(lisp_object_t* cursor);
+    void parse(const ReaderMapping& reader);
   };
 
 #define LEVEL_NAME_MAX 20

@@ -24,15 +24,17 @@
 #include <string.h>
 #include <iostream>
 #include "globals.h"
-#include "setup.h"
 #include "screen.h"
 #include "level.h"
 #include "physic.h"
 #include "scene.h"
 #include "tile.h"
-#include "lispreader.h"
 #include "resources.h"
 #include "music_manager.h"
+#include "file_system.hpp"
+#include "reader/reader_document.hpp"
+#include "reader/reader_mapping.hpp"
+#include "reader/writer.hpp"
 
 using namespace std;
 
@@ -58,145 +60,69 @@ void LevelSubset::create(const std::string& subset_name)
   new_lev.save(subset_name, 1);
 }
 
-void LevelSubset::parse (lisp_object_t* cursor)
+void LevelSubset::parse(const ReaderMapping& reader)
 {
-  while(!lisp_nil_p(cursor))
-    {
-      lisp_object_t* cur = lisp_car(cursor);
-      char *s;
-
-      if (!lisp_cons_p(cur) || !lisp_symbol_p (lisp_car(cur)))
-        {
-          printf("Not good");
-        }
-      else
-        {
-          if (strcmp(lisp_symbol(lisp_car(cur)), "title") == 0)
-            {
-              if(( s = lisp_string(lisp_car(lisp_cdr(cur)))) != NULL)
-                {
-                  title = s;
-                }
-            }
-          else if (strcmp(lisp_symbol(lisp_car(cur)), "description") == 0)
-            {
-              if(( s = lisp_string(lisp_car(lisp_cdr(cur)))) != NULL)
-                {
-                  description = s;
-                }
-            }
-        }
-      cursor = lisp_cdr (cursor);
-    }
+  reader.get("title", title);
+  reader.get("description", description);
 }
 
-void LevelSubset::load(char *subset)
+void LevelSubset::load(const std::string& subset)
 {
-  FILE* fi;
-  char filename[1024];
   char str[1024];
-  int i;
-  lisp_object_t* root_obj = 0;
-
   name = subset;
 
-  snprintf(filename, 1024, "%s/levels/%s/info", st_dir, subset);
-  if(!faccessible(filename))
-    snprintf(filename, 1024, "%s/levels/%s/info", datadir.c_str(), subset);
-  if(faccessible(filename))
+  const std::string filename = "levels/" + subset + "/info";
+  try
+  {
+    ReaderDocument doc = ReaderDocument::from_file(filename);
+    ReaderObject root = doc.get_root();
+    if (root.get_name() != "supertux-level-subset")
     {
-      fi = fopen(filename, "r");
-      if (fi == NULL)
-        {
-          perror(filename);
-        }
-      lisp_stream_t stream;
-      lisp_stream_init_file (&stream, fi);
-      root_obj = lisp_read (&stream);
-
-      if (root_obj->type == LISP_TYPE_EOF || root_obj->type == LISP_TYPE_PARSE_ERROR)
-        {
-          printf("World: Parse Error in file %s", filename);
-        }
-
-      lisp_object_t* cur = lisp_car(root_obj);
-
-      if (!lisp_symbol_p (cur))
-        {
-          printf("World: Read error in %s",filename);
-        }
-
-      if (strcmp(lisp_symbol(cur), "supertux-level-subset") == 0)
-        {
-          parse(lisp_cdr(root_obj));
-
-        }
-
-      lisp_free(root_obj);
-      fclose(fi);
-
-      snprintf(str, 1024, "%s.png", filename);
-      if(faccessible(str))
-        {
-          delete image;
-          image = new Surface(str,IGNORE_ALPHA);
-        }
-      else
-        {
-          snprintf(filename, 1024, "%s/images/status/level-subset-info.png", datadir.c_str());
-          delete image;
-          image = new Surface(filename,IGNORE_ALPHA);
-        }
+      throw std::runtime_error("File is not a supertux-level-subset file");
     }
+    ReaderMapping reader = root.get_mapping();
 
-  for(i=1; i != -1; ++i)
+    parse(reader);
+
+    if(FileSystem::file_exists(filename + ".png"))
     {
-      /* Get the number of levels in this subset */
-      snprintf(filename, 1024, "%s/levels/%s/level%d.stl", st_dir, subset,i);
-      if(!faccessible(filename))
-        {
-          snprintf(filename, 1024, "%s/levels/%s/level%d.stl", datadir.c_str(), subset,i);
-          if(!faccessible(filename))
-            break;
-        }
+      delete image;
+      image = new Surface(filename + ".png", IGNORE_ALPHA);
     }
+    else
+    {
+      image = new Surface("images/status/level-subset-info.png",IGNORE_ALPHA);
+    }
+  }
+  catch (std::exception& err)
+  {
+    std::cout << "Couldn't read all level subset data '" << filename << "': " << err.what() << std::endl;
+  }
+
+  int i;
+  for (i=1; i != -1; ++i)
+  {
+    /* Get the number of levels in this subset */
+    std::stringstream level_filename;
+    level_filename << "levels/" << subset + "/level" << i << ".stl";
+    if (!FileSystem::file_exists(level_filename.str()))
+      break;
+  }
   levels = --i;
 }
 
 void LevelSubset::save()
 {
-  FILE* fi;
-  string filename;
+  FileSystem::mkdir("levels/" + name); // Create directory if it doesn't exist
+  Writer writer("levels/" + name + "/info");
 
-  /* Save data file: */
-  filename = "/levels/" + name + "/";
+  writer.write_comment("SuperTux-Level-Subset");
+  writer.start_list("supertux-level-subset");
 
-  fcreatedir(filename.c_str());
-  filename = string(st_dir) + "/levels/" + name + "/info";
-  if(!fwriteable(filename.c_str()))
-    filename = datadir + "/levels/" + name + "/info";
-  if(fwriteable(filename.c_str()))
-    {
-      fi = fopen(filename.c_str(), "w");
-      if (fi == NULL)
-        {
-          perror(filename.c_str());
-        }
+  writer.write("title", title);
+  writer.write("description", description);
 
-      /* Write header: */
-      fprintf(fi,";SuperTux-Level-Subset\n");
-      fprintf(fi,"(supertux-level-subset\n");
-
-      /* Save title info: */
-      fprintf(fi,"  (title \"%s\")\n", title.c_str());
-
-      /* Save the description: */
-      fprintf(fi,"  (description \"%s\")\n", description.c_str());
-
-      fprintf( fi,")");
-      fclose(fi);
-
-    }
+  writer.end_list("supertux-level-subset");
 }
 
 Level::Level()
@@ -272,9 +198,7 @@ Level::load(const std::string& subset, int level)
   char filename[1024];
 
   // Load data file:
-  snprintf(filename, 1024, "%s/levels/%s/level%d.stl", st_dir, subset.c_str(), level);
-  if(!faccessible(filename))
-    snprintf(filename, 1024, "%s/levels/%s/level%d.stl", datadir.c_str(), subset.c_str(), level);
+  snprintf(filename, 1024, "levels/%s/level%d.stl", subset.c_str(), level);
 
   return load(filename);
 }
@@ -282,258 +206,248 @@ Level::load(const std::string& subset, int level)
 int 
 Level::load(const std::string& filename)
 {
-  lisp_object_t* root_obj = lisp_read_from_file(filename);
-  if (!root_obj)
+  try
+  {
+    ReaderDocument doc = ReaderDocument::from_file(filename);
+    ReaderObject root = doc.get_root();
+    if (root.get_name() != "supertux-level")
     {
-      std::cout << "Level: Couldn't load file: " << filename << std::endl;
-      return -1;
+      throw std::runtime_error("File is not a supertux-level file");
+    }
+    ReaderMapping reader = root.get_mapping();
+
+    vector<int> ia_tm;
+    vector<int> bg_tm;
+    vector<int> fg_tm;
+
+    int version = 0;
+
+    reader.read_int("version",  &version);
+    if(!reader.read_int("width",  &width))
+      st_abort("No width specified for level.", "");
+    if (!reader.read_int("start_pos_x", &start_pos_x)) start_pos_x = 100;
+    if (!reader.read_int("start_pos_y", &start_pos_y)) start_pos_y = 170;
+    time_left = 500;
+    if(!reader.read_int("time",  &time_left)) {
+      printf("Warning no time specified for level.\n");
     }
 
-  if (root_obj->type == LISP_TYPE_EOF || root_obj->type == LISP_TYPE_PARSE_ERROR)
+    back_scrolling = false;
+    reader.read_bool("back_scrolling",  &back_scrolling);
+
+    hor_autoscroll_speed = 0;
+    reader.read_float("hor_autoscroll_speed",  &hor_autoscroll_speed);
+
+    bkgd_speed = 50;
+    reader.read_int("bkgd_speed",  &bkgd_speed);
+
+
+    bkgd_top.red = bkgd_top.green = bkgd_top.blue = 0;
+    reader.read_int("bkgd_red_top",  &bkgd_top.red);
+    reader.read_int("bkgd_green_top",  &bkgd_top.green);
+    reader.read_int("bkgd_blue_top",  &bkgd_top.blue);
+
+    bkgd_bottom.red = bkgd_bottom.green = bkgd_bottom.blue = 0;
+    reader.read_int("bkgd_red_bottom",  &bkgd_bottom.red);
+    reader.read_int("bkgd_green_bottom",  &bkgd_bottom.green);
+    reader.read_int("bkgd_blue_bottom",  &bkgd_bottom.blue);
+
+    gravity = 10;
+    reader.read_float("gravity",  &gravity);
+    name = "Noname";
+    reader.read_string("name",  &name);
+    author = "unknown author";
+    reader.read_string("author", &author);
+    song_title = "";
+    reader.read_string("music",  &song_title);
+    bkgd_image = "";
+    reader.read_string("background",  &bkgd_image);
+    particle_system = "";
+    reader.read_string("particle_system", &particle_system);
+
+    reader.read_int_vector("background-tm",  &bg_tm);
+
+    if (!reader.read_int_vector("interactive-tm", &ia_tm))
+      reader.read_int_vector("tilemap", &ia_tm);
+
+    reader.read_int_vector("foreground-tm",  &fg_tm);
+
+    ReaderIterator iter = reader.get_iter();
+    while (iter.next())
     {
-      printf("World: Parse Error in file %s", filename.c_str());
-      return -1;
-    }
+      if (iter.get_key() == "reset-points") // Read ResetPoints
+      {
+        ReaderIterator rp_iter = iter.as_mapping().get_iter();
+        while (rp_iter.next())
+        {
+          ReaderMapping rp_reader = rp_iter.as_mapping();
 
-  vector<int> ia_tm;
-  vector<int> bg_tm;
-  vector<int> fg_tm;
-
-  int version = 0;
-  if (strcmp(lisp_symbol(lisp_car(root_obj)), "supertux-level") == 0)
-    {
-      LispReader reader(lisp_cdr(root_obj));
-      version = 0;
-      reader.read_int("version",  &version);
-      if(!reader.read_int("width",  &width))
-        st_abort("No width specified for level.", "");
-      if (!reader.read_int("start_pos_x", &start_pos_x)) start_pos_x = 100;
-      if (!reader.read_int("start_pos_y", &start_pos_y)) start_pos_y = 170;
-      time_left = 500;
-      if(!reader.read_int("time",  &time_left)) {
-        printf("Warning no time specified for level.\n");
-      }
-      
-      back_scrolling = false;
-      reader.read_bool("back_scrolling",  &back_scrolling);
-
-      hor_autoscroll_speed = 0;
-      reader.read_float("hor_autoscroll_speed",  &hor_autoscroll_speed);
-      
-      bkgd_speed = 50;
-      reader.read_int("bkgd_speed",  &bkgd_speed);
-
-      
-      bkgd_top.red = bkgd_top.green = bkgd_top.blue = 0;
-      reader.read_int("bkgd_red_top",  &bkgd_top.red);
-      reader.read_int("bkgd_green_top",  &bkgd_top.green);
-      reader.read_int("bkgd_blue_top",  &bkgd_top.blue);
-
-      bkgd_bottom.red = bkgd_bottom.green = bkgd_bottom.blue = 0;
-      reader.read_int("bkgd_red_bottom",  &bkgd_bottom.red);
-      reader.read_int("bkgd_green_bottom",  &bkgd_bottom.green);
-      reader.read_int("bkgd_blue_bottom",  &bkgd_bottom.blue);
-
-      gravity = 10;
-      reader.read_float("gravity",  &gravity);
-      name = "Noname";
-      reader.read_string("name",  &name);
-      author = "unknown author";
-      reader.read_string("author", &author);
-      song_title = "";
-      reader.read_string("music",  &song_title);
-      bkgd_image = "";
-      reader.read_string("background",  &bkgd_image);
-      particle_system = "";
-      reader.read_string("particle_system", &particle_system);
-
-      reader.read_int_vector("background-tm",  &bg_tm);
-
-      if (!reader.read_int_vector("interactive-tm", &ia_tm))
-        reader.read_int_vector("tilemap", &ia_tm);
-
-      reader.read_int_vector("foreground-tm",  &fg_tm);
-
-      { // Read ResetPoints
-        lisp_object_t* cur = 0;
-        if (reader.read_lisp("reset-points",  &cur))
+          ResetPoint pos;
+          if (rp_reader.read_int("x", &pos.x)
+              && rp_reader.read_int("y", &pos.y))
           {
-            while (!lisp_nil_p(cur))
+            reset_points.push_back(pos);
+          }
+        }
+      }
+      else if (iter.get_key() == "objects") // Read BadGuys
+      {
+        ReaderIterator obj_iter = iter.as_mapping().get_iter();
+        while (obj_iter.next())
+        {
+          ReaderMapping obj_reader = obj_iter.as_mapping();
+
+          BadGuyData bg_data;
+          bg_data.kind = badguykind_from_string(obj_iter.get_key());
+          obj_reader.read_int("x", &bg_data.x);
+          obj_reader.read_int("y", &bg_data.y);
+          obj_reader.read_bool("stay-on-platform", &bg_data.stay_on_platform);
+
+          badguy_data.push_back(bg_data);
+        }
+      }
+    }
+
+    // Convert old levels to the new tile numbers
+    if (version == 0)
+      {
+        std::map<char, int> transtable;
+        transtable['.'] = 0;
+        transtable['x'] = 104;
+        transtable['X'] = 77;
+        transtable['y'] = 78;
+        transtable['Y'] = 105;
+        transtable['A'] = 83;
+        transtable['B'] = 102;
+        transtable['!'] = 103;
+        transtable['a'] = 84;
+        transtable['C'] = 85;
+        transtable['D'] = 86;
+        transtable['E'] = 87;
+        transtable['F'] = 88;
+        transtable['c'] = 89;
+        transtable['d'] = 90;
+        transtable['e'] = 91;
+        transtable['f'] = 92;
+
+        transtable['G'] = 93;
+        transtable['H'] = 94;
+        transtable['I'] = 95;
+        transtable['J'] = 96;
+
+        transtable['g'] = 97;
+        transtable['h'] = 98;
+        transtable['i'] = 99;
+        transtable['j'] = 100
+                          ;
+        transtable['#'] = 11;
+        transtable['['] = 13;
+        transtable['='] = 14;
+        transtable[']'] = 15;
+        transtable['$'] = 82;
+        transtable['^'] = 76;
+        transtable['*'] = 80;
+        transtable['|'] = 79;
+        transtable['\\'] = 81;
+        transtable['&'] = 75;
+
+        int x = 0;
+        int y = 0;
+        for(std::vector<int>::iterator i = ia_tm.begin(); i != ia_tm.end(); ++i)
+          {
+            if (*i == '0' || *i == '1' || *i == '2')
               {
-                lisp_object_t* data = lisp_car(cur);
-
-                ResetPoint pos;
-
-                LispReader reader(lisp_cdr(data));
-                if (reader.read_int("x", &pos.x)
-                    && reader.read_int("y", &pos.y))
-                  {
-                    reset_points.push_back(pos);
-                  }
-
-                cur = lisp_cdr(cur);
+                badguy_data.push_back(BadGuyData(static_cast<BadGuyKind>(*i-'0'),
+                                                 x*32, y*32, false));
+                *i = 0;
+              }
+            else
+              {
+                std::map<char, int>::iterator j = transtable.find(*i);
+                if (j != transtable.end())
+                  *i = j->second;
+                else
+                  printf("Error: conversion will fail, unsupported char: '%c' (%d)\n", *i, *i);
+              }
+            ++x;
+            if (x >= width)
+              {
+                x = 0;
+                ++y;
               }
           }
       }
 
-      { // Read BadGuys
-        lisp_object_t* cur = 0;
-        if (reader.read_lisp("objects",  &cur))
+    for(int i = 0; i < 15; ++i)
+      {
+        ia_tiles[i].resize(width + 1, 0);
+        bg_tiles[i].resize(width + 1, 0);
+        fg_tiles[i].resize(width + 1, 0);
+      }
+
+    int i = 0;
+    int j = 0;
+    for(vector<int>::iterator it = ia_tm.begin(); it != ia_tm.end(); ++it, ++i)
+      {
+        if(j >= 15)
           {
-            while (!lisp_nil_p(cur))
-              {
-                lisp_object_t* data = lisp_car(cur);
+          std::cerr << "Warning: Level higher than 15 interactive tiles."
+                       "Ignoring by cutting tiles.\n"
+                       "The level might not be finishable anymore!\n";
+          break;
+          }
 
-                BadGuyData bg_data;
-                bg_data.kind = badguykind_from_string(lisp_symbol(lisp_car(data)));
-                LispReader reader(lisp_cdr(data));
-                reader.read_int("x", &bg_data.x);
-                reader.read_int("y", &bg_data.y);
-                reader.read_bool("stay-on-platform", &bg_data.stay_on_platform);
-
-                badguy_data.push_back(bg_data);
-
-                cur = lisp_cdr(cur);
-              }
+        ia_tiles[j][i] = (*it);
+        if(i == width - 1)
+          {
+            i = -1;
+            ++j;
           }
       }
 
-      // Convert old levels to the new tile numbers
-      if (version == 0)
-        {
-          std::map<char, int> transtable;
-          transtable['.'] = 0;
-          transtable['x'] = 104;
-          transtable['X'] = 77;
-          transtable['y'] = 78;
-          transtable['Y'] = 105;
-          transtable['A'] = 83;
-          transtable['B'] = 102;
-          transtable['!'] = 103;
-          transtable['a'] = 84;
-          transtable['C'] = 85;
-          transtable['D'] = 86;
-          transtable['E'] = 87;
-          transtable['F'] = 88;
-          transtable['c'] = 89;
-          transtable['d'] = 90;
-          transtable['e'] = 91;
-          transtable['f'] = 92;
+    i = j = 0;
+    for(vector<int>::iterator it = bg_tm.begin(); it != bg_tm.end(); ++it, ++i)
+      {
+        if(j >= 15)
+          {
+          std::cerr << "Warning: Level higher than 15 background tiles."
+                       "Ignoring by cutting tiles.\n";
+          break;
+          }
 
-          transtable['G'] = 93;
-          transtable['H'] = 94;
-          transtable['I'] = 95;
-          transtable['J'] = 96;
+        bg_tiles[j][i] = (*it);
+        if(i == width - 1)
+          {
+            i = -1;
+            ++j;
+          }
+      }
 
-          transtable['g'] = 97;
-          transtable['h'] = 98;
-          transtable['i'] = 99;
-          transtable['j'] = 100
-                            ;
-          transtable['#'] = 11;
-          transtable['['] = 13;
-          transtable['='] = 14;
-          transtable[']'] = 15;
-          transtable['$'] = 82;
-          transtable['^'] = 76;
-          transtable['*'] = 80;
-          transtable['|'] = 79;
-          transtable['\\'] = 81;
-          transtable['&'] = 75;
+    i = j = 0;
+    for(vector<int>::iterator it = fg_tm.begin(); it != fg_tm.end(); ++it, ++i)
+      {
+        if(j >= 15)
+          {
+          std::cerr << "Warning: Level higher than 15 foreground tiles."
+                       "Ignoring by cutting tiles.\n";
+          break;
+          }
 
-          int x = 0;
-          int y = 0;
-          for(std::vector<int>::iterator i = ia_tm.begin(); i != ia_tm.end(); ++i)
-            {
-              if (*i == '0' || *i == '1' || *i == '2')
-                {
-                  badguy_data.push_back(BadGuyData(static_cast<BadGuyKind>(*i-'0'),
-                                                   x*32, y*32, false));
-                  *i = 0;
-                }
-              else
-                {
-                  std::map<char, int>::iterator j = transtable.find(*i);
-                  if (j != transtable.end())
-                    *i = j->second;
-                  else
-                    printf("Error: conversion will fail, unsupported char: '%c' (%d)\n", *i, *i);
-                }
-              ++x;
-              if (x >= width)
-                {
-                  x = 0;
-                  ++y;
-                }
-            }
-        }
-    }
+        fg_tiles[j][i] = (*it);
+        if(i == width - 1)
+          {
+            i = -1;
+            ++j;
+          }
+      }
 
-  for(int i = 0; i < 15; ++i)
-    {
-      ia_tiles[i].resize(width + 1, 0);
-      bg_tiles[i].resize(width + 1, 0);
-      fg_tiles[i].resize(width + 1, 0);
-    }
-
-  int i = 0;
-  int j = 0;
-  for(vector<int>::iterator it = ia_tm.begin(); it != ia_tm.end(); ++it, ++i)
-    {
-      if(j >= 15)
-        {
-        std::cerr << "Warning: Level higher than 15 interactive tiles."
-                     "Ignoring by cutting tiles.\n"
-                     "The level might not be finishable anymore!\n";
-        break;
-        }
-
-      ia_tiles[j][i] = (*it);
-      if(i == width - 1)
-        {
-          i = -1;
-          ++j;
-        }
-    }
-
-  i = j = 0;
-  for(vector<int>::iterator it = bg_tm.begin(); it != bg_tm.end(); ++it, ++i)
-    {
-      if(j >= 15)
-        {
-        std::cerr << "Warning: Level higher than 15 background tiles."
-                     "Ignoring by cutting tiles.\n";
-        break;
-        }
-
-      bg_tiles[j][i] = (*it);
-      if(i == width - 1)
-        {
-          i = -1;
-          ++j;
-        }
-    }
-
-  i = j = 0;
-  for(vector<int>::iterator it = fg_tm.begin(); it != fg_tm.end(); ++it, ++i)
-    {
-      if(j >= 15)
-        {
-        std::cerr << "Warning: Level higher than 15 foreground tiles."
-                     "Ignoring by cutting tiles.\n";
-        break;
-        }
-
-      fg_tiles[j][i] = (*it);
-      if(i == width - 1)
-        {
-          i = -1;
-          ++j;
-        }
-    }
-
-  lisp_free(root_obj);
-  return 0;
+    return 0;
+  }
+  catch (std::exception& err)
+  {
+    log_warning << "Error loading level '" << filename << "': " << err.what() << std::endl;
+    return 1;
+  }
 }
 
 /* Save data for level: */
@@ -541,100 +455,83 @@ Level::load(const std::string& filename)
 void 
 Level::save(const std::string& subset, int level)
 {
-  char filename[1024];
-  char str[80];
+  FileSystem::mkdir("levels/" + subset); // Create subset directory if it doesn't exist
 
-  /* Save data file: */
-  sprintf(str, "/levels/%s/", subset.c_str());
-  fcreatedir(str);
-  snprintf(filename, 1024, "%s/levels/%s/level%d.stl", st_dir, subset.c_str(),
-      level);
-  if(!fwriteable(filename))
-    snprintf(filename, 1024, "%s/levels/%s/level%d.stl", datadir.c_str(),
-        subset.c_str(), level);
+  std::stringstream filename;
+  filename << "levels/" << subset << "/level" << level << ".stl";
 
-  FILE * fi = fopen(filename, "w");
-  if (fi == NULL)
+  Writer writer(filename.str());
+
+  writer.write_comment("SuperTux-Level");
+  writer.start_list("supertux-level");
+
+  writer.write("version", 1);
+  writer.write("name", name);
+  writer.write("author", author);
+  writer.write("music", song_title);
+  writer.write("background", bkgd_image);
+  writer.write("particle_system", particle_system);
+  writer.write("bkgd_speed", bkgd_speed);
+  writer.write("bkgd_red_top", bkgd_top.red);
+  writer.write("bkgd_green_top", bkgd_top.green);
+  writer.write("bkgd_blue_top", bkgd_top.blue);
+  writer.write("bkgd_red_bottom", bkgd_bottom.red);
+  writer.write("bkgd_green_bottom", bkgd_bottom.green);
+  writer.write("bkgd_blue_bottom", bkgd_bottom.blue);
+  writer.write("time", time_left);
+  writer.write("width", width);
+  writer.write("back_scrolling", back_scrolling);
+  writer.write("hor_autoscroll_speed", hor_autoscroll_speed);
+  writer.write("gravity", gravity);
+
+  std::stringstream bg_tiles_out;
+  for (const auto& tile_row : bg_tiles)
+    for (int i = 0; i < width; i++)
+      bg_tiles_out << tile_row[i] << " ";
+
+  std::stringstream ia_tiles_out;
+  for (const auto& tile_row : ia_tiles)
+    for (int i = 0; i < width; i++)
+      ia_tiles_out << tile_row[i] << " ";
+
+  std::stringstream fg_tiles_out;
+  for (const auto& tile_row : fg_tiles)
+    for (int i = 0; i < width; i++)
+      fg_tiles_out << tile_row[i] << " ";
+
+  writer.write_raw("background-tm", bg_tiles_out.str());
+  writer.write_raw("interactive-tm", ia_tiles_out.str());
+  writer.write_raw("foreground-tm", fg_tiles_out.str());
+
+  writer.start_list("reset-points");
+  for(std::vector<ResetPoint>::iterator it = reset_points.begin();
+     it != reset_points.end(); ++it)
+  {
+    writer.start_list("point");
     {
-      perror(filename);
-      st_shutdown();
-      exit(-1);
+      writer.write("x", it->x);
+      writer.write("y", it->y);
     }
+    writer.end_list("point");
+  }
+  writer.end_list("reset-points");
 
-
-  /* Write header: */
-  fprintf(fi,";SuperTux-Level\n");
-  fprintf(fi,"(supertux-level\n");
-
-  fprintf(fi,"  (version %d)\n", 1);
-  fprintf(fi,"  (name \"%s\")\n", name.c_str());
-  fprintf(fi,"  (author \"%s\")\n", author.c_str());
-  fprintf(fi,"  (music \"%s\")\n", song_title.c_str());
-  fprintf(fi,"  (background \"%s\")\n", bkgd_image.c_str());
-  fprintf(fi,"  (particle_system \"%s\")\n", particle_system.c_str());
-  fprintf(fi,"  (bkgd_speed %d)\n", bkgd_speed);
-  fprintf(fi,"  (bkgd_red_top %d)\n", bkgd_top.red);
-  fprintf(fi,"  (bkgd_green_top %d)\n", bkgd_top.green);
-  fprintf(fi,"  (bkgd_blue_top %d)\n", bkgd_top.blue);
-  fprintf(fi,"  (bkgd_red_bottom %d)\n", bkgd_bottom.red);
-  fprintf(fi,"  (bkgd_green_bottom %d)\n", bkgd_bottom.green);
-  fprintf(fi,"  (bkgd_blue_bottom %d)\n", bkgd_bottom.blue);
-  fprintf(fi,"  (time %d)\n", time_left);
-  fprintf(fi,"  (width %d)\n", width);
-  if(back_scrolling)
-    fprintf(fi,"  (back_scrolling #t)\n"); 
-  else
-    fprintf(fi,"  (back_scrolling #f)\n");
-  fprintf(fi,"  (hor_autoscroll_speed %2.1f)\n", hor_autoscroll_speed);
-  fprintf(fi,"  (gravity %2.1f)\n", gravity);
-  fprintf(fi,"  (background-tm ");
-
-  for(int y = 0; y < 15; ++y)
-    {
-      for(int i = 0; i < width; ++i)
-        fprintf(fi," %d ", bg_tiles[y][i]);
-    }
-
-  fprintf( fi,")\n");
-  fprintf(fi,"  (interactive-tm ");
-
-  for(int y = 0; y < 15; ++y)
-    {
-      for(int i = 0; i < width; ++i)
-        fprintf(fi," %d ", ia_tiles[y][i]);
-    }
-
-  fprintf( fi,")\n");
-  fprintf(fi,"  (foreground-tm ");
-
-  for(int y = 0; y < 15; ++y)
-    {
-      for(int i = 0; i < width; ++i)
-        fprintf(fi," %d ", fg_tiles[y][i]);
-    }
-
-  fprintf( fi,")\n");
-
-  fprintf( fi,"(reset-points\n");
-  for(std::vector<ResetPoint>::iterator i = reset_points.begin();
-      i != reset_points.end(); ++i)
-    fprintf( fi,"(point (x %d) (y %d))\n",i->x, i->y);
-  fprintf( fi,")\n");
-
-  fprintf( fi,"(objects\n");
-
+  writer.start_list("objects");
   for(std::vector<BadGuyData>::iterator it = badguy_data.begin();
-      it != badguy_data.end();
-      ++it)
-    fprintf( fi,"(%s (x %d) (y %d) (stay-on-platform %s))\n",
-             badguykind_to_string((*it).kind).c_str(),(*it).x,(*it).y,
-             it->stay_on_platform ? "#t" : "#f");
+      it != badguy_data.end(); ++it)
+  {
+    const std::string kind = badguykind_to_string(it->kind);
+    writer.start_list(kind);
+    {
+      writer.write("x", it->x);
+      writer.write("y", it->y);
+      writer.write("stay-on-platform", it->stay_on_platform);
+    }
+    writer.end_list(kind);
+  }
+  writer.end_list("objects");
 
-  fprintf( fi,")\n");
-
-  fprintf( fi,")\n");
-
-  fclose(fi);
+  writer.end_list("supertux-level");
 }
 
 
@@ -666,7 +563,7 @@ Level::load_gfx()
     {
       char fname[1024];
       snprintf(fname, 1024, "%s/background/%s", st_dir, bkgd_image.c_str());
-      if(!faccessible(fname))
+      if(!FileSystem::file_exists(fname))
         snprintf(fname, 1024, "%s/images/background/%s", datadir.c_str(), bkgd_image.c_str());
       delete img_bkgd;
       img_bkgd = new Surface(fname, IGNORE_ALPHA);
@@ -684,7 +581,7 @@ void Level::load_image(Surface** ptexture, string theme,const  char * file, int 
   char fname[1024];
 
   snprintf(fname, 1024, "%s/themes/%s/%s", st_dir, theme.c_str(), file);
-  if(!faccessible(fname))
+  if(!FileSystem::file_exists(fname))
     snprintf(fname, 1024, "%s/images/themes/%s/%s", datadir.c_str(), theme.c_str(), file);
 
   *ptexture = new Surface(fname, use_alpha);
@@ -736,7 +633,7 @@ Level::load_song()
   char* song_path;
   char* song_subtitle;
 
-  level_song = music_manager->load_music(datadir + "/music/" + song_title);
+  level_song = music_manager->load_music("music/" + song_title);
 
   song_path = (char *) malloc(sizeof(char) * datadir.length() +
                               strlen(song_title.c_str()) + 8 + 5);

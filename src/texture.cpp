@@ -26,6 +26,7 @@
 #include "texture.h"
 #include "globals.h"
 #include "setup.h"
+#include "reader/physfs/physfs_sdl.hpp"
 
 Surface::Surfaces Surface::surfaces;
 
@@ -313,7 +314,14 @@ sdl_surface_part_from_file(const std::string& file, int x, int y, int w, int h, 
   SDL_Surface * temp;
   SDL_Surface * conv;
 
-  temp = IMG_Load(file.c_str());
+  try
+  {
+    temp = IMG_Load_RW(get_physfs_SDLRWops(file), 1);
+  }
+  catch (std::exception& err)
+  {
+    st_abort("Can't load image '" + file + "'", err.what());
+  }
 
   if (temp == NULL)
     st_abort("Can't load", file);
@@ -364,7 +372,14 @@ sdl_surface_from_file(const std::string& file, int use_alpha)
   SDL_Surface* sdl_surface;
   SDL_Surface* temp;
 
-  temp = IMG_Load(file.c_str());
+  try
+  {
+    temp = IMG_Load_RW(get_physfs_SDLRWops(file), 1);
+  }
+  catch (std::exception& err)
+  {
+    st_abort("Can't load image '" + file + "'", err.what());
+  }
 
   if (temp == NULL)
     st_abort("Can't load", file);

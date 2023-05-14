@@ -32,7 +32,6 @@
 #include "screen.h"
 #include "defines.h"
 #include "globals.h"
-#include "setup.h"
 #include "menu.h"
 #include "level.h"
 #include "gameloop.h"
@@ -42,6 +41,7 @@
 #include "tile.h"
 #include "resources.h"
 #include "music_manager.h"
+#include "file_system.hpp"
 
 /* definitions to aid development */
 
@@ -102,7 +102,7 @@ struct TileOrObject
 };
 
 /* leveleditor internals */
-static string_list_type level_subsets;
+static std::vector<std::string> level_subsets;
 static bool le_level_changed;  /* if changes, ask for saving, when quiting*/
 static bool show_minimap;
 static bool show_selections;
@@ -302,7 +302,7 @@ int leveleditor(char* filename)
         default:
           if(i >= 1)
           {
-            if(le_load_level_subset(level_subsets.item[i-1]))
+            if(le_load_level_subset((char*)level_subsets[i-1].c_str()))
               return 1;
           }
           break;
@@ -375,7 +375,7 @@ int le_load_level_subset(char *filename)
   le_level = 1;
   le_goto_level(1);
 
-  //GameSession* session = new GameSession(datadir + "/levels/" + le_level_subset->name + "/level1.stl", 0, ST_GL_DEMO_GAME);
+  //GameSession* session = new GameSession("levels/" + le_level_subset->name + "/level1.stl", 0, ST_GL_DEMO_GAME);
 
   Menu::set_current(NULL);
 
@@ -408,9 +408,9 @@ void le_init_menus()
   subset_load_menu->additem(MN_LABEL, "Load Level Subset", 0, 0);
   subset_load_menu->additem(MN_HL, "", 0, 0);
 
-  for(i = 0; i < level_subsets.num_items; ++i)
+  for(i = 0; i < static_cast<int>(level_subsets.size()); ++i)
   {
-    subset_load_menu->additem(MN_ACTION,level_subsets.item[i],0,0, i+1);
+    subset_load_menu->additem(MN_ACTION,level_subsets[i],0,0, i+1);
   }
   subset_load_menu->additem(MN_HL,"",0,0);
   subset_load_menu->additem(MN_BACK,"Back",0,0);
@@ -515,9 +515,13 @@ void le_init_menus()
 
 int le_init()
 {
+  level_subsets.clear();
 
+  std::vector<std::string> all_subsets = FileSystem::get_files("levels");
+  for (const std::string& subset : all_subsets)
+    if (FileSystem::file_exists("levels/" + subset + "/level1.stl")) // Has initial level in subset
+      level_subsets.push_back(subset); // Add to subsets list
 
-  level_subsets = dsubdirs("/levels", "level1.stl");
   le_level_subset = new LevelSubset;
 
   le_world = NULL;
@@ -540,7 +544,7 @@ int le_init()
   le_mouse_clicked[LEFT] = false;
   le_mouse_clicked[RIGHT] = false;
 
-  le_selection = new Surface(datadir + "/images/icons/select.png", USE_ALPHA);
+  le_selection = new Surface("images/icons/select.png", USE_ALPHA);
 
   select_tilegroup_menu_effect.init(false);
   select_objects_menu_effect.init(false);
@@ -564,7 +568,7 @@ int le_init()
   le_object_properties_bt = new Button("/images/icons/properties.png","Edit object properties", SDLK_p, screen->w - 32, screen->h-98);
   le_object_properties_bt->set_active(false);
 
-  mouse_select_object = new MouseCursor(datadir + "/images/status/select-cursor.png",1);
+  mouse_select_object = new MouseCursor("images/status/select-cursor.png",1);
   mouse_select_object->set_mid(16,16);
 
   le_tilemap_panel = new ButtonPanel(screen->w-64,screen->h-32,32,32);
@@ -593,8 +597,19 @@ void update_level_settings_menu()
   level_settings_menu->get_item_by_id(MNID_NAME).change_input(le_world->get_level()->name.c_str());
   level_settings_menu->get_item_by_id(MNID_AUTHOR).change_input(le_world->get_level()->author.c_str());
 
-  string_list_copy(level_settings_menu->get_item_by_id(MNID_SONG).list, dfiles("music/",NULL, "-fast"));
-  string_list_copy(level_settings_menu->get_item_by_id(MNID_BGIMG).list, dfiles("images/background",NULL, NULL));
+  string_list_type music;
+  string_list_init(&music);
+  for (const std::string& mus : FileSystem::get_files("music"))
+    if (mus.find("-fast") == std::string::npos) // Do not include "-fast" music
+      string_list_add_item(&music, mus.c_str());
+
+  string_list_type backgrounds;
+  string_list_init(&backgrounds);
+  for (const std::string& bg : FileSystem::get_files("images/background"))
+    string_list_add_item(&backgrounds, bg.c_str());
+
+  string_list_copy(level_settings_menu->get_item_by_id(MNID_SONG).list, music);
+  string_list_copy(level_settings_menu->get_item_by_id(MNID_BGIMG).list, backgrounds);
   string_list_add_item(level_settings_menu->get_item_by_id(MNID_BGIMG).list,"");
   string_list_add_item(level_settings_menu->get_item_by_id(MNID_PARTICLE).list,"");
   string_list_add_item(level_settings_menu->get_item_by_id(MNID_PARTICLE).list,"snow");

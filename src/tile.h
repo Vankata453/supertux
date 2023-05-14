@@ -26,7 +26,6 @@
 #include <vector>
 #include "texture.h"
 #include "globals.h"
-#include "lispreader.h"
 #include "setup.h"
 
 /**
@@ -104,7 +103,8 @@ class TileManager
   std::vector<Tile*> tiles;
   static TileManager* instance_ ;
   static std::set<TileGroup>* tilegroups_;
-  void load_tileset(std::string filename);
+
+  void load_tileset(const std::string& filename);
 
   std::string current_tileset;
   

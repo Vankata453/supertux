@@ -17,6 +17,7 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
+#include <sstream>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -25,11 +26,14 @@
 #include "globals.h"
 #include "texture.h"
 #include "screen.h"
-#include "lispreader.h"
 #include "gameloop.h"
 #include "setup.h"
 #include "worldmap.h"
 #include "resources.h"
+#include "file_system.hpp"
+#include "reader/reader_document.hpp"
+#include "reader/reader_mapping.hpp"
+#include "reader/writer.hpp"
 
 #define DISPLAY_MAP_MESSAGE_TIME 2800
 
@@ -88,81 +92,77 @@ string_to_direction(const std::string& directory)
 
 TileManager::TileManager()
 {
-  std::string stwt_filename = datadir +  "/images/worldmap/antarctica.stwt";
-  lisp_object_t* root_obj = lisp_read_from_file(stwt_filename);
- 
-  if (!root_obj)
-    st_abort("Couldn't load file", stwt_filename);
-
-  if (strcmp(lisp_symbol(lisp_car(root_obj)), "supertux-worldmap-tiles") == 0)
+  std::string stwt_filename = "images/worldmap/antarctica.stwt";
+  try
+  {
+    ReaderDocument doc = ReaderDocument::from_file(stwt_filename);
+    ReaderObject root = doc.get_root();
+    if (root.get_name() != "supertux-worldmap-tiles")
     {
-      lisp_object_t* cur = lisp_cdr(root_obj);
-
-      while(!lisp_nil_p(cur))
-        {
-          lisp_object_t* element = lisp_car(cur);
-
-          if (strcmp(lisp_symbol(lisp_car(element)), "tile") == 0)
-            {
-              int id = 0;
-              std::string filename = "<invalid>";
-
-              Tile* tile = new Tile;             
-              tile->north = true;
-              tile->east  = true;
-              tile->south = true;
-              tile->west  = true;
-              tile->stop  = true;
-              tile->auto_walk = false;
-  
-              LispReader reader(lisp_cdr(element));
-              reader.read_int("id",  &id);
-              reader.read_bool("north", &tile->north);
-              reader.read_bool("south", &tile->south);
-              reader.read_bool("west",  &tile->west);
-              reader.read_bool("east",  &tile->east);
-              reader.read_bool("stop",  &tile->stop);
-              reader.read_bool("auto-walk",  &tile->auto_walk);
-              reader.read_string("image",  &filename);
-
-              std::string temp;
-              reader.read_string("one-way",  &temp);
-              tile->one_way = BOTH_WAYS;
-              if(!temp.empty())
-                {
-                if(temp == "north-south")
-                  tile->one_way = NORTH_SOUTH_WAY;
-                else if(temp == "south-north")
-                  tile->one_way = SOUTH_NORTH_WAY;
-                else if(temp == "east-west")
-                  tile->one_way = EAST_WEST_WAY;
-                else if(temp == "west-east")
-                  tile->one_way = WEST_EAST_WAY;
-                }
-
-              tile->sprite = new Surface(
-                           datadir +  "/images/worldmap/" + filename, 
-                           USE_ALPHA);
-
-              if (id >= int(tiles.size()))
-                tiles.resize(id+1);
-
-              tiles[id] = tile;
-            }
-          else
-            {
-              puts("Unhandled symbol");
-            }
-
-          cur = lisp_cdr(cur);
-        }
+      throw std::runtime_error("File is not a supertux-worldmap-tiles file");
     }
-  else
+    ReaderIterator iter = root.get_mapping().get_iter();
+
+    while (iter.next())
     {
-      assert(0);
-    }
+      if (iter.get_key() == "tile")
+      {
+        int id = 0;
+        std::string filename = "<invalid>";
 
-  lisp_free(root_obj);
+        Tile* tile = new Tile;
+        tile->north = true;
+        tile->east  = true;
+        tile->south = true;
+        tile->west  = true;
+        tile->stop  = true;
+        tile->auto_walk = false;
+
+        ReaderMapping reader = iter.as_mapping();
+
+        reader.read_int("id",  &id);
+        reader.read_bool("north", &tile->north);
+        reader.read_bool("south", &tile->south);
+        reader.read_bool("west",  &tile->west);
+        reader.read_bool("east",  &tile->east);
+        reader.read_bool("stop",  &tile->stop);
+        reader.read_bool("auto-walk",  &tile->auto_walk);
+        reader.read_string("image",  &filename);
+
+        std::string temp;
+        reader.read_string("one-way",  &temp);
+        tile->one_way = BOTH_WAYS;
+        if(!temp.empty())
+          {
+          if(temp == "north-south")
+            tile->one_way = NORTH_SOUTH_WAY;
+          else if(temp == "south-north")
+            tile->one_way = SOUTH_NORTH_WAY;
+          else if(temp == "east-west")
+            tile->one_way = EAST_WEST_WAY;
+          else if(temp == "west-east")
+            tile->one_way = WEST_EAST_WAY;
+          }
+
+        tile->sprite = new Surface(
+                     datadir +  "/images/worldmap/" + filename, 
+                     USE_ALPHA);
+
+        if (id >= int(tiles.size()))
+          tiles.resize(id+1);
+
+        tiles[id] = tile;
+      }
+      else
+      {
+        puts("Unhandled symbol");
+      }
+    }
+  }
+  catch (std::exception& err)
+  {
+    std::cout << "Couldn't load worldmap tileset '" << stwt_filename << "': " << err.what() << std::endl;
+  }
 }
 
 TileManager::~TileManager()
@@ -389,7 +389,7 @@ WorldMap::WorldMap()
   leveldot_red = new Surface(datadir +  "/images/worldmap/leveldot_red.png", USE_ALPHA);
   leveldot_teleporter = new Surface(datadir +  "/images/worldmap/teleporter.png", USE_ALPHA);
   
-  map_file = datadir + "/levels/worldmaps/world1.stwm";
+  map_file = "levels/worldmaps/world1.stwm";
   
   input_direction = D_NONE;
   enter_level = false;
@@ -412,102 +412,94 @@ WorldMap::~WorldMap()
 void
 WorldMap::set_map_file(std::string mapfile)
 {
-  map_file = datadir + "/levels/worldmaps/" + mapfile;
+  map_file = "levels/worldmaps/" + mapfile;
 }
 
 void
 WorldMap::load_map()
 {
-  lisp_object_t* root_obj = lisp_read_from_file(map_file);
-  if (!root_obj)
-    st_abort("Couldn't load file", map_file);
-  
-  if (strcmp(lisp_symbol(lisp_car(root_obj)), "supertux-worldmap") == 0)
+  try
+  {
+    ReaderDocument doc = ReaderDocument::from_file(map_file);
+    ReaderObject root = doc.get_root();
+    if (root.get_name() != "supertux-worldmap")
     {
-      lisp_object_t* cur = lisp_cdr(root_obj);
-
-      while(!lisp_nil_p(cur))
-        {
-          lisp_object_t* element = lisp_car(cur);
-
-          if (strcmp(lisp_symbol(lisp_car(element)), "tilemap") == 0)
-            {
-              LispReader reader(lisp_cdr(element));
-              reader.read_int("width",  &width);
-              reader.read_int("height", &height);
-              reader.read_int_vector("data", &tilemap);
-            }
-          else if (strcmp(lisp_symbol(lisp_car(element)), "properties") == 0)
-            {
-              LispReader reader(lisp_cdr(element));
-              reader.read_string("name",  &name);
-              reader.read_string("music", &music);
-   	      reader.read_int("start_pos_x", &start_x);
-	      reader.read_int("start_pos_y", &start_y);
-            }
-          else if (strcmp(lisp_symbol(lisp_car(element)), "levels") == 0)
-            {
-              lisp_object_t* cur = lisp_cdr(element);
-              
-              while(!lisp_nil_p(cur))
-                {
-                  lisp_object_t* element = lisp_car(cur);
-                  
-                  if (strcmp(lisp_symbol(lisp_car(element)), "level") == 0)
-                    {
-                      Level level;
-                      LispReader reader(lisp_cdr(element));
-                      level.solved = false;
-                      
-                      level.north = true;
-                      level.east  = true;
-                      level.south = true;
-                      level.west  = true;
-
-                      reader.read_string("extro-filename",  &level.extro_filename);
-                      reader.read_string("name",  &level.name);
-                      reader.read_int("x", &level.x);
-                      reader.read_int("y", &level.y);
-                      reader.read_string("map-message", &level.display_map_message);
-                      level.auto_path = true;
-                      reader.read_bool("auto-path", &level.auto_path);
-                      level.passive_message = true;
-                      reader.read_bool("passive-message", &level.passive_message);
-							 
-							 level.invisible_teleporter = false;
-							 level.teleport_dest_x = level.teleport_dest_y = -1;
-							 reader.read_int("dest_x", &level.teleport_dest_x);
-							 reader.read_int("dest_y", &level.teleport_dest_y);
-							 reader.read_string("teleport-message", &level.teleport_message);
-							 reader.read_bool("invisible-teleporter", &level.invisible_teleporter);
-                      
-							 level.apply_action_north = level.apply_action_south =
-                            level.apply_action_east = level.apply_action_west = true;
-                      reader.read_bool("apply-action-up", &level.apply_action_north);
-                      reader.read_bool("apply-action-down", &level.apply_action_south);
-                      reader.read_bool("apply-action-left", &level.apply_action_west);
-                      reader.read_bool("apply-action-right", &level.apply_action_east);
-
-                      if(!level.name.empty())
-                        get_level_title(&level);   // get level's title
-
-                      levels.push_back(level);
-                    }
-                  
-                  cur = lisp_cdr(cur);      
-                }
-            }
-          else
-            {
-              
-            }
-          
-          cur = lisp_cdr(cur);
-        }
+      throw std::runtime_error("File is not a supertux-worldmap file");
     }
+    ReaderIterator iter = root.get_mapping().get_iter();
 
-    lisp_free(root_obj);   
-    tux = new Tux(this);
+    while (iter.next())
+    {
+      if (iter.get_key() == "tilemap")
+      {
+        ReaderMapping reader = iter.as_mapping();
+        reader.read_int("width",  &width);
+        reader.read_int("height", &height);
+        reader.read_int_vector("data", &tilemap);
+      }
+      else if (iter.get_key() == "properties")
+      {
+        ReaderMapping reader = iter.as_mapping();
+        reader.read_string("name",  &name);
+        reader.read_string("music", &music);
+        reader.read_int("start_pos_x", &start_x);
+        reader.read_int("start_pos_y", &start_y);
+      }
+      else if (iter.get_key() == "levels")
+      {
+        ReaderIterator levels_iter = iter.as_mapping().get_iter();
+        while (levels_iter.next())
+        {
+          if (levels_iter.get_key() == "level")
+          {
+            ReaderMapping reader = levels_iter.as_mapping();
+
+            Level level;
+            level.solved = false;
+            level.north = true;
+            level.east  = true;
+            level.south = true;
+            level.west  = true;
+
+            reader.read_string("extro-filename",  &level.extro_filename);
+            reader.read_string("name",  &level.name);
+            reader.read_int("x", &level.x);
+            reader.read_int("y", &level.y);
+            reader.read_string("map-message", &level.display_map_message);
+            level.auto_path = true;
+            reader.read_bool("auto-path", &level.auto_path);
+            level.passive_message = true;
+            reader.read_bool("passive-message", &level.passive_message);
+     
+            level.invisible_teleporter = false;
+            level.teleport_dest_x = level.teleport_dest_y = -1;
+            reader.read_int("dest_x", &level.teleport_dest_x);
+            reader.read_int("dest_y", &level.teleport_dest_y);
+            reader.read_string("teleport-message", &level.teleport_message);
+            reader.read_bool("invisible-teleporter", &level.invisible_teleporter);
+
+            level.apply_action_north = level.apply_action_south =
+            level.apply_action_east = level.apply_action_west = true;
+            reader.read_bool("apply-action-up", &level.apply_action_north);
+            reader.read_bool("apply-action-down", &level.apply_action_south);
+            reader.read_bool("apply-action-left", &level.apply_action_west);
+            reader.read_bool("apply-action-right", &level.apply_action_east);
+
+            if(!level.name.empty())
+              get_level_title(&level); // get level's title
+
+            levels.push_back(level);
+          }
+        }
+      }
+    }
+  }
+  catch (std::exception& err)
+  {
+    std::cout << "Couldn't load worldmap data '" << map_file << "': " << err.what() << std::endl;
+  }
+
+  tux = new Tux(this);
 }
 
 void WorldMap::get_level_title(Levels::pointer level)
@@ -515,33 +507,22 @@ void WorldMap::get_level_title(Levels::pointer level)
   /** get level's title */
   level->title = "<no title>";
 
-  FILE * fi;
-  lisp_object_t* root_obj = 0;
-  fi = fopen((datadir +  "/levels/" + level->name).c_str(), "r");
-  if (fi == NULL)
+  try
   {
-    perror((datadir +  "/levels/" + level->name).c_str());
-    return;
-  }
+    ReaderDocument doc = ReaderDocument::from_file("levels/" + level->name);
+    ReaderObject root = doc.get_root();
+    if (root.get_name() != "supertux-level")
+    {
+      throw std::runtime_error("File is not a supertux-level file");
+    }
+    ReaderMapping reader = root.get_mapping();
 
-  lisp_stream_t stream;
-  lisp_stream_init_file (&stream, fi);
-  root_obj = lisp_read (&stream);
-
-  if (root_obj->type == LISP_TYPE_EOF || root_obj->type == LISP_TYPE_PARSE_ERROR)
-  {
-    printf("World: Parse Error in file %s", level->name.c_str());
-  }
-
-  if (strcmp(lisp_symbol(lisp_car(root_obj)), "supertux-level") == 0)
-  {
-    LispReader reader(lisp_cdr(root_obj));
     reader.read_string("name",  &level->title);
   }
-
-  lisp_free(root_obj);
-
-  fclose(fi);
+  catch (std::exception& err)
+  {
+    std::cout << "Couldn't parse worldmap level '" << level->name << "': " << err.what() << std::endl;
+  }
 }
 
 void
@@ -768,8 +749,8 @@ WorldMap::update(float delta)
                     if (!level->extro_filename.empty())
                       { 
                         MusicRef theme =
-                          music_manager->load_music(datadir + "/music/theme.mod");
-                        MusicRef credits = music_manager->load_music(datadir + "/music/credits.ogg");
+                          music_manager->load_music("music/theme.mod");
+                        MusicRef credits = music_manager->load_music("music/credits.ogg");
                         music_manager->play_music(theme);
                         // Display final credits and go back to the main menu
                         display_text_file(level->extro_filename,
@@ -1026,37 +1007,53 @@ void
 WorldMap::savegame(const std::string& filename)
 {
   std::cout << "savegame: " << filename << std::endl;
-  std::ofstream out(filename.c_str());
 
   int nb_solved_levels = 0;
   for(Levels::iterator i = levels.begin(); i != levels.end(); ++i)
+  {
+    if (i->solved)
+      ++nb_solved_levels;
+  }
+
+  std::stringstream title;
+  title << "Icyisland - " << nb_solved_levels << "/" << levels.size();
+
+  FileSystem::mkdir("save"); // Create if missing
+
+  Writer writer(filename);
+  writer.start_list("supertux-savegame");
+
+  writer.write("version", 1);
+  writer.write("title", title.str());
+  writer.write("lives", player_status.lives);
+  writer.write("score", player_status.score);
+  writer.write("distros", player_status.distros);
+
+  writer.start_list("tux");
+  {
+    writer.write("x", tux->get_tile_pos().x);
+    writer.write("y", tux->get_tile_pos().y);
+    writer.write("back", direction_to_string(tux->back_direction));
+    writer.write("bonus", bonus_to_string(player_status.bonus));
+  }
+  writer.end_list("tux");
+
+  writer.start_list("levels");
+  for (Levels::iterator i = levels.begin(); i != levels.end(); ++i)
+  {
+    if (i->solved && !i->name.empty())
     {
-      if (i->solved)
-        ++nb_solved_levels;
+      writer.start_list("level");
+      {
+        writer.write("name", i->name);
+        writer.write("solved", true);
+      }
+      writer.end_list("level");
     }
+  }
+  writer.end_list("levels");
 
-  out << "(supertux-savegame\n"
-      << "  (version 1)\n"
-      << "  (title  \"Icyisland - " << nb_solved_levels << "/" << levels.size() << "\")\n"
-      << "  (lives   " << player_status.lives << ")\n"
-      << "  (score   " << player_status.score << ")\n"
-      << "  (distros " << player_status.distros << ")\n"
-      << "  (tux (x " << tux->get_tile_pos().x << ") (y " << tux->get_tile_pos().y << ")\n"
-      << "       (back \"" << direction_to_string(tux->back_direction) << "\")\n"
-      << "       (bonus \"" << bonus_to_string(player_status.bonus) <<  "\"))\n"
-      << "  (levels\n";
-  
-  for(Levels::iterator i = levels.begin(); i != levels.end(); ++i)
-    {
-      if (i->solved && !i->name.empty())
-        {
-          out << "     (level (name \"" << i->name << "\")\n"
-              << "            (solved #t))\n";
-        }
-    }  
-
-  out << "   )\n"
-      << " )\n\n;; EOF ;;" << std::endl;
+  writer.end_list("supertux-savegame");
 }
 
 void
@@ -1064,79 +1061,73 @@ WorldMap::loadgame(const std::string& filename)
 {
   std::cout << "loadgame: " << filename << std::endl;
   savegame_file = filename;
-
-  if (access(filename.c_str(), F_OK) != 0)
-    return;
   
-  lisp_object_t* savegame = lisp_read_from_file(filename);
-  if (!savegame)
+  try
+  {
+    ReaderDocument doc = ReaderDocument::from_file(filename);
+    ReaderObject root = doc.get_root();
+    if (root.get_name() != "supertux-savegame")
     {
-      std::cout << "WorldMap:loadgame: File not found: " << filename << std::endl;
-      return;
+      throw std::runtime_error("File is not a supertux-savegame file");
     }
+    ReaderMapping reader = root.get_mapping();
 
-  lisp_object_t* cur = savegame;
+    reader.read_int("lives",  &player_status.lives);
+    reader.read_int("score",  &player_status.score);
+    reader.read_int("distros", &player_status.distros);
 
-  if (strcmp(lisp_symbol(lisp_car(cur)), "supertux-savegame") != 0)
-    return;
+    if (player_status.lives < 0)
+      player_status.lives = START_LIVES;
 
-  cur = lisp_cdr(cur);
-  LispReader reader(cur);
-
-  reader.read_int("lives",  &player_status.lives);
-  reader.read_int("score",  &player_status.score);
-  reader.read_int("distros", &player_status.distros);
-
-  if (player_status.lives < 0)
-    player_status.lives = START_LIVES;
-
-  lisp_object_t* tux_cur = 0;
-  if (reader.read_lisp("tux", &tux_cur))
+    ReaderIterator iter = reader.get_iter();
+    while (iter.next())
     {
-      Point p;
-      std::string back_str = "none";
-      std::string bonus_str = "none";
+      if (iter.get_key() == "tux")
+      {
+        ReaderMapping tux_reader = iter.as_mapping();
 
-      LispReader tux_reader(tux_cur);
-      tux_reader.read_int("x", &p.x);
-      tux_reader.read_int("y", &p.y);
-      tux_reader.read_string("back", &back_str);
-      tux_reader.read_string("bonus", &bonus_str);
-      
-      player_status.bonus = string_to_bonus(bonus_str);
-      tux->back_direction = string_to_direction(back_str);      
-      tux->set_tile_pos(p);
-    }
+        Point p;
+        std::string back_str = "none";
+        std::string bonus_str = "none";
 
-  lisp_object_t* level_cur = 0;
-  if (reader.read_lisp("levels", &level_cur))
-    {
-      while(level_cur)
+        tux_reader.read_int("x", &p.x);
+        tux_reader.read_int("y", &p.y);
+        tux_reader.read_string("back", &back_str);
+        tux_reader.read_string("bonus", &bonus_str);
+        
+        player_status.bonus = string_to_bonus(bonus_str);
+        tux->back_direction = string_to_direction(back_str);
+        tux->set_tile_pos(p);
+      }
+      else if (iter.get_key() == "levels")
+      {
+        ReaderIterator levels_iter = iter.as_mapping().get_iter();
+        while (levels_iter.next())
         {
-          lisp_object_t* sym  = lisp_car(lisp_car(level_cur));
-          lisp_object_t* data = lisp_cdr(lisp_car(level_cur));
+          if (levels_iter.get_key() == "level")
+          {
+            ReaderMapping level_reader = levels_iter.as_mapping();
 
-          if (strcmp(lisp_symbol(sym), "level") == 0)
+            std::string name;
+            bool solved = false;
+
+            level_reader.read_string("name",   &name);
+            level_reader.read_bool("solved", &solved);
+
+            for(Levels::iterator i = levels.begin(); i != levels.end(); ++i)
             {
-              std::string name;
-              bool solved = false;
-
-              LispReader level_reader(data);
-              level_reader.read_string("name",   &name);
-              level_reader.read_bool("solved", &solved);
-
-              for(Levels::iterator i = levels.begin(); i != levels.end(); ++i)
-                {
-                  if (name == i->name)
-                    i->solved = solved;
-                }
+              if (name == i->name)
+                i->solved = solved;
             }
-
-          level_cur = lisp_cdr(level_cur);
+          }
         }
+      }
     }
- 
-  lisp_free(savegame);
+  }
+  catch (std::exception& err)
+  {
+    std::cout << "Couldn't load savegame file '" << filename << "': " << err.what() << std::endl;
+  }
 }
 
 void

@@ -25,7 +25,6 @@
 #include "special.h"
 #include "resources.h"
 #include "sprite_manager.h"
-#include "setup.h"
 
 Surface* img_waves[3]; 
 Surface* img_water;
@@ -45,7 +44,7 @@ void loadshared()
 {
   int i;
 
-  sprite_manager = new SpriteManager(datadir + "/supertux.strf");
+  sprite_manager = new SpriteManager("supertux.strf");
   music_manager = new MusicManager();
   music_manager->enable_music(use_music);
 
@@ -98,58 +97,58 @@ void loadshared()
   firetux.duck_right  = sprite_manager->load("firetux-duck-right");
 
   /* Water: */
-  img_water = new Surface(datadir + "/images/shared/water.png", IGNORE_ALPHA);
+  img_water = new Surface("images/shared/water.png", IGNORE_ALPHA);
 
-  img_waves[0] = new Surface(datadir + "/images/shared/waves-0.png",
+  img_waves[0] = new Surface("images/shared/waves-0.png",
                USE_ALPHA);
 
-  img_waves[1] = new Surface(datadir + "/images/shared/waves-1.png",
+  img_waves[1] = new Surface("images/shared/waves-1.png",
                USE_ALPHA);
 
-  img_waves[2] = new Surface(datadir + "/images/shared/waves-2.png",
+  img_waves[2] = new Surface("images/shared/waves-2.png",
                USE_ALPHA);
 
 
   /* Pole: */
 
-  img_pole = new Surface(datadir + "/images/shared/pole.png", USE_ALPHA);
-  img_poletop = new Surface(datadir + "/images/shared/poletop.png",
+  img_pole = new Surface("images/shared/pole.png", USE_ALPHA);
+  img_poletop = new Surface("images/shared/poletop.png",
                USE_ALPHA);
 
 
   /* Flag: */
 
-  img_flag[0] = new Surface(datadir + "/images/shared/flag-0.png",
+  img_flag[0] = new Surface("images/shared/flag-0.png",
                USE_ALPHA);
-  img_flag[1] = new Surface(datadir + "/images/shared/flag-1.png",
+  img_flag[1] = new Surface("images/shared/flag-1.png",
                USE_ALPHA);
 
 
   /* Cloud: */
 
-  img_cloud[0][0] = new Surface(datadir + "/images/shared/cloud-00.png",
+  img_cloud[0][0] = new Surface("images/shared/cloud-00.png",
                USE_ALPHA);
 
-  img_cloud[0][1] = new Surface(datadir + "/images/shared/cloud-01.png",
+  img_cloud[0][1] = new Surface("images/shared/cloud-01.png",
                USE_ALPHA);
 
-  img_cloud[0][2] = new Surface(datadir + "/images/shared/cloud-02.png",
+  img_cloud[0][2] = new Surface("images/shared/cloud-02.png",
                USE_ALPHA);
 
-  img_cloud[0][3] = new Surface(datadir + "/images/shared/cloud-03.png",
+  img_cloud[0][3] = new Surface("images/shared/cloud-03.png",
                USE_ALPHA);
 
 
-  img_cloud[1][0] = new Surface(datadir + "/images/shared/cloud-10.png",
+  img_cloud[1][0] = new Surface("images/shared/cloud-10.png",
                USE_ALPHA);
 
-  img_cloud[1][1] = new Surface(datadir + "/images/shared/cloud-11.png",
+  img_cloud[1][1] = new Surface("images/shared/cloud-11.png",
                USE_ALPHA);
 
-  img_cloud[1][2] = new Surface(datadir + "/images/shared/cloud-12.png",
+  img_cloud[1][2] = new Surface("images/shared/cloud-12.png",
                USE_ALPHA);
 
-  img_cloud[1][3] = new Surface(datadir + "/images/shared/cloud-13.png",
+  img_cloud[1][3] = new Surface("images/shared/cloud-13.png",
                USE_ALPHA);
 
 
@@ -160,22 +159,22 @@ void loadshared()
   load_special_gfx();
 
   /* Distros: */
-  img_distro[0] = new Surface(datadir + "/images/tilesets/coin1.png",
+  img_distro[0] = new Surface("images/tilesets/coin1.png",
                USE_ALPHA);
 
-  img_distro[1] = new Surface(datadir + "/images/tilesets/coin2.png",
+  img_distro[1] = new Surface("images/tilesets/coin2.png",
                USE_ALPHA);
 
-  img_distro[2] = new Surface(datadir + "/images/tilesets/coin3.png",
+  img_distro[2] = new Surface("images/tilesets/coin3.png",
                USE_ALPHA);
 
-  img_distro[3] = new Surface(datadir + "/images/tilesets/coin2.png",
+  img_distro[3] = new Surface("images/tilesets/coin2.png",
                USE_ALPHA);
 
 
   /* Tux life: */
 
-  tux_life = new Surface(datadir + "/images/shared/tux-life.png",
+  tux_life = new Surface("images/shared/tux-life.png",
                          USE_ALPHA);
 
   /* Sound effects: */
@@ -191,8 +190,8 @@ void loadshared()
     sounds[i] = load_sound(datadir + soundfilenames[i]);
 
   /* Herring song */
-  herring_song = music_manager->load_music(datadir + "/music/SALCON.MOD");
-  level_end_song = music_manager->load_music(datadir + "/music/leveldone.mod");
+  herring_song = music_manager->load_music("music/SALCON.MOD");
+  level_end_song = music_manager->load_music("music/leveldone.mod");
 }
 
 

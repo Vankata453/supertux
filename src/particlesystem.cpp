@@ -115,7 +115,7 @@ void SnowParticleSystem::simulate(float elapsed_time)
 
 CloudParticleSystem::CloudParticleSystem()
 {
-    cloudimage = new Surface(datadir + "/images/shared/cloud.png", USE_ALPHA);
+    cloudimage = new Surface("images/shared/cloud.png", USE_ALPHA);
 
     virtual_width = 2000.0;
 

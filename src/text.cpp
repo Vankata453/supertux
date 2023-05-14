@@ -24,6 +24,7 @@
 #include "defines.h"
 #include "screen.h"
 #include "text.h"
+#include "reader/physfs/ifile_stream.hpp"
 
 Text::Text(const std::string& file, int kind_, int w_, int h_)
 {
@@ -250,24 +251,24 @@ void display_text_file(const std::string& file, Surface* surface, float scroll_s
   char filename[1024];
   string_list_init(&names);
   sprintf(filename,"%s/%s", datadir.c_str(), file.c_str());
-  if((fi = fopen(filename,"r")) != NULL)
-    {
-      while(fgets(temp, sizeof(temp), fi) != NULL)
-        {
-          temp[strlen(temp)-1]='\0';
-          string_list_add_item(&names,temp);
-        }
-      fclose(fi);
-    }
-  else
-    {
-      string_list_add_item(&names,"File was not found!");
-      string_list_add_item(&names,filename);
-      string_list_add_item(&names,"Shame on the guy, who");
-      string_list_add_item(&names,"forgot to include it");
-      string_list_add_item(&names,"in your SuperTux distribution.");
-    }
 
+  IFileStream file_stream(filename);
+  if(file_stream.good())
+  {
+    std::string line;
+    while (std::getline(file_stream, line))
+    {
+      string_list_add_item(&names, line.c_str());
+    }
+  }
+  else
+  {
+    string_list_add_item(&names,"File was not found!");
+    string_list_add_item(&names,filename);
+    string_list_add_item(&names,"Shame on the guy, who");
+    string_list_add_item(&names,"forgot to include it");
+    string_list_add_item(&names,"in your SuperTux distribution.");
+  }
 
   scroll = 0;
   speed = scroll_speed / 50;

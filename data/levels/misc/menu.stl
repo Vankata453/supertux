@@ -6,7 +6,7 @@
   (music "theme.mod")
   (background "arctis2.jpg")
   (particle_system "")
-  (bkgd_speed "2")
+  (bkgd_speed 2)
   (bkgd_red_top 0)
   (bkgd_green_top 0)
   (bkgd_blue_top 0)

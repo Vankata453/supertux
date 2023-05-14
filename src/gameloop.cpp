@@ -40,7 +40,6 @@
 #include "globals.h"
 #include "gameloop.h"
 #include "screen.h"
-#include "setup.h"
 #include "high_scores.h"
 #include "menu.h"
 #include "badguy.h"
@@ -54,6 +53,9 @@
 #include "particlesystem.h"
 #include "resources.h"
 #include "music_manager.h"
+#include "file_system.hpp"
+#include "reader/reader_document.hpp"
+#include "reader/reader_mapping.hpp"
 
 GameSession* GameSession::current_ = 0;
 
@@ -801,27 +803,31 @@ std::string slotinfo(int slot)
   char tmp[1024];
   char slotfile[1024];
   std::string title;
-  sprintf(slotfile,"%s/slot%d.stsg",st_save_dir,slot);
+  sprintf(slotfile, "save/slot%d.stsg", slot);
 
-  lisp_object_t* savegame = lisp_read_from_file(slotfile);
-  if (savegame)
+  try
+  {
+    if (FileSystem::file_exists(slotfile))
     {
-      LispReader reader(lisp_cdr(savegame));
+      ReaderDocument doc = ReaderDocument::from_file(slotfile);
+      ReaderMapping reader = doc.get_root().get_mapping();
+
       reader.read_string("title", &title);
-      lisp_free(savegame);
-    }
 
-  if (access(slotfile, F_OK) == 0)
-    {
       if (!title.empty())
-        snprintf(tmp,1024,"Slot %d - %s",slot, title.c_str());
+        snprintf(tmp,1024,"Slot %d - %s", slot, title.c_str());
       else
         snprintf(tmp, 1024,"Slot %d - Savegame",slot);
     }
-  else
-    sprintf(tmp,"Slot %d - Free",slot);
+    else
+    {
+      sprintf(tmp,"Slot %d - Free",slot);
+    }
+  }
+  catch (std::exception& err)
+  {
+    std::cout << "Couldn't get information about slot " << slot << ": " << err.what() << std::endl;
+  }
 
   return tmp;
 }
-
-

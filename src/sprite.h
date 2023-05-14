@@ -22,12 +22,13 @@
 
 #include <string>
 #include <vector>
-#include "lispreader.h"
 #include "texture.h"
+
+class ReaderMapping;
 
 class Sprite
 {
- private:
+private:
   std::string name;
 
   int x_hotspot;
@@ -45,10 +46,9 @@ class Sprite
   std::vector<Surface*> surfaces;
 
   void init_defaults();
- public:
-  /** cur has to be a pointer to data in the form of ((x-hotspot 5)
-      (y-hotspot 10) ...) */
-  Sprite(lisp_object_t* cur);
+
+public:
+  Sprite(const ReaderMapping& reader);
   ~Sprite();
   
   void reset();

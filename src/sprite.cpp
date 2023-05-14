@@ -22,12 +22,11 @@
 #include "globals.h"
 #include "sprite.h"
 #include "setup.h"
+#include "reader/reader_mapping.hpp"
 
-Sprite::Sprite(lisp_object_t* cur)
+Sprite::Sprite(const ReaderMapping& reader)
 {
   init_defaults();
-
-  LispReader reader(cur);
 
   if(!reader.read_string("name",   &name))
     st_abort("Sprite wihtout name", "");
@@ -40,10 +39,10 @@ Sprite::Sprite(lisp_object_t* cur)
     st_abort("Sprite contains no images: ", name.c_str());
 
   for(std::vector<std::string>::size_type i = 0; i < images.size(); ++i)
-    {
-      surfaces.push_back(
-          new Surface(datadir + "/images/" + images[i], USE_ALPHA));
-    }        
+  {
+    surfaces.push_back(
+        new Surface("images/" + images[i], USE_ALPHA));
+  }
 
   frame_delay = 1000.0f/fps;
 }

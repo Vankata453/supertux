@@ -104,5 +104,8 @@ enum DyingType {
        #define DEBUG_MSG( msg ) {}
 #endif
 
+#define log_debug std::cout
+#define log_warning std::cout
+
 #endif
 

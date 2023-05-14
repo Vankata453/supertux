@@ -17,18 +17,20 @@
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
+#include <iostream>
 #include <stdlib.h>
 #include <string>
 #include "configfile.h"
-#include "setup.h"
 #include "globals.h"
-#include "lispreader.h"
+#include "reader/reader_document.hpp"
+#include "reader/reader_mapping.hpp"
+#include "reader/writer.hpp"
 #include "player.h"
 
 #ifdef WIN32
-const char * config_filename = "/st_config.dat";
+const char * config_filename = "st_config.dat";
 #else
-const char * config_filename = "/config";
+const char * config_filename = "config";
 #endif
 
 static void defaults ()
@@ -47,107 +49,79 @@ static void defaults ()
 
 void loadconfig(void)
 {
-  FILE * file = NULL;
-
   defaults();
 
-  /* override defaults from config file */
+  try
+  {
+    ReaderDocument doc = ReaderDocument::from_file("config");
+    ReaderObject root = doc.get_root();
+    if (root.get_name() != "supertux-config")
+    {
+      throw std::runtime_error("File is not a supertux-config file");
+    }
+    ReaderMapping reader = root.get_mapping();
 
-  file = opendata(config_filename, "r");
+    reader.get("fullscreen", use_fullscreen);
+    reader.get("sound",      use_sound);
+    reader.get("music",      use_music);
+    reader.get("show_fps",   show_fps);
 
-  if (file == NULL)
-    return;
+    std::string video;
+    reader.get ("video", video);
+    use_gl = video == "opengl";
 
-  /* read config file */
+    reader.get ("joystick", joystick_num);
+    use_joystick = joystick_num >= 0;
 
-  lisp_stream_t   stream;
-  lisp_object_t * root_obj = NULL;
+    reader.get ("joystick-x", joystick_keymap.x_axis);
+    reader.get ("joystick-y", joystick_keymap.y_axis);
+    reader.get ("joystick-a", joystick_keymap.a_button);
+    reader.get ("joystick-b", joystick_keymap.b_button);
+    reader.get ("joystick-start", joystick_keymap.start_button);
+    reader.get ("joystick-deadzone", joystick_keymap.dead_zone);
 
-  lisp_stream_init_file (&stream, file);
-  root_obj = lisp_read (&stream);
-
-  if (root_obj->type == LISP_TYPE_EOF || root_obj->type == LISP_TYPE_PARSE_ERROR)
-    return;
-
-  if (strcmp(lisp_symbol(lisp_car(root_obj)), "supertux-config") != 0)
-    return;
-
-  LispReader reader(lisp_cdr(root_obj));
-
-  reader.read_bool("fullscreen", &use_fullscreen);
-  reader.read_bool("sound",      &use_sound);
-  reader.read_bool("music",      &use_music);
-  reader.read_bool("show_fps",   &show_fps);
-
-  std::string video;
-  reader.read_string ("video", &video);
-  if (video == "opengl")
-    use_gl = true;
-  else
-    use_gl = false;
-
-  reader.read_int ("joystick", &joystick_num);
-  if (!(joystick_num >= 0))
-    use_joystick = false;
-  else
-    use_joystick = true;
-
-  reader.read_int ("joystick-x", &joystick_keymap.x_axis);
-  reader.read_int ("joystick-y", &joystick_keymap.y_axis);
-  reader.read_int ("joystick-a", &joystick_keymap.a_button);
-  reader.read_int ("joystick-b", &joystick_keymap.b_button);
-  reader.read_int ("joystick-start", &joystick_keymap.start_button);
-  reader.read_int ("joystick-deadzone", &joystick_keymap.dead_zone);
-
-  reader.read_int ("keyboard-jump", &keymap.jump);
-  reader.read_int ("keyboard-duck", &keymap.duck);
-  reader.read_int ("keyboard-left", &keymap.left);
-  reader.read_int ("keyboard-right", &keymap.right);
-  reader.read_int ("keyboard-fire", &keymap.fire);
-
-  lisp_free(root_obj);
-  fclose(file);
+    reader.get ("keyboard-jump", keymap.jump);
+    reader.get ("keyboard-duck", keymap.duck);
+    reader.get ("keyboard-left", keymap.left);
+    reader.get ("keyboard-right", keymap.right);
+    reader.get ("keyboard-fire", keymap.fire);
+  }
+  catch (std::exception& err)
+  {
+    log_warning << "Error reading full config: " << err.what() << std::endl;
+  }
 }
 
 void saveconfig (void)
 {
-  /* write settings to config file */
+  Writer writer("config");
 
-  FILE * config = opendata(config_filename, "w");
+  writer.start_list("supertux-config");
+  writer.write_comment("the following options can be set to #t or #f:");
 
-  if(config)
-    {
-      fprintf(config, "(supertux-config\n");
-      fprintf(config, "\t;; the following options can be set to #t or #f:\n");
-      fprintf(config, "\t(fullscreen %s)\n", use_fullscreen ? "#t" : "#f");
-      fprintf(config, "\t(sound      %s)\n", use_sound      ? "#t" : "#f");
-      fprintf(config, "\t(music      %s)\n", use_music      ? "#t" : "#f");
-      fprintf(config, "\t(show_fps   %s)\n", show_fps       ? "#t" : "#f");
+  writer.write("fullscreen", use_fullscreen);
+  writer.write("sound",      use_sound);
+  writer.write("music",      use_music);
+  writer.write("show_fps",   show_fps);
 
-      fprintf(config, "\n\t;; either \"opengl\" or \"sdl\"\n");
-      fprintf(config, "\t(video      \"%s\")\n", use_gl ? "opengl" : "sdl");
+  writer.write("video", use_gl ? "opengl" : "sdl");
 
-      fprintf(config, "\n\t;; joystick number (-1 means no joystick):\n");
-      fprintf(config, "\t(joystick   %d)\n", use_joystick ? joystick_num : -1);
+  writer.write("joystick", use_joystick ? joystick_num : -1);
 
-      fprintf(config, "\t(joystick-x   %d)\n", joystick_keymap.x_axis);
-      fprintf(config, "\t(joystick-y   %d)\n", joystick_keymap.y_axis);
-      fprintf(config, "\t(joystick-a   %d)\n", joystick_keymap.a_button);
-      fprintf(config, "\t(joystick-b   %d)\n", joystick_keymap.b_button);
-      fprintf(config, "\t(joystick-start  %d)\n", joystick_keymap.start_button);
-      fprintf(config, "\t(joystick-deadzone  %d)\n", joystick_keymap.dead_zone);
+  writer.write("joystick-x", joystick_keymap.x_axis);
+  writer.write("joystick-y", joystick_keymap.y_axis);
+  writer.write("joystick-a", joystick_keymap.a_button);
+  writer.write("joystick-b", joystick_keymap.b_button);
+  writer.write("joystick-start", joystick_keymap.start_button);
+  writer.write("joystick-deadzone", joystick_keymap.dead_zone);
 
-      fprintf(config, "\t(keyboard-jump  %d)\n", keymap.jump);
-      fprintf(config, "\t(keyboard-duck  %d)\n", keymap.duck);
-      fprintf(config, "\t(keyboard-left  %d)\n", keymap.left);
-      fprintf(config, "\t(keyboard-right %d)\n", keymap.right);
-      fprintf(config, "\t(keyboard-fire  %d)\n", keymap.fire);
+  writer.write("keyboard-jump", keymap.jump);
+  writer.write("keyboard-duck", keymap.duck);
+  writer.write("keyboard-left", keymap.left);
+  writer.write("keyboard-right", keymap.right);
+  writer.write("keyboard-fire", keymap.fire);
 
-      fprintf(config, ")\n");
-
-      fclose(config);
-    }
-
+  writer.end_list("supertux-config");
 }
 
 /* EOF */
