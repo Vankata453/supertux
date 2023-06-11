@@ -34,7 +34,8 @@ private:
     MNID_LEVELSEL,
     MNID_LEVELSETSEL,
 	  MNID_HELP,
-    MNID_QUITEDITOR
+    MNID_QUITEDITOR,
+    MNID_CONVERT
   };
 
 public:
