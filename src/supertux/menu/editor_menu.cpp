@@ -16,17 +16,22 @@
 
 #include "supertux/menu/editor_menu.hpp"
 
+#include <unordered_map>
+
 #include <physfs.h>
 
 #include "editor/editor.hpp"
 #include "gui/dialog.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
+#include "object/tilemap.hpp"
+#include "physfs/ifile_stream.hpp"
 #include "supertux/level.hpp"
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
 #include "supertux/menu/editor_save_as.hpp"
 #include "supertux/menu/menu_storage.hpp"
+#include "supertux/sector.hpp"
 #include "util/gettext.hpp"
 #include "video/compositor.hpp"
 
@@ -67,6 +72,10 @@ EditorMenu::EditorMenu()
     add_entry(MNID_LEVELSEL, _("Edit Another Level"));
 
   add_entry(MNID_LEVELSETSEL, _("Edit Another World"));
+
+  add_hl();
+
+  add_entry(MNID_CONVERT, _("Convert Level"));
 
   add_hl();
 
@@ -185,6 +194,60 @@ EditorMenu::menu_action(MenuItem& item)
     case MNID_QUITEDITOR:
       MenuManager::instance().clear_menu_stack();
       Editor::current()->m_quit_request = true;
+      break;
+
+    case MNID_CONVERT:
+    {
+      std::unordered_map<int, int> tiles;
+
+      IFileStream in("images/convert.txt");
+      if (!in.good()) {
+        std::stringstream msg;
+        msg << "Couldn't open images/convert.txt.";
+        throw std::runtime_error(msg.str());
+      }
+
+      int a, b;
+      std::string delimiter;
+      while (in >> a >> delimiter >> b)
+      {
+        if (delimiter != "->")
+        {
+          std::stringstream msg;
+          msg << "Couldn't parse images/convert.txt.";
+          throw std::runtime_error(msg.str());
+        }
+
+        tiles[a] = b;
+      }
+
+      MenuManager::instance().clear_menu_stack();
+      Level* level = Editor::current()->get_level();
+      for (size_t i = 0; i < level->get_sector_count(); i++)
+      {
+        Sector* sector = level->get_sector(i);
+        for (auto& tilemap : sector->get_objects_by_type<TileMap>())
+        {
+          // Can't use change_all(), if there's like `1 -> 2`and then
+          // `2 -> 3`, it'll do a double replacement
+          for (int x = 0; x < tilemap.get_width(); x++)
+          {
+            for (int y = 0; y < tilemap.get_height(); y++)
+            {
+              auto tile = tilemap.get_tile_id(x, y);
+              try
+              {
+                tilemap.change(x, y, tiles.at(tile));
+              }
+              catch (std::out_of_range& e)
+              {
+                // Expected for tiles that don't need to be replaced
+              }
+            }
+          }
+        }
+      }
+    }
       break;
 
     default:
