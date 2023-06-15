@@ -22,6 +22,7 @@
 
 #include "editor/editor.hpp"
 #include "gui/dialog.hpp"
+#include "gui/item_action.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
 #include "object/tilemap.hpp"
@@ -75,7 +76,8 @@ EditorMenu::EditorMenu()
 
   add_hl();
 
-  add_entry(MNID_CONVERT, _("Convert Level"));
+  add_entry(MNID_CONVERT, _("Convert Level"))
+    .set_help(_("Levels, edited in previous Nightly Builds, are likely to have their tiles corrupted.\nUse this feature to convert all tiles in the current level back to their proper state."));
 
   add_hl();
 
