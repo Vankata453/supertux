@@ -523,6 +523,27 @@ Editor::set_level(std::unique_ptr<Level> level, bool reset)
   m_layers_widget->refresh_sector_text();
   m_toolbox_widget->update_mouse_icon();
   m_overlay_widget->on_level_change();
+
+  if (!reset) return;
+
+  // Check for any deprecated tiles, used throughout the entire level, and warn the user if any are used
+  bool has_deprecated_tiles = false;
+  for (size_t sector_num = 0; sector_num < m_level->get_sector_count(); sector_num++)
+  {
+    for (auto& tilemap : m_level->get_sector(sector_num)->get_objects_by_type<TileMap>())
+    {
+      for (const uint32_t& tile_id : tilemap.get_tiles())
+      {
+        if (m_tileset->get(tile_id).is_deprecated())
+        {
+          has_deprecated_tiles = true;
+          break;
+        }
+      }
+    }
+  }
+  if (has_deprecated_tiles)
+    Dialog::show_message(_("This level contains deprecated tiles.\nIt is strongly recommended to replace all deprecated tiles\nto avoid loss of compatibility in future versions.\n \nNote: Deprecated tiles on the active tilemap show a '!' sign when hovered."));
 }
 
 void
