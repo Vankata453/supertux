@@ -77,7 +77,7 @@ EditorMenu::EditorMenu()
   add_hl();
 
   add_entry(MNID_CONVERT, _("Convert Level"))
-    .set_help(_("Levels, edited in previous Nightly Builds, are likely to have their tiles corrupted.\nUse this feature to convert all tiles in the current level back to their proper state."));
+    .set_help(_("Levels, edited in previous Nightly Builds, are likely to have had their tiles corrupted.\nUse this feature to convert all tiles in the current level back to their proper state."));
 
   add_hl();
 
@@ -205,7 +205,7 @@ EditorMenu::menu_action(MenuItem& item)
 
     case MNID_CONVERT:
     {
-      Dialog::show_confirmation(_("This will convert all tiles in the level. Proceed?"), [this]() {
+      Dialog::show_confirmation(_("This will convert all tiles in the level. Proceed?\n \nNote: This should not be ran more than once on a level."), [this]() {
         convert_level();
       });
     }
