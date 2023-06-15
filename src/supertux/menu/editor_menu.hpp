@@ -47,6 +47,9 @@ public:
   bool on_back_action() override;
 
 private:
+  void convert_level();
+
+private:
   EditorMenu(const EditorMenu&) = delete;
   EditorMenu& operator=(const EditorMenu&) = delete;
 };
