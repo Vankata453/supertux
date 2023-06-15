@@ -1423,10 +1423,21 @@ EditorOverlayWidget::draw(DrawingContext& context)
     m_object_tip->draw(context, m_mouse_pos);
   }
 
+  auto cam_translation = m_editor.get_sector()->get_camera().get_translation();
+
+  if (m_editor.get_tileselect_input_type() == EditorToolboxWidget::InputType::TILE)
+  {
+    // Deprecated tiles in active tilemaps should have indication, when hovered
+    auto sel_tilemap = m_editor.get_selected_tilemap();
+    if (m_editor.get_tileset()->get(sel_tilemap->get_tile_id(static_cast<int>(m_hovered_tile.x), static_cast<int>(m_hovered_tile.y))).is_deprecated())
+      context.color().draw_text(Resources::normal_font, "!",
+                                tp_to_sp(Vector(static_cast<int>(m_hovered_tile.x), static_cast<int>(m_hovered_tile.y))) - cam_translation + Vector(16, 8),
+                                ALIGN_CENTER, LAYER_GUI - 10, Color::RED);
+  }
+
   if (m_dragging && m_editor.get_tileselect_select_mode() == 1
       && !m_dragging_right) {
     // Draw selection rectangle...
-    auto cam_translation = m_editor.get_sector()->get_camera().get_translation();
     Vector p0 = m_drag_start - cam_translation;
     Vector p3 = m_mouse_pos;
     if (p0.x > p3.x) {
