@@ -35,7 +35,8 @@ private:
     MNID_LEVELSETSEL,
 	  MNID_HELP,
     MNID_QUITEDITOR,
-    MNID_CONVERT
+    MNID_CONVERT,
+    MNID_CHECKDEPRECATEDTILES
   };
 
 public:
@@ -47,6 +48,8 @@ public:
   bool on_back_action() override;
 
 private:
+  void rebuild_menu();
+
   void convert_level();
 
 private:
