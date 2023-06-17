@@ -144,6 +144,7 @@ public:
   bool editor_autotile_mode;
   bool editor_autotile_help;
   int editor_autosave_frequency;
+  bool editor_show_deprecated_tiles;
 
   bool multiplayer_auto_manage_players;
   bool multiplayer_multibind;

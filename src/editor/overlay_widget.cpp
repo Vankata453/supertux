@@ -1425,7 +1425,8 @@ EditorOverlayWidget::draw(DrawingContext& context)
 
   auto cam_translation = m_editor.get_sector()->get_camera().get_translation();
 
-  if (m_editor.get_tileselect_input_type() == EditorToolboxWidget::InputType::TILE)
+  if (m_editor.get_tileselect_input_type() == EditorToolboxWidget::InputType::TILE &&
+      !g_config->editor_show_deprecated_tiles) // If showing deprecated tiles is enabled, this is redundant, since tiles are indicated without the need of hovering over.
   {
     // Deprecated tiles in active tilemaps should have indication, when hovered
     auto sel_tilemap = m_editor.get_selected_tilemap();

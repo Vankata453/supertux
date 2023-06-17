@@ -25,6 +25,8 @@
 #include <emscripten/html5.h>
 #endif
 
+#include <fmt/format.h>
+
 #include "zip_manager.hpp"
 
 #include "audio/sound_manager.hpp"
@@ -107,6 +109,7 @@ Editor::Editor() :
   m_leveltested(false),
   m_after_setup(false),
   m_tileset(nullptr),
+  m_has_deprecated_tiles(false),
   m_widgets(),
   m_overlay_widget(),
   m_toolbox_widget(),
@@ -535,24 +538,14 @@ Editor::set_level(std::unique_ptr<Level> level, bool reset)
 
   if (!reset) return;
 
-  // Check for any deprecated tiles, used throughout the entire level, and warn the user if any are used
-  bool has_deprecated_tiles = false;
-  for (size_t sector_num = 0; sector_num < m_level->get_sector_count(); sector_num++)
+  // Warn the user if any deprecated tiles are used throughout the level
+  check_deprecated_tiles();
+  if (m_has_deprecated_tiles)
   {
-    for (auto& tilemap : m_level->get_sector(sector_num)->get_objects_by_type<TileMap>())
-    {
-      for (const uint32_t& tile_id : tilemap.get_tiles())
-      {
-        if (m_tileset->get(tile_id).is_deprecated())
-        {
-          has_deprecated_tiles = true;
-          break;
-        }
-      }
-    }
+    Dialog::show_message(fmt::format(fmt::runtime(_("This level contains deprecated tiles.\nIt is strongly recommended to replace all deprecated tiles\nto avoid loss of compatibility in future versions.{}{}")),
+        !g_config->editor_show_deprecated_tiles ? "\n \n" : "",
+        !g_config->editor_show_deprecated_tiles ? _("Tip: Turn on \"Show Deprecated Tiles\" from the level editor menu.") : ""));
   }
-  if (has_deprecated_tiles)
-    Dialog::show_message(_("This level contains deprecated tiles.\nIt is strongly recommended to replace all deprecated tiles\nto avoid loss of compatibility in future versions.\n \nNote: Deprecated tiles on the active tilemap show a '!' sign when hovered."));
 }
 
 void
@@ -629,6 +622,27 @@ Editor::check_unsaved_changes(const std::function<void ()>& action)
   else
   {
     action();
+  }
+}
+
+void
+Editor::check_deprecated_tiles()
+{
+  // Check for any deprecated tiles, used throughout the entire level
+  m_has_deprecated_tiles = false;
+  for (size_t sector_num = 0; sector_num < m_level->get_sector_count(); sector_num++)
+  {
+    for (auto& tilemap : m_level->get_sector(sector_num)->get_objects_by_type<TileMap>())
+    {
+      for (const uint32_t& tile_id : tilemap.get_tiles())
+      {
+        if (m_tileset->get(tile_id).is_deprecated())
+        {
+          m_has_deprecated_tiles = true;
+          break;
+        }
+      }
+    }
   }
 }
 

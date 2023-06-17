@@ -106,6 +106,7 @@ Config::Config() :
   editor_autotile_mode(false),
   editor_autotile_help(true),
   editor_autosave_frequency(5),
+  editor_show_deprecated_tiles(false),
   multiplayer_auto_manage_players(true),
   multiplayer_multibind(false),
 #if SDL_VERSION_ATLEAST(2, 0, 9)
@@ -251,6 +252,7 @@ Config::load()
     editor_mapping->get("render_lighting", editor_render_lighting);
     editor_mapping->get("selected_snap_grid_size", editor_selected_snap_grid_size);
     editor_mapping->get("snap_to_grid", editor_snap_to_grid);
+    editor_mapping->get("show_deprecated_tiles", editor_show_deprecated_tiles);
   }
 
   if (is_christmas()) {
@@ -503,6 +505,7 @@ Config::save()
     writer.write("render_lighting", editor_render_lighting);
     writer.write("selected_snap_grid_size", editor_selected_snap_grid_size);
     writer.write("snap_to_grid", editor_snap_to_grid);
+    writer.write("show_deprecated_tiles", editor_show_deprecated_tiles);
   }
   writer.end_list("editor");
 
