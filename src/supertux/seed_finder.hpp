@@ -57,9 +57,10 @@ private:
   float m_precision;
 
   float m_value;
+  float m_temp_time;
 
   bool m_pilot_timeframe;
-  float m_temp_time;
+  float m_pilot_timeframe_time;
 
 public:
   Randomization(float range_start, float range_end, RandType type, float time = -1.f,
@@ -79,6 +80,9 @@ public:
   bool has_match() const;
 
   bool has_pilot_timeframe() const { return m_pilot_timeframe; }
+  bool has_pilot_timeframe_time() const { return m_pilot_timeframe_time > 0.f; }
+  float get_pilot_timeframe_time() const { return m_pilot_timeframe_time; }
+
   float get_temp_time() const { return m_temp_time; }
   void set_temp_time(const float& temp_time) { m_temp_time = temp_time; }
 

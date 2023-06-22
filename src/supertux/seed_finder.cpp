@@ -38,8 +38,9 @@ Randomization::Randomization(float range_start, float range_end, RandType type, 
   m_desired_value(desired_value),
   m_precision(precision),
   m_value(),
+  m_temp_time(),
   m_pilot_timeframe(false),
-  m_temp_time()
+  m_pilot_timeframe_time(-1.f)
 {
   reset();
 }
@@ -53,8 +54,9 @@ Randomization::Randomization(ReaderMapping& mapping) :
   m_desired_value(),
   m_precision(0.01f),
   m_value(),
+  m_temp_time(),
   m_pilot_timeframe(false),
-  m_temp_time()
+  m_pilot_timeframe_time(-1.f)
 {
   reset();
 
@@ -71,6 +73,7 @@ Randomization::Randomization(ReaderMapping& mapping) :
   mapping.get("precision", m_precision);
 
   mapping.get("pilot-timeframe", m_pilot_timeframe);
+  mapping.get("pilot-timeframe-time", m_pilot_timeframe_time);
 }
 
 void
@@ -79,7 +82,7 @@ Randomization::save(Writer& writer)
   writer.write("range-start", m_range_start);
   writer.write("range-end", m_range_end);
 
-  if (m_time >= 0)
+  if (m_time >= 0.f)
     writer.write("time", m_time);
 
   writer.write("type", m_type);
@@ -92,7 +95,11 @@ Randomization::save(Writer& writer)
   }
 
   if (m_pilot_timeframe)
+  {
     writer.write("pilot-timeframe", m_pilot_timeframe);
+    if (m_pilot_timeframe_time > 0.f)
+      writer.write("pilot-timeframe-time", m_pilot_timeframe_time);
+  }
 }
 
 void
@@ -271,6 +278,8 @@ SeedFinder::update()
   for (const auto& rand : m_randomizations)
     randomizations.push_back(rand.get());
 
+  std::vector<int> excluded_timeframes;
+
   bool has_match = true;
   for (size_t i = 0; i < randomizations.size(); i++)
   {
@@ -284,6 +293,13 @@ SeedFinder::update()
 
     if (rand->has_pilot_timeframe()) // Timeframe for pilot puff timer
     {
+      // If time until update is more than the maximum allowed time, do not add pilot update cycle.
+      if (rand->has_pilot_timeframe_time() && rand->get_value() > rand->get_pilot_timeframe_time())
+      {
+        excluded_timeframes.push_back(static_cast<int>(i));
+        continue;
+      }
+
       int update_time = rand->get_time() + rand->get_value();
 
       auto new_rand = new Randomization(-10, 10, Randomization::RANDTYPE_FLOAT);
@@ -318,6 +334,15 @@ SeedFinder::update()
   if (has_match)
   {
     log_warning << "Found seed: " << m_seed << std::endl;
+    if (!excluded_timeframes.empty())
+    {
+      std::stringstream out;
+      out << "Excluded timeframes: ";
+      for (const int& rand_id : excluded_timeframes)
+        out << rand_id << " ";
+
+      log_warning << out.str() << std::endl;
+    }
     m_search_timer.stop();
     m_in_progress = false;
   }
