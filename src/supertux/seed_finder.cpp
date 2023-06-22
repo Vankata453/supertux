@@ -16,6 +16,7 @@
 
 #include "supertux/seed_finder.hpp"
 
+#include <algorithm>
 #include <limits>
 #include <sstream>
 
@@ -36,7 +37,9 @@ Randomization::Randomization(float range_start, float range_end, RandType type, 
   m_value_type(RANDVALUE_EQUAL),
   m_desired_value(desired_value),
   m_precision(precision),
-  m_value()
+  m_value(),
+  m_pilot_timeframe(false),
+  m_temp_time()
 {
   reset();
 }
@@ -49,7 +52,9 @@ Randomization::Randomization(ReaderMapping& mapping) :
   m_value_type(),
   m_desired_value(),
   m_precision(0.01f),
-  m_value()
+  m_value(),
+  m_pilot_timeframe(false),
+  m_temp_time()
 {
   reset();
 
@@ -64,6 +69,8 @@ Randomization::Randomization(ReaderMapping& mapping) :
     m_desired_value = desired_value;
 
   mapping.get("precision", m_precision);
+
+  mapping.get("pilot-timeframe", m_pilot_timeframe);
 }
 
 void
@@ -83,6 +90,9 @@ Randomization::save(Writer& writer)
     writer.write("desired-value", m_desired_value.get());
     writer.write("precision", m_precision);
   }
+
+  if (m_pilot_timeframe)
+    writer.write("pilot-timeframe", m_pilot_timeframe);
 }
 
 void
@@ -201,11 +211,11 @@ SeedFinder::save()
 }
 
 std::string
-SeedFinder::values_to_string() const
+SeedFinder::values_to_string(const std::vector<Randomization*>& rands) const
 {
   std::stringstream stream;
 
-  for (auto& rand : m_randomizations)
+  for (auto& rand : rands)
     stream << rand->get_value() << ' ';
 
   std::string result = stream.str();
@@ -219,8 +229,29 @@ SeedFinder::find_seed()
   if (m_in_progress) return;
 
   m_rng.srand(m_init_seed);
+
+  float latest_time = 0.f;
   for (auto& rand : m_randomizations)
+  {
     rand->reset();
+
+    // Ensure every randomization has time set, preserving current order.
+    if (rand->get_time() < 0.f)
+    {
+      rand->set_temp_time(latest_time);
+    }
+    else
+    {
+      rand->set_temp_time(rand->get_time());
+      latest_time = rand->get_time();
+    }
+  }
+
+  // Sort all randomizations by their assigned temporary randomization time.
+  std::stable_sort(m_randomizations.begin(), m_randomizations.end(),
+    [](const std::unique_ptr<Randomization>& lhs, const std::unique_ptr<Randomization>& rhs) {
+      return lhs->get_temp_time() < rhs->get_temp_time();
+    });
 
   m_in_progress = true;
   m_search_timer.start(m_search_time - 1.0f); // The search time variable stores real time seconds.
@@ -234,18 +265,55 @@ SeedFinder::update()
 
   m_seed = m_rng.srand(m_rng.rand());
 
+  std::vector<Randomization*> randomizations;
+  std::vector<Randomization*> randomizations_cleanup;
+
+  for (const auto& rand : m_randomizations)
+    randomizations.push_back(rand.get());
+
   bool has_match = true;
-  for (auto& rand : m_randomizations)
+  for (size_t i = 0; i < randomizations.size(); i++)
   {
+    Randomization* rand = randomizations[i];
     rand->rand(m_rng);
     if (!rand->has_match())
     {
       has_match = false;
       break;
     }
+
+    if (rand->has_pilot_timeframe()) // Timeframe for pilot puff timer
+    {
+      int update_time = rand->get_time() + rand->get_value();
+
+      auto new_rand = new Randomization(-10, 10, Randomization::RANDTYPE_FLOAT);
+      new_rand->set_temp_time(update_time);
+      randomizations.push_back(new_rand);
+      randomizations_cleanup.push_back(new_rand);
+
+      auto new_rand2 = new Randomization(4.0f, 8.0f, Randomization::RANDTYPE_FLOAT);
+      new_rand2->set_temp_time(update_time);
+      randomizations.push_back(new_rand2);
+      randomizations_cleanup.push_back(new_rand2);
+
+      auto new_rand3 = new Randomization(0.95, 1.05, Randomization::RANDTYPE_FLOAT);
+      new_rand3->set_temp_time(update_time);
+      randomizations.push_back(new_rand3);
+      randomizations_cleanup.push_back(new_rand3);
+
+      // Re-sort randomizations, including the newly added ones.
+      std::stable_sort(randomizations.begin(), randomizations.end(),
+        [](const Randomization* lhs, const Randomization* rhs) {
+          return lhs->get_temp_time() < rhs->get_temp_time();
+        });
+    }
   }
 
-  log_warning << "SEED FINDER: " << m_seed << " -> " << values_to_string() << std::endl;
+  log_warning << "SEED FINDER: " << m_seed << " -> " << values_to_string(randomizations) << std::endl;
+
+  // Cleanup
+  for (auto& rand : randomizations_cleanup)
+    delete rand;
 
   if (has_match)
   {

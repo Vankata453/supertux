@@ -58,6 +58,9 @@ private:
 
   float m_value;
 
+  bool m_pilot_timeframe;
+  float m_temp_time;
+
 public:
   Randomization(float range_start, float range_end, RandType type, float time = -1.f,
                 boost::optional<float> desired_value = boost::none,
@@ -71,8 +74,13 @@ public:
 
   std::string to_string() const;
 
+  float get_time() const { return m_time; }
   float get_value() const { return m_value; }
   bool has_match() const;
+
+  bool has_pilot_timeframe() const { return m_pilot_timeframe; }
+  float get_temp_time() const { return m_temp_time; }
+  void set_temp_time(const float& temp_time) { m_temp_time = temp_time; }
 
 private:
   Randomization(const Randomization&);
@@ -120,13 +128,14 @@ public:
   void read();
   void save();
 
-  std::string values_to_string() const;
-
   void find_seed();
   void update();
 
   int get_seed() const { return m_seed; }
   Status get_status() const;
+
+private:
+  std::string values_to_string(const std::vector<Randomization*>& rands) const;
 
 private:
   SeedFinder(const SeedFinder&);
