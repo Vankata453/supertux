@@ -170,7 +170,7 @@ ScreenManager::draw_random_seed(DrawingContext& context)
   if (gameRandom.rand_count)
     context.draw_text(Resources::small_font, "Randomizations performed: " + std::to_string(gameRandom.rand_count),
                     Vector(pos_text.x, pos_text.y + 25), ALIGN_LEFT, LAYER_GUI, Color::CYAN);
-  if (gameRandom.log)
+  if (gameRandom.logging_on())
     context.draw_text(Resources::normal_font, "Randomization logging on",
                     Vector(pos_text.x, pos_text.y + 50), ALIGN_LEFT, LAYER_GUI, Color::YELLOW);
 }
@@ -338,21 +338,27 @@ ScreenManager::process_events()
           if (GameSession::current() && GameSession::current()->is_active()) return;
           MenuManager::instance().set_menu(MenuStorage::SEED_FINDER_MENU);
         }
+        else if (event.key.keysym.sym == SDLK_F6)
+        {
+          gameRandom.toggle_logging();
+        }
         else if (event.key.keysym.sym == SDLK_F8)
         {
           auto seed_finder = SeedFinderMenu::get_seed_finder();
           if (seed_finder)
+          {
+            auto current_menu = MenuManager::instance().current_menu();
+            if (current_menu)
+              current_menu->refresh();
+
             seed_finder->read();
+          }
         }
         else if (event.key.keysym.sym == SDLK_F9)
         {
           auto seed_finder = SeedFinderMenu::get_seed_finder();
           if (seed_finder)
             seed_finder->save();
-        }
-        else if (event.key.keysym.sym == SDLK_F6)
-        {
-          gameRandom.log = !gameRandom.log;
         }
         break;
     }

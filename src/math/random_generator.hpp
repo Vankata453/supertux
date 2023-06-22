@@ -83,13 +83,18 @@ private:
   static const int rand_max = 0x7fffffff;         // biggest signed Uint32
   bool log_disabled;
 
-public:
   bool log;
+  float log_started_time;
+
+public:
   int rand_count;
 
 public:
   RandomGenerator();
   ~RandomGenerator();
+
+  void toggle_logging();
+  bool logging_on() const { return log; }
 
   // Documentation of user-visible calls:
 

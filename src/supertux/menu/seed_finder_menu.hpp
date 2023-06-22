@@ -32,7 +32,8 @@ public:
 public:
   SeedFinderMenu();
 
-  void rebuild_menu();
+  void refresh() override;
+
   void update_status(const SeedFinder::Status& status = s_seed_finder->get_status());
 
   void add_randomization();

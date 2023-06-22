@@ -27,10 +27,11 @@
 
 const std::vector<std::string> Randomization::s_rand_types = { _("Integer"), _("Float") };
 
-Randomization::Randomization(float range_start, float range_end, RandType type,
+Randomization::Randomization(float range_start, float range_end, RandType type, float time,
                              boost::optional<float> desired_value, float precision) :
   m_range_start(range_start),
   m_range_end(range_end),
+  m_time(time),
   m_type(type),
   m_value_type(RANDVALUE_EQUAL),
   m_desired_value(desired_value),
@@ -43,16 +44,18 @@ Randomization::Randomization(float range_start, float range_end, RandType type,
 Randomization::Randomization(ReaderMapping& mapping) :
   m_range_start(),
   m_range_end(),
+  m_time(-1.f),
   m_type(),
   m_value_type(),
   m_desired_value(),
-  m_precision(),
+  m_precision(0.01f),
   m_value()
 {
   reset();
 
   mapping.get("range-start", m_range_start);
   mapping.get("range-end", m_range_end);
+  mapping.get("time", m_time);
   mapping.get("type", m_type);
   mapping.get("value-type", m_value_type);
 
@@ -68,6 +71,10 @@ Randomization::save(Writer& writer)
 {
   writer.write("range-start", m_range_start);
   writer.write("range-end", m_range_end);
+
+  if (m_time >= 0)
+    writer.write("time", m_time);
+
   writer.write("type", m_type);
 
   if (m_desired_value)
@@ -147,8 +154,6 @@ void
 SeedFinder::import_logged_randomizations(const int& selected)
 {
   if (s_randomization_log.size() <= 0) return;
-
-  m_randomizations.clear();
 
   for (int i = 0; i < static_cast<int>(s_randomization_log.size()); i++)
   {

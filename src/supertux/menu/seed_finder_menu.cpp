@@ -32,11 +32,11 @@ SeedFinderMenu::SeedFinderMenu()
 {
   if (!s_seed_finder) s_seed_finder.reset(new SeedFinder(0));
 
-  rebuild_menu();
+  refresh();
 }
 
 void
-SeedFinderMenu::rebuild_menu()
+SeedFinderMenu::refresh()
 {
   clear();
 
@@ -132,10 +132,17 @@ void
 SeedFinderMenu::import_randomizations()
 {
   if (s_seed_finder->m_randomizations.size() <= 0)
+  {
     add_randomization();
+  }
   else
-    for (int i = 0; i < static_cast<int>(s_seed_finder->m_randomizations.size()); i++)
+  {
+    const int rands_size = static_cast<int>(s_seed_finder->m_randomizations.size());
+    for (int i = (rands_size < 10 ? 0 : rands_size - 10); i < rands_size; i++)
+    {
       import_randomization(i);
+    }
+  }
 }
 
 void
@@ -165,7 +172,7 @@ SeedFinderMenu::import_logged_randomizations()
   auto callback = [this](int selected)
     {
       s_seed_finder->import_logged_randomizations(selected);
-      rebuild_menu();
+      refresh();
     };
   auto* select_menu = new MenuSelectItem(rand_strings, std::move(callback));
 

@@ -49,6 +49,8 @@ public:
 private:
   float m_range_start;
   float m_range_end;
+  float m_time;
+
   int m_type;
   int m_value_type;
   boost::optional<float> m_desired_value;
@@ -57,7 +59,7 @@ private:
   float m_value;
 
 public:
-  Randomization(float range_start, float range_end, RandType type,
+  Randomization(float range_start, float range_end, RandType type, float time = -1.f,
                 boost::optional<float> desired_value = boost::none,
                 float precision = 0.01f);
   Randomization(ReaderMapping& mapping);

@@ -42,6 +42,7 @@
 
 #include "math/random_generator.hpp"
 
+#include "supertux/globals.hpp"
 #include "supertux/seed_finder.hpp"
 
 RandomGenerator graphicsRandom;               // graphic RNG
@@ -59,6 +60,7 @@ RandomGenerator::RandomGenerator() :
   debug(),
   log_disabled(false),
   log(false),
+  log_started_time(-1),
   rand_count(0)
 {
   assert(sizeof(int) >= 4);
@@ -68,6 +70,13 @@ RandomGenerator::RandomGenerator() :
 }
 
 RandomGenerator::~RandomGenerator() {
+}
+
+void
+RandomGenerator::toggle_logging()
+{
+  log_started_time = real_time;
+  log = !log;
 }
 
 int RandomGenerator::srand(int x)    {
@@ -85,7 +94,7 @@ int RandomGenerator::srand(int x)    {
 
 int RandomGenerator::rand() {
   if (!log_disabled && log)
-    SeedFinder::log_randomization(new Randomization(0, std::numeric_limits<int>::max(), Randomization::RANDTYPE_INT));
+    SeedFinder::log_randomization(new Randomization(0, std::numeric_limits<int>::max(), Randomization::RANDTYPE_INT, real_time - log_started_time));
 
   int rv;                                  // a positive int
   while ((rv = RandomGenerator::random()) <= 0) // neg or zero causes probs
@@ -98,7 +107,7 @@ int RandomGenerator::rand() {
 
 int RandomGenerator::rand(int v) {
   if (!log_disabled && log)
-    SeedFinder::log_randomization(new Randomization(0, v, Randomization::RANDTYPE_INT));
+    SeedFinder::log_randomization(new Randomization(0, v, Randomization::RANDTYPE_INT, real_time - log_started_time));
   assert(v >= 0); // illegal arg
 
   // remove biases, esp. when v is large (e.g. v == (rand_max/4)*3;)
@@ -111,7 +120,7 @@ int RandomGenerator::rand(int v) {
 
 int RandomGenerator::rand(int u, int v) {
   if (!log_disabled && log)
-    SeedFinder::log_randomization(new Randomization(u, v, Randomization::RANDTYPE_INT));
+    SeedFinder::log_randomization(new Randomization(u, v, Randomization::RANDTYPE_INT, real_time - log_started_time));
   assert(v > u);
 
   log_disabled = true;
@@ -122,7 +131,7 @@ int RandomGenerator::rand(int u, int v) {
 
 double RandomGenerator::randf(double v) {
   if (!log_disabled && log)
-    SeedFinder::log_randomization(new Randomization(0, v, Randomization::RANDTYPE_FLOAT));
+    SeedFinder::log_randomization(new Randomization(0, v, Randomization::RANDTYPE_FLOAT, real_time - log_started_time));
 
   float rv;
   do {
@@ -137,7 +146,7 @@ double RandomGenerator::randf(double v) {
 
 double RandomGenerator::randf(double u, double v) {
   if (!log_disabled && log)
-    SeedFinder::log_randomization(new Randomization(u, v, Randomization::RANDTYPE_FLOAT));
+    SeedFinder::log_randomization(new Randomization(u, v, Randomization::RANDTYPE_FLOAT, real_time - log_started_time));
 
   log_disabled = true;
   double result = u + RandomGenerator::randf(v-u);
