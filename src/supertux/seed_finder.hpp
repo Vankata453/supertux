@@ -25,6 +25,8 @@
 
 #include "math/random_generator.hpp"
 #include "supertux/timer.hpp"
+#include "util/reader_mapping.hpp"
+#include "util/writer.hpp"
 
 class Randomization
 {
@@ -36,12 +38,19 @@ public:
     RANDTYPE_INT,
     RANDTYPE_FLOAT
   };
+  enum RandValue
+  {
+    RANDVALUE_EQUAL,
+    RANDVALUE_LESSTHAN,
+    RANDVALUE_MORETHAN
+  };
   static const std::vector<std::string> s_rand_types;
 
 private:
   float m_range_start;
   float m_range_end;
-  RandType m_type;
+  int m_type;
+  int m_value_type;
   boost::optional<float> m_desired_value;
   float m_precision;
 
@@ -51,9 +60,12 @@ public:
   Randomization(float range_start, float range_end, RandType type,
                 boost::optional<float> desired_value = boost::none,
                 float precision = 0.01f);
+  Randomization(ReaderMapping& mapping);
 
   void rand(RandomGenerator& rng);
   void reset();
+
+  void save(Writer& writer);
 
   std::string to_string() const;
 
@@ -103,7 +115,9 @@ public:
   void add_randomization(Randomization* rand) { m_randomizations.push_back(std::unique_ptr<Randomization>(rand)); }
   void import_logged_randomizations(const int& selected);
 
-  bool all_match() const;
+  void read();
+  void save();
+
   std::string values_to_string() const;
 
   void find_seed();

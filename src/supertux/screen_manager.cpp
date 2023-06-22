@@ -34,6 +34,7 @@
 #include "supertux/globals.hpp"
 #include "supertux/main.hpp"
 #include "supertux/menu/menu_storage.hpp"
+#include "supertux/menu/seed_finder_menu.hpp"
 #include "supertux/player_status.hpp"
 #include "supertux/resources.hpp"
 #include "supertux/screen.hpp"
@@ -331,6 +332,23 @@ ScreenManager::process_events()
         {
           if (GameSession::current() && GameSession::current()->is_active()) return;
           MenuManager::instance().set_menu(MenuStorage::SEED_FINDER_MENU);
+        }
+        else if (event.key.keysym.sym == SDLK_F5)
+        {
+          if (GameSession::current() && GameSession::current()->is_active()) return;
+          MenuManager::instance().set_menu(MenuStorage::SEED_FINDER_MENU);
+        }
+        else if (event.key.keysym.sym == SDLK_F8)
+        {
+          auto seed_finder = SeedFinderMenu::get_seed_finder();
+          if (seed_finder)
+            seed_finder->read();
+        }
+        else if (event.key.keysym.sym == SDLK_F9)
+        {
+          auto seed_finder = SeedFinderMenu::get_seed_finder();
+          if (seed_finder)
+            seed_finder->save();
         }
         else if (event.key.keysym.sym == SDLK_F6)
         {

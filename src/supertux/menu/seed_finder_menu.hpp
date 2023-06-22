@@ -27,6 +27,9 @@ private:
   static std::unique_ptr<SeedFinder> s_seed_finder;
 
 public:
+  static SeedFinder* get_seed_finder() { return s_seed_finder.get(); }
+
+public:
   SeedFinderMenu();
 
   void rebuild_menu();

@@ -23,6 +23,7 @@
 #include "supertux/menu/seed_finder_menu.hpp"
 #include "util/gettext.hpp"
 #include "util/log.hpp"
+#include "util/reader_document.hpp"
 
 const std::vector<std::string> Randomization::s_rand_types = { _("Integer"), _("Float") };
 
@@ -31,11 +32,50 @@ Randomization::Randomization(float range_start, float range_end, RandType type,
   m_range_start(range_start),
   m_range_end(range_end),
   m_type(type),
+  m_value_type(RANDVALUE_EQUAL),
   m_desired_value(desired_value),
   m_precision(precision),
   m_value()
 {
   reset();
+}
+
+Randomization::Randomization(ReaderMapping& mapping) :
+  m_range_start(),
+  m_range_end(),
+  m_type(),
+  m_value_type(),
+  m_desired_value(),
+  m_precision(),
+  m_value()
+{
+  reset();
+
+  mapping.get("range-start", m_range_start);
+  mapping.get("range-end", m_range_end);
+  mapping.get("type", m_type);
+  mapping.get("value-type", m_value_type);
+
+  float desired_value;
+  if (mapping.get("desired-value", desired_value))
+    m_desired_value = desired_value;
+
+  mapping.get("precision", m_precision);
+}
+
+void
+Randomization::save(Writer& writer)
+{
+  writer.write("range-start", m_range_start);
+  writer.write("range-end", m_range_end);
+  writer.write("type", m_type);
+
+  if (m_desired_value)
+  {
+    writer.write("value-type", m_value_type);
+    writer.write("desired-value", m_desired_value.get());
+    writer.write("precision", m_precision);
+  }
 }
 
 void
@@ -72,7 +112,19 @@ Randomization::to_string() const
 bool
 Randomization::has_match() const
 {
-  return m_desired_value == boost::none || std::fabs(m_value - m_desired_value.get()) < m_precision;
+  if (m_desired_value == boost::none)
+    return true;
+
+  switch (m_value_type)
+  {
+    case RANDVALUE_EQUAL:
+      return std::fabs(m_value - m_desired_value.get()) < m_precision;
+    case RANDVALUE_LESSTHAN:
+      return m_value <= m_desired_value.get();
+    case RANDVALUE_MORETHAN:
+      return m_value >= m_desired_value.get();
+  }
+  return false;
 }
 
 
@@ -107,13 +159,40 @@ SeedFinder::import_logged_randomizations(const int& selected)
   s_randomization_log.clear();
 }
 
-bool
-SeedFinder::all_match() const
+void
+SeedFinder::read()
 {
-  for (auto& rand : m_randomizations)
-    if (!rand->has_match()) return false;
+  m_randomizations.clear();
 
-  return true;
+  auto doc = ReaderDocument::parse("rand");
+  auto root = doc.get_root();
+  if (root.get_name() != "supertux-randomizations")
+    return;
+
+  auto iter = root.get_mapping().get_iter();
+  while (iter.next())
+  {
+    if (iter.get_key() != "randomization")
+      continue;
+
+    auto mapping = iter.as_mapping();
+    m_randomizations.push_back(std::unique_ptr<Randomization>(new Randomization(mapping)));
+  }
+}
+
+void
+SeedFinder::save()
+{
+  Writer writer("rand");
+
+  writer.start_list("supertux-randomizations");
+  for (const auto& randomization : m_randomizations)
+  {
+    writer.start_list("randomization");
+    randomization->save(writer);
+    writer.end_list("randomization");
+  }
+  writer.end_list("supertux-randomizations");
 }
 
 std::string
@@ -150,18 +229,26 @@ SeedFinder::update()
 
   m_seed = m_rng.srand(m_rng.rand());
 
+  bool has_match = true;
   for (auto& rand : m_randomizations)
+  {
     rand->rand(m_rng);
+    if (!rand->has_match())
+    {
+      has_match = false;
+      break;
+    }
+  }
 
   log_warning << "SEED FINDER: " << m_seed << " -> " << values_to_string() << std::endl;
 
-  if (all_match())
+  if (has_match)
   {
     log_warning << "Found seed: " << m_seed << std::endl;
     m_search_timer.stop();
     m_in_progress = false;
   }
-  if (m_search_timer.check())
+  else if (m_search_timer.check())
   {
     log_warning << "Seed search timed out: Search took longer than " << m_search_time << " seconds." << std::endl;
     m_seed = -1; // Mark seed as not found due to time out.
