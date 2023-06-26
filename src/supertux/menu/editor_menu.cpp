@@ -225,14 +225,12 @@ EditorMenu::menu_action(MenuItem& item)
       break;
 
     case MNID_CONVERT:
-    {
-      Dialog::show_confirmation(_("This will convert all tiles in the level. Proceed?\n \nNote: This should not be ran more than once on a level."), [this]() {
+      Dialog::show_confirmation(_("This will convert all tiles in the level. Proceed?\n \nNote: This should not be ran more than once on a level.\nCreating a separate copy of the level is highly recommended."), [this]() {
         convert_level();
       });
-    }
+      break;
 
     case MNID_CHECKDEPRECATEDTILES:
-    {
       editor->check_deprecated_tiles();
       if (editor->has_deprecated_tiles())
       {
@@ -252,8 +250,7 @@ EditorMenu::menu_action(MenuItem& item)
         Dialog::show_message(_("There are no more deprecated tiles in the level!"));
         rebuild_menu();
       }
-    }
-    break;
+      break;
 
     default:
       break;
@@ -306,6 +303,7 @@ EditorMenu::convert_level()
     Sector* sector = level->get_sector(i);
     for (auto& tilemap : sector->get_objects_by_type<TileMap>())
     {
+      tilemap.save_state();
       // Can't use change_all(), if there's like `1 -> 2`and then
       // `2 -> 3`, it'll do a double replacement
       for (int x = 0; x < tilemap.get_width(); x++)
@@ -317,12 +315,13 @@ EditorMenu::convert_level()
           {
             tilemap.change(x, y, tiles.at(tile));
           }
-          catch (std::out_of_range& e)
+          catch (std::out_of_range&)
           {
             // Expected for tiles that don't need to be replaced
           }
         }
       }
+      tilemap.check_state();
     }
   }
 }
