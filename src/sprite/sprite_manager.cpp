@@ -16,13 +16,14 @@
 
 #include "sprite/sprite_manager.hpp"
 
+#include <sstream>
+
 #include "sprite/sprite.hpp"
 #include "util/file_system.hpp"
+#include "util/log.hpp"
 #include "util/reader_document.hpp"
 #include "util/reader_mapping.hpp"
 #include "util/string_util.hpp"
-
-#include <sstream>
 
 SpriteManager::SpriteManager() :
   sprites()
@@ -34,15 +35,26 @@ SpriteManager::create(const std::string& name)
 {
   Sprites::iterator i = sprites.find(name);
   SpriteData* data;
-  if (i == sprites.end()) {
-    // try loading the spritefile
-    data = load(name);
-    if (data == nullptr) {
-      std::stringstream msg;
-      msg << "Sprite '" << name << "' not found.";
-      throw std::runtime_error(msg.str());
+  if (i == sprites.end())
+  {
+    // Try loading the sprite file
+    try
+    {
+      data = load(name);
+      if (!data)
+      {
+        log_warning << "Sprite '" << name << "' not found." << std::endl;
+        return create(""); // Load a sprite with no images, loading the missing image texture
+      }
     }
-  } else {
+    catch (std::exception& err)
+    {
+      log_warning << "Error loading sprite '" << name << "': " << err.what() << std::endl;
+      return create(""); // Load a sprite with no images, loading the missing image texture
+    }
+  }
+  else
+  {
     data = i->second.get();
   }
 

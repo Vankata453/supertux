@@ -69,11 +69,7 @@ MovingSprite::MovingSprite(const ReaderMapping& reader, const std::string& sprit
   }
   else
   {
-    if (!change_sprite(m_sprite_name)) // If sprite change fails, change back to default.
-    {
-      m_sprite = SpriteManager::current()->create(m_default_sprite_name);
-      m_sprite_found = false;
-    }
+    change_sprite(m_sprite_name);
   }
 
   update_hitbox();
@@ -179,23 +175,11 @@ MovingSprite::set_action(const std::string& action, int loops, AnchorPoint ancho
                          m_sprite->get_current_hitbox_height(), anchorPoint));
 }
 
-bool
+void
 MovingSprite::change_sprite(const std::string& new_sprite_name)
 {
-  SpritePtr new_sprite;
-  try
-  {
-    new_sprite = SpriteManager::current()->create(m_sprite_name);
-  }
-  catch (std::exception& err)
-  {
-    log_warning << "Sprite change failed: Sprite '" << new_sprite_name << "' cannot be loaded: " << err.what() << std::endl;
-    return false;
-  }
-
-  m_sprite = std::move(new_sprite);
+  m_sprite = SpriteManager::current()->create(new_sprite_name);
   m_sprite_name = new_sprite_name;
-  return true;
 }
 
 ObjectSettings

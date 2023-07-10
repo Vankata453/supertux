@@ -59,7 +59,7 @@ public:
 
   bool has_found_sprite();
   std::string get_sprite_name() const;
-  bool change_sprite(const std::string& new_sprite_name);
+  void change_sprite(const std::string& new_sprite_name);
   void spawn_explosion_sprites(int count, const std::string& sprite_path);
 
   /** Get various sprite properties. **/
