@@ -24,6 +24,7 @@
 #include "util/reader_document.hpp"
 #include "util/reader_mapping.hpp"
 #include "util/string_util.hpp"
+#include "video/texture_manager.hpp"
 
 SpriteManager::SpriteManager() :
   sprites()
@@ -43,14 +44,14 @@ SpriteManager::create(const std::string& name)
       data = load(name);
       if (!data)
       {
-        log_warning << "Sprite '" << name << "' not found." << std::endl;
-        return create(""); // Load a sprite with no images, loading the missing image texture
+        log_warning << "Sprite '" << name << "' not found. Using dummy texture." << std::endl;
+        return create(TextureManager::s_dummy_texture); // Load the missing dummy texture
       }
     }
     catch (std::exception& err)
     {
-      log_warning << "Error loading sprite '" << name << "': " << err.what() << std::endl;
-      return create(""); // Load a sprite with no images, loading the missing image texture
+      log_warning << "Error loading sprite '" << name << "', using dummy texture: " << err.what() << std::endl;
+      return create(TextureManager::s_dummy_texture); // Load the missing dummy texture
     }
   }
   else
