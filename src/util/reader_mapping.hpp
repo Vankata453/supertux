@@ -19,6 +19,8 @@
 
 #include "util/reader_iterator.hpp"
 
+#include <cstdint>
+
 namespace sexp {
 class Value;
 } // namespace sexp
