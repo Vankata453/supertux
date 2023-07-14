@@ -48,6 +48,8 @@
 RandomGenerator graphicsRandom;               // graphic RNG
 RandomGenerator gameRandom;                   // game RNG
 
+std::vector<std::unique_ptr<RandomGenerator>> RandomGenerator::s_rng_savestates = {};
+
 RandomGenerator::RandomGenerator() :
   initialized(),
   fptr(),
@@ -61,7 +63,8 @@ RandomGenerator::RandomGenerator() :
   log_disabled(false),
   log(false),
   log_started_time(-1),
-  rand_count(0)
+  rand_count(0),
+  seed()
 {
   assert(sizeof(int) >= 4);
   initialized = 0;
@@ -89,6 +92,7 @@ int RandomGenerator::srand(int x)    {
            x, x0, RandomGenerator::rand_max);
 
   RandomGenerator::srandom(x);
+  seed = x;
   return x;                               // let caller know seed used
 }
 

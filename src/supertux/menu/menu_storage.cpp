@@ -38,6 +38,7 @@
 #include "supertux/menu/options_menu.hpp"
 #include "supertux/menu/profile_menu.hpp"
 #include "supertux/menu/random_seed_menu.hpp"
+#include "supertux/menu/rng_savestates_menu.hpp"
 #include "supertux/menu/seed_finder_menu.hpp"
 #include "supertux/menu/worldmap_menu.hpp"
 #include "supertux/menu/worldmap_cheat_menu.hpp"
@@ -103,6 +104,9 @@ MenuStorage::create(MenuId menu_id)
 
     case RANDOM_SEED_MENU:
       return std::unique_ptr<Menu>(new RandomSeedMenu);
+
+    case RNG_SAVESTATES_MENU:
+      return std::unique_ptr<Menu>(new RNGSavestatesMenu);
 
     case SEED_FINDER_MENU:
       return std::unique_ptr<Menu>(new SeedFinderMenu);
