@@ -34,8 +34,13 @@
 #ifndef HEADER_SUPERTUX_MATH_RANDOM_GENERATOR_HPP
 #define HEADER_SUPERTUX_MATH_RANDOM_GENERATOR_HPP
 
+#include <memory>
+
 class RandomGenerator
 {
+public:
+  static std::unique_ptr<RandomGenerator> s_saved_gameRandom;
+
 private:
   // Array versions of the above information to make code run faster --
   // relies on fact that TYPE_i == i.
@@ -123,10 +128,6 @@ public:
   //  char *initstate(unsigned long seed, char *arg_state, long n);
   //  char *setstate(char *arg_state);
   long random();
-
-private:
-  RandomGenerator(const RandomGenerator&);
-  RandomGenerator& operator=(const RandomGenerator&);
 };
 
 // Use for random particle fx or whatever

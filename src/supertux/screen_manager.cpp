@@ -288,11 +288,7 @@ ScreenManager::process_events()
         break;
 
       case SDL_KEYDOWN:
-        if (event.key.keysym.sym == SDLK_F10)
-        {
-          g_config->show_fps = !g_config->show_fps;
-        }
-        else if (event.key.keysym.sym == SDLK_F11 ||
+        if (event.key.keysym.sym == SDLK_F11 ||
                  ((event.key.keysym.mod & KMOD_LALT || event.key.keysym.mod & KMOD_RALT) &&
                  (event.key.keysym.sym == SDLK_KP_ENTER || event.key.keysym.sym == SDLK_RETURN)))
         {
@@ -323,6 +319,13 @@ ScreenManager::process_events()
         {
           if (GameSession::current() && GameSession::current()->is_active()) return;
           MenuManager::instance().set_menu(MenuStorage::RANDOM_SEED_MENU);
+        }
+        else if (event.key.keysym.sym == SDLK_F10)
+        {
+          if (event.key.keysym.mod & KMOD_CTRL)
+            gameRandom = *RandomGenerator::s_saved_gameRandom;
+          else
+            RandomGenerator::s_saved_gameRandom.reset(new RandomGenerator(gameRandom));
         }
         break;
     }

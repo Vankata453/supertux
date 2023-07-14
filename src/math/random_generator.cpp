@@ -44,6 +44,8 @@
 RandomGenerator graphicsRandom;               // graphic RNG
 RandomGenerator gameRandom;                   // game RNG
 
+std::unique_ptr<RandomGenerator> RandomGenerator::s_saved_gameRandom = nullptr;
+
 RandomGenerator::RandomGenerator() :
   initialized(),
   fptr(),
