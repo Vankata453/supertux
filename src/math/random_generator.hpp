@@ -35,11 +35,12 @@
 #define HEADER_SUPERTUX_MATH_RANDOM_GENERATOR_HPP
 
 #include <memory>
+#include <vector>
 
 class RandomGenerator
 {
 public:
-  static std::unique_ptr<RandomGenerator> s_saved_gameRandom;
+  static std::vector<std::unique_ptr<RandomGenerator>> s_rng_savestates;
 
 private:
   // Array versions of the above information to make code run faster --
@@ -87,8 +88,12 @@ private:
   int debug;
   static const int rand_max = 0x7fffffff;         // biggest signed Uint32
 
-public:
   int rand_count;
+  int seed;
+
+public:
+  const int& get_rand_count() const { return rand_count; }
+  const int& get_seed() const { return seed; }
 
 public:
   RandomGenerator();

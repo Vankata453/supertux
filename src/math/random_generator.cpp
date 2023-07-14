@@ -44,7 +44,7 @@
 RandomGenerator graphicsRandom;               // graphic RNG
 RandomGenerator gameRandom;                   // game RNG
 
-std::unique_ptr<RandomGenerator> RandomGenerator::s_saved_gameRandom = nullptr;
+std::vector<std::unique_ptr<RandomGenerator>> RandomGenerator::s_rng_savestates = {};
 
 RandomGenerator::RandomGenerator() :
   initialized(),
@@ -56,7 +56,8 @@ RandomGenerator::RandomGenerator() :
   rand_sep(),
   end_ptr(),
   debug(),
-  rand_count(0)
+  rand_count(0),
+  seed()
 {
   assert(sizeof(int) >= 4);
   initialized = 0;
@@ -77,6 +78,7 @@ int RandomGenerator::srand(int x)    {
            x, x0, RandomGenerator::rand_max);
 
   RandomGenerator::srandom(x);
+  seed = x;
   return x;                               // let caller know seed used
 }
 

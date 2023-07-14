@@ -164,10 +164,10 @@ ScreenManager::draw_random_seed(DrawingContext& context)
 {
   const Vector pos_text = Vector(40, 40);
 
-  context.draw_text(Resources::normal_font, std::to_string(g_config->random_seed),
+  context.draw_text(Resources::normal_font, std::to_string(gameRandom.get_seed()),
                     pos_text, ALIGN_LEFT, LAYER_GUI);
-  if (gameRandom.rand_count)
-    context.draw_text(Resources::small_font, "Randomizations performed: " + std::to_string(gameRandom.rand_count),
+  if (gameRandom.get_rand_count() > 0)
+    context.draw_text(Resources::small_font, "Randomizations performed: " + std::to_string(gameRandom.get_rand_count()),
                     Vector(pos_text.x, pos_text.y + 25), ALIGN_LEFT, LAYER_GUI, Color::CYAN);
 }
 
@@ -322,10 +322,8 @@ ScreenManager::process_events()
         }
         else if (event.key.keysym.sym == SDLK_F10)
         {
-          if (event.key.keysym.mod & KMOD_CTRL)
-            gameRandom = *RandomGenerator::s_saved_gameRandom;
-          else
-            RandomGenerator::s_saved_gameRandom.reset(new RandomGenerator(gameRandom));
+          if (GameSession::current() && GameSession::current()->is_active()) return;
+          MenuManager::instance().set_menu(MenuStorage::RNG_SAVESTATES_MENU);
         }
         break;
     }
