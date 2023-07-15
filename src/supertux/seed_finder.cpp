@@ -223,7 +223,7 @@ SeedFinder::values_to_string(const std::vector<Randomization*>& rands) const
   std::stringstream stream;
 
   for (auto& rand : rands)
-    stream << rand->get_value() << ' ';
+    stream << rand->get_value() << " (" << rand->get_temp_time() << ")" << ' ';
 
   std::string result = stream.str();
   result.pop_back(); // Remove the last space character.
