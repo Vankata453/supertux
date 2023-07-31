@@ -40,6 +40,7 @@
 #include "supertux/collision.hpp"
 #include "supertux/constants.hpp"
 #include "supertux/game_session.hpp"
+#include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
 #include "supertux/level.hpp"
 #include "supertux/object_factory.hpp"
@@ -57,7 +58,6 @@
 
 Sector* Sector::_current = 0;
 
-bool Sector::show_collrects = false;
 bool Sector::draw_solids_only = false;
 
 Sector::Sector(Level* parent) :
@@ -569,12 +569,38 @@ Sector::draw(DrawingContext& context)
     object->draw(context);
   }
 
-  if(show_collrects) {
-    Color color(1.0f, 0.0f, 0.0f, 0.75f);
-    for(auto& object : moving_objects) {
-      const Rectf& rect = object->get_bbox();
-
-      context.draw_filled_rect(rect, color, LAYER_FOREGROUND1 + 10);
+  if (g_config->show_col_rects)
+  {
+    const Color violet(0.5f, 0.0f, 1.0f, 0.75f);
+    const Color red(1.0f, 0.0f, 0.0f, 0.75f);
+    const Color red_bright(1.0f, 0.5f, 0.5f, 0.75f);
+    const Color cyan(0.0f, 1.0f, 1.0f, 0.75f);
+    const Color orange(1.0f, 0.5f, 0.0f, 0.75f);
+    const Color green_bright(0.7f, 1.0f, 0.7f, 0.75f);
+    for (auto& object : moving_objects)
+    {
+      Color color;
+      switch (object->get_group())
+      {
+        case COLGROUP_MOVING_STATIC:
+          color = violet;
+          break;
+        case COLGROUP_MOVING:
+          color = red;
+          break;
+        case COLGROUP_MOVING_ONLY_STATIC:
+          color = red_bright;
+          break;
+        case COLGROUP_STATIC:
+          color = cyan;
+          break;
+        case COLGROUP_TOUCHABLE:
+          color = orange;
+          break;
+        default:
+          color = green_bright;
+      }
+      context.draw_filled_rect(object->get_bbox(), color, LAYER_FOREGROUND1 + 10);
     }
   }
 

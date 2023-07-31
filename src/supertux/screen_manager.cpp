@@ -290,11 +290,17 @@ ScreenManager::process_events()
         {
           take_screenshot();
         }
-        else if (event.key.keysym.sym == SDLK_F2 &&
-                 event.key.keysym.mod & KMOD_CTRL)
+        else if (event.key.keysym.sym == SDLK_F2)
         {
-          g_config->developer_mode = !g_config->developer_mode;
-          log_info << "developer mode: " << g_config->developer_mode << std::endl;
+          if (event.key.keysym.mod & KMOD_CTRL)
+          {
+            g_config->developer_mode = !g_config->developer_mode;
+            log_info << "developer mode: " << g_config->developer_mode << std::endl;
+          }
+          else
+          {
+            g_config->show_col_rects = !g_config->show_col_rects;
+          }
         }
         break;
     }

@@ -295,7 +295,6 @@ private:
 
 public: // TODO make this private again
   /// show collision rectangles of moving objects (for debugging)
-  static bool show_collrects;
   static bool draw_solids_only;
 
   GameObjects gameobjects;
