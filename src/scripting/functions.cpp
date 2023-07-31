@@ -153,7 +153,7 @@ void import(HSQUIRRELVM vm, const std::string& filename)
 
 void debug_collrects(bool enable)
 {
-  ::Sector::show_collrects = enable;
+  g_config->show_col_rects = enable;
 }
 
 void debug_show_fps(bool enable)
