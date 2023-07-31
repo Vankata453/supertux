@@ -57,6 +57,7 @@ public:
   bool try_vsync;
   bool show_fps;
   bool show_player_pos;
+  bool show_col_rects;
   bool sound_enabled;
   bool music_enabled;
 
