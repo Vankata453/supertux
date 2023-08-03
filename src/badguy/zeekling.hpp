@@ -38,6 +38,8 @@ public:
   void collision_solid(const CollisionHit& hit);
   void active_update(float elapsed_time);
 
+  void draw(DrawingContext& context) override;
+
   void freeze();
   void unfreeze();
   bool is_freezable() const;
@@ -98,6 +100,7 @@ private:
   const MovingObject* last_player; /**< last player we tracked */
   DiveVariables dive_variables;
   bool display_dive_variables;
+  bool show_estimates;
 
 private:
   Zeekling(const Zeekling&);

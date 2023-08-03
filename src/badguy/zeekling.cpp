@@ -26,6 +26,7 @@
 #include "supertux/object_factory.hpp"
 #include "supertux/resources.hpp"
 #include "util/reader_mapping.hpp"
+#include "video/drawing_context.hpp"
 
 const float Zeekling::s_status_shift = 40.0f;
 
@@ -36,12 +37,14 @@ Zeekling::Zeekling(const ReaderMapping& reader) :
   state(),
   last_player(0),
   dive_variables(),
-  display_dive_variables(false)
+  display_dive_variables(false),
+  show_estimates(false)
 {
   state = FLYING;
   if (!reader.get("speed", speed))
     speed = gameRandom.rand(130, 171);
   reader.get("display_dive_variables", display_dive_variables);
+  reader.get("show-estimates", show_estimates);
   physic.enable_gravity(false);
 }
 
@@ -52,7 +55,8 @@ Zeekling::Zeekling(const Vector& pos, Direction d) :
   state(),
   last_player(0),
   dive_variables(),
-  display_dive_variables(false)
+  display_dive_variables(false),
+  show_estimates(false)
 {
   state = FLYING;
   speed = gameRandom.rand(130, 171);
@@ -68,6 +72,8 @@ Zeekling::get_settings()
                                          "speed"));
   result.options.push_back(ObjectOption(MN_TOGGLE, _("Display dive variables"), &display_dive_variables,
                                          "display_dive_variables"));
+  result.options.push_back(ObjectOption(MN_TOGGLE, _("Show Position Estimates"), &show_estimates,
+                                         "show-estimates"));
 
   return result;
 }
@@ -129,6 +135,23 @@ Zeekling::initialize()
 {
   physic.set_velocity_x(dir == LEFT ? -speed : speed);
   sprite->set_action(dir == LEFT ? "left" : "right");
+}
+
+void
+Zeekling::draw(DrawingContext& context)
+{
+  BadGuy::draw(context);
+
+  auto player = get_nearest_player();
+  if (!show_estimates || !player) return;
+
+  const Vector est_player_pos(dive_variables.estPx, player->get_pos().y);
+  const Vector est_self_pos(dive_variables.estBx, get_pos().y);
+
+  context.draw_filled_rect(est_player_pos, player->get_bbox().get_size().as_vector(), Color(0, 0, 1, 1), LAYER_OBJECTS + 1);
+  context.draw_filled_rect(est_self_pos, get_bbox().get_size().as_vector(), Color(1, 0, 0, 1), LAYER_OBJECTS + 1);
+
+  context.draw_line(est_player_pos, est_self_pos, Color(0, 1, 0, 1), LAYER_OBJECTS + 1);
 }
 
 bool
@@ -246,7 +269,13 @@ Zeekling::should_we_dive() {
     dive_variables.estBx = (dive_variables.self_pos.x + (dive_variables.estFrames * dive_variables.self_mov.x));
 
     // near misses are OK, too
-    if (fabsf(dive_variables.estPx - dive_variables.estBx) < 8) return true;
+    if (fabsf(dive_variables.estPx - dive_variables.estBx) < 8)
+    {
+      if (show_estimates)
+        log_warning << "Diving on " << dive_variables.self_pos << std::endl;
+
+      return true;
+    }
   }
 
   // update last player tracked, as well as our positions
