@@ -23,6 +23,8 @@
 #include "object/player.hpp"
 #include "sprite/sprite.hpp"
 #include "supertux/object_factory.hpp"
+#include "util/reader_mapping.hpp"
+#include "video/drawing_context.hpp"
 
 Zeekling::Zeekling(const ReaderMapping& reader) :
   BadGuy(reader, "images/creatures/zeekling/zeekling.sprite"),
@@ -31,10 +33,14 @@ Zeekling::Zeekling(const ReaderMapping& reader) :
   state(),
   last_player(0),
   last_player_pos(),
-  last_self_pos()
+  last_self_pos(),
+  show_estimates(false),
+  estPx(),
+  estBx()
 {
   state = FLYING;
   speed = gameRandom.rand(130, 171);
+  reader.get("show-estimates", show_estimates);
   physic.enable_gravity(false);
 }
 
@@ -45,11 +51,25 @@ Zeekling::Zeekling(const Vector& pos, Direction d) :
   state(),
   last_player(0),
   last_player_pos(),
-  last_self_pos()
+  last_self_pos(),
+  show_estimates(false),
+  estPx(),
+  estBx()
 {
   state = FLYING;
   speed = gameRandom.rand(130, 171);
   physic.enable_gravity(false);
+}
+
+ObjectSettings
+Zeekling::get_settings()
+{
+  ObjectSettings result = BadGuy::get_settings();
+
+  result.options.push_back(ObjectOption(MN_TOGGLE, _("Show Position Estimates"), &show_estimates,
+                                         "show-estimates"));
+
+  return result;
 }
 
 void
@@ -57,6 +77,23 @@ Zeekling::initialize()
 {
   physic.set_velocity_x(dir == LEFT ? -speed : speed);
   sprite->set_action(dir == LEFT ? "left" : "right");
+}
+
+void
+Zeekling::draw(DrawingContext& context)
+{
+  BadGuy::draw(context);
+
+  auto player = get_nearest_player();
+  if (!show_estimates || !player) return;
+
+  const Vector est_player_pos(estPx, player->get_pos().y);
+  const Vector est_self_pos(estBx, get_pos().y);
+
+  context.draw_filled_rect(est_player_pos, player->get_bbox().get_size().as_vector(), Color(0, 0, 1, 1), LAYER_OBJECTS + 1);
+  context.draw_filled_rect(est_self_pos, get_bbox().get_size().as_vector(), Color(1, 0, 0, 1), LAYER_OBJECTS + 1);
+
+  context.draw_line(est_player_pos, est_self_pos, Color(0, 1, 0, 1), LAYER_OBJECTS + 1);
 }
 
 bool
@@ -168,10 +205,10 @@ Zeekling::should_we_dive() {
     float estFrames = height / relSpeed;
 
     // guess where the player would be at this time
-    float estPx = (player_pos.x + (estFrames * player_mov.x));
+    estPx = (player_pos.x + (estFrames * player_mov.x));
 
     // guess where we would be at this time
-    float estBx = (self_pos.x + (estFrames * self_mov.x));
+    estBx = (self_pos.x + (estFrames * self_mov.x));
 
     // near misses are OK, too
     if (fabsf(estPx - estBx) < 8) return true;
