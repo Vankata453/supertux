@@ -30,6 +30,8 @@ public:
   void collision_solid(const CollisionHit& hit);
   void active_update(float elapsed_time);
 
+  void draw(DrawingContext& context) override;
+
   void freeze();
   void unfreeze();
   bool is_freezable() const;
@@ -39,6 +41,8 @@ public:
   std::string get_display_name() const {
     return _("Zeekling");
   }
+
+  ObjectSettings get_settings() override;
 
 private:
   bool collision_squished(GameObject& object);
@@ -60,6 +64,10 @@ private:
   const MovingObject* last_player; /**< last player we tracked */
   Vector last_player_pos; /**< position we last spotted the player at */
   Vector last_self_pos; /**< position we last were at */
+
+  bool show_estimates;
+  float estPx;
+  float estBx;
 
 private:
   Zeekling(const Zeekling&);
