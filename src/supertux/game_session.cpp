@@ -450,6 +450,8 @@ GameSession::setup()
     levelintro_shown = true;
     active = false;
     ScreenManager::current()->push_screen(std::unique_ptr<Screen>(new LevelIntro(level.get(), best_level_statistics, m_savegame.get_player_status())));
+  } else if (worldmap::WorldMap::current() && g_run_start_time < 0.f) {
+    g_run_start_time = real_time;
   }
   ScreenManager::current()->set_screen_fade(std::unique_ptr<ScreenFade>(new FadeIn(1)));
   end_seq_started = false;
@@ -661,6 +663,30 @@ GameSession::start_sequence(Sequence seq)
     if(lt)
       lt->stop();
   }
+
+  // If all other levels have been finished, stop the RTA speedrun timer.
+  const std::string level_filename = FileSystem::basename(levelfile);
+  bool levels_finished = true;
+  for (const auto& map : m_savegame.get_worldmaps())
+  {
+    for (const auto& level_state : m_savegame.get_worldmap_state(map).level_states)
+    {
+      if (level_state.filename == level_filename)
+        continue;
+
+      if (!level_state.solved)
+      {
+        levels_finished = false;
+        break;
+      }
+    }
+
+    if (!levels_finished)
+      break;
+  }
+
+  if (levels_finished)
+    g_run_end_time = real_time;
 }
 
 /* (Status): */

@@ -159,6 +159,33 @@ ScreenManager::draw_player_pos(DrawingContext& context)
 }
 
 void
+ScreenManager::draw_run_timer(DrawingContext& context)
+{
+  if (g_run_start_time < 0.f)
+    return;
+
+  /** Convert seconds to a string in the format of "hh:mm:ss.milliseconds".
+      See https://stackoverflow.com/a/58696275. */
+  int ms = static_cast<int>(((g_run_end_time < 0.f ? real_time : g_run_end_time) - g_run_start_time) * 1000.f);
+
+  int h = ms / (1000 * 60 * 60);
+  ms -= h * (1000 * 60 * 60);
+
+  int m = ms / (1000 * 60);
+  ms -= m * (1000 * 60);
+
+  int s = ms / 1000;
+  ms -= s * 1000;
+
+  std::ostringstream out;
+  out << std::setfill('0') << std::setw(2) << h << ':' << std::setw(2) << m
+      << ':' << std::setw(2) << s << '.' << std::setw(3) << ms;
+
+  context.draw_text(Resources::normal_font, out.str(),
+                    Vector(SCREEN_WIDTH / 2, 20.f), ALIGN_CENTER, LAYER_HUD);
+}
+
+void
 ScreenManager::draw(DrawingContext& context)
 {
   assert(!m_screen_stack.empty());
@@ -184,6 +211,9 @@ ScreenManager::draw(DrawingContext& context)
   {
     draw_player_pos(context);
   }
+
+  // Draw RTA speedrun timer, if available.
+  draw_run_timer(context);
 
   // if a screenshot was requested, pass request on to drawing_context
   if (m_screenshot_requested)
