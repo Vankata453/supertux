@@ -46,6 +46,8 @@ public:
     PEEK_UP,
     PEEK_DOWN,
 
+    STOP_RUN_TIMER,
+
     CONTROLCOUNT
   };
 

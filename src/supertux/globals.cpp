@@ -26,6 +26,9 @@ std::unique_ptr<Config> g_config;
 float game_time = 0;
 float real_time = 0;
 
+float g_run_start_time = -1.f;
+float g_run_end_time = -1.f;
+
 float g_game_speed = 1.0f;
 
 /* EOF */

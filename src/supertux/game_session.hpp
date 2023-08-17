@@ -42,7 +42,8 @@ class GameSession : public Screen,
                     public Currenton<GameSession>
 {
 public:
-  GameSession(const std::string& levelfile, Savegame& savegame, Statistics* statistics = NULL);
+  GameSession(const std::string& levelfile, Savegame& savegame, Statistics* statistics = NULL,
+              bool start_run_timer = false);
   ~GameSession();
 
   void record_demo(const std::string& filename);
@@ -158,6 +159,8 @@ private:
   bool active; /** Game active? **/
 
   bool end_seq_started;
+
+  const bool m_start_run_timer;
 
 private:
   GameSession(const GameSession&);

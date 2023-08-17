@@ -35,6 +35,7 @@ const char* Controller::controlNames[] = {
   "peek-right",
   "peek-up",
   "peek-down",
+  "stop-run-timer",
   0
 };
 

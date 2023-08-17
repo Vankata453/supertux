@@ -633,9 +633,11 @@ WorldMap::update(float delta)
     }
 
     // check for auto-play levels
+    bool autoplay_level = false;
     auto level = at_level();
     if (level && (level->auto_play) && (!level->solved) && (!tux->is_moving())) {
       enter_level = true;
+      autoplay_level = true;
       // automatically mark these levels as solved in case player aborts
       level->solved = true;
     }
@@ -664,7 +666,7 @@ WorldMap::update(float delta)
 
           // update state and savegame
           save_state();
-          ScreenManager::current()->push_screen(std::unique_ptr<Screen>(new GameSession(levelfile, m_savegame, &level_->statistics)),
+          ScreenManager::current()->push_screen(std::unique_ptr<Screen>(new GameSession(levelfile, m_savegame, &level_->statistics, !autoplay_level)),
                                                 std::unique_ptr<ScreenFade>(new ShrinkFade(shrinkpos, 1.0f)));
           in_level = true;
         } catch(std::exception& e) {

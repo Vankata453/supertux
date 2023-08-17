@@ -53,7 +53,8 @@
 #  define snprintf _snprintf
 #endif
 
-GameSession::GameSession(const std::string& levelfile_, Savegame& savegame, Statistics* statistics) :
+GameSession::GameSession(const std::string& levelfile_, Savegame& savegame, Statistics* statistics,
+                         bool start_run_timer) :
   reset_button(false),
   level(),
   old_level(),
@@ -84,7 +85,8 @@ GameSession::GameSession(const std::string& levelfile_, Savegame& savegame, Stat
   max_fire_bullets_at_start(),
   max_ice_bullets_at_start(),
   active(false),
-  end_seq_started(false)
+  end_seq_started(false),
+  m_start_run_timer(start_run_timer)
 {
   if (restart_level() != 0)
     throw std::runtime_error ("Initializing the level failed.");
@@ -450,6 +452,8 @@ GameSession::setup()
     levelintro_shown = true;
     active = false;
     ScreenManager::current()->push_screen(std::unique_ptr<Screen>(new LevelIntro(level.get(), best_level_statistics, m_savegame.get_player_status())));
+  } else if (m_start_run_timer && g_run_start_time < 0.f) {
+    g_run_start_time = real_time;
   }
   ScreenManager::current()->set_screen_fade(std::unique_ptr<ScreenFade>(new FadeIn(1)));
   end_seq_started = false;

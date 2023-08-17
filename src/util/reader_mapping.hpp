@@ -17,6 +17,8 @@
 #ifndef HEADER_SUPERTUX_UTIL_READER_MAPPING_HPP
 #define HEADER_SUPERTUX_UTIL_READER_MAPPING_HPP
 
+#include <cstdint>
+
 #include "util/reader_iterator.hpp"
 
 namespace sexp {
