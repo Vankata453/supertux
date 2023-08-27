@@ -1604,13 +1604,23 @@ EditorOverlayWidget::tile_screen_pos(const Vector& tp, int tile_size) const
 }
 
 Vector
+EditorOverlayWidget::get_tilemap_grid_offset(int tile_size) const
+{
+  auto tilemap = m_editor.get_selected_tilemap();
+  if (!tilemap) return Vector(0, 0);
+
+  return tilemap->get_offset() - Vector(static_cast<float>((static_cast<int>(tilemap->get_offset().x) / tile_size) * tile_size),
+                                        static_cast<float>((static_cast<int>(tilemap->get_offset().y) / tile_size) * tile_size));
+}
+
+Vector
 EditorOverlayWidget::align_to_tilemap(const Vector& sp, int tile_size) const
 {
   auto tilemap = m_editor.get_selected_tilemap();
   if (!tilemap) return Vector(0, 0);
 
   Vector sp_ = sp + tilemap->get_offset() / static_cast<float>(tile_size);
-  return glm::trunc(sp_) * static_cast<float>(tile_size);
+  return glm::trunc(sp_) * static_cast<float>(tile_size) + get_tilemap_grid_offset();
 }
 
 bool

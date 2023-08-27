@@ -111,6 +111,7 @@ private:
   Vector tp_to_sp(const Vector& tp, int tile_size = 32) const;
   Vector sp_to_tp(const Vector& sp, int tile_size = 32) const;
   Vector tile_screen_pos(const Vector& tp, int tile_size = 32) const;
+  Vector get_tilemap_grid_offset(int tile_size = 32) const;
   Vector align_to_tilemap(const Vector& sp, int tile_size = 32) const;
   bool is_position_inside_tilemap(const TileMap* tilemap, const Vector& pos) const;
 
