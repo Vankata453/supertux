@@ -42,21 +42,22 @@ public:
 public:
   Rectf() :
     m_p1(0.0f, 0.0f),
-    m_size()
+    m_size(),
+    m_rotation(0.f)
   { }
 
   Rectf(const Rectf& rhs) = default;
   Rectf& operator=(const Rectf& rhs) = default;
 
   Rectf(const Vector& np1, const Vector& np2) :
-    m_p1(np1), m_size(np2.x - np1.x, np2.y - np1.y)
+    m_p1(np1), m_size(np2.x - np1.x, np2.y - np1.y), m_rotation(0.f)
   {
     assert(m_size.width >= 0 &&
            m_size.height >= 0);
   }
 
   Rectf(float x1, float y1, float x2, float y2) :
-    m_p1(x1, y1), m_size(x2 - x1, y2 - y1)
+    m_p1(x1, y1), m_size(x2 - x1, y2 - y1), m_rotation(0.f)
   {
     assert(m_size.width >= 0 &&
            m_size.height >= 0);
@@ -64,12 +65,13 @@ public:
 
   Rectf(const Vector& p1, const Sizef& size) :
     m_p1(p1),
-    m_size(size)
+    m_size(size),
+    m_rotation(0.f)
   {
   }
 
   Rectf(const SDL_FRect& rect) :
-    m_p1(rect.x, rect.y), m_size(rect.w, rect.h)
+    m_p1(rect.x, rect.y), m_size(rect.w, rect.h), m_rotation(0.f)
   {
   }
 
@@ -90,6 +92,8 @@ public:
   float get_top() const { return m_p1.y; }
   float get_bottom() const { return m_p1.y + m_size.height; }
 
+  std::vector<Vector> get_corner_positions() const;
+
   float get_width() const { return m_size.width; }
   float get_height() const { return m_size.height; }
 
@@ -103,11 +107,15 @@ public:
                                             m_p1.y + m_size.height / 2.0f); }
 
   void set_pos(const Vector& v) { m_p1 = v; }
+  void set_size(const Sizef& s) { m_size = s; }
 
   void set_width(float width) { m_size.width = width; }
   void set_height(float height) { m_size.height = height; }
   void set_size(float width, float height) { m_size = Sizef(width, height); }
   Sizef get_size() const { return m_size; }
+
+  const float& get_rotation() const { return m_rotation; }
+  void set_rotation(const float& rotation) { m_rotation = rotation; }
 
   bool empty() const
   {
@@ -183,6 +191,7 @@ private:
   /// upper left edge
   Vector m_p1;
   Sizef m_size;
+  float m_rotation;
 };
 
 std::ostream& operator<<(std::ostream& out, const Rectf& rect);

@@ -34,6 +34,7 @@
 #include "editor/object_info.hpp"
 #include "editor/particle_editor.hpp"
 #include "editor/resize_marker.hpp"
+#include "editor/scripting_widget.hpp"
 #include "editor/tile_selection.hpp"
 #include "editor/tip.hpp"
 #include "editor/tool_icon.hpp"
@@ -112,19 +113,23 @@ Editor::Editor() :
   m_overlay_widget(),
   m_toolbox_widget(),
   m_layers_widget(),
+  m_scripting_widget(),
   m_enabled(false),
   m_bgr_surface(Surface::from_file("images/engine/menu/bg_editor.png")),
   m_time_since_last_save(0.f),
   m_scroll_speed(32.0f)
 {
+  auto scripting_widget = std::make_unique<EditorScriptingWidget>(*this);
   auto toolbox_widget = std::make_unique<EditorToolboxWidget>(*this);
   auto layers_widget = std::make_unique<EditorLayersWidget>(*this);
   auto overlay_widget = std::make_unique<EditorOverlayWidget>(*this);
 
+  m_scripting_widget = scripting_widget.get();
   m_toolbox_widget = toolbox_widget.get();
   m_layers_widget = layers_widget.get();
   m_overlay_widget = overlay_widget.get();
 
+  m_widgets.push_back(std::move(scripting_widget));
   m_widgets.push_back(std::move(toolbox_widget));
   m_widgets.push_back(std::move(layers_widget));
   m_widgets.push_back(std::move(overlay_widget));
@@ -465,6 +470,7 @@ Editor::set_sector(Sector* sector)
   }
 
   m_layers_widget->refresh();
+  m_scripting_widget->setup();
 }
 
 void
@@ -753,14 +759,21 @@ Editor::event(const SDL_Event& ev)
 
     BIND_SECTOR(*m_sector);
 
-    for(const auto& widget : m_widgets) {
+    bool widget_performed_event = false;
+    for (const auto& widget : m_widgets)
+    {
       if (widget->event(ev))
+      {
+        widget_performed_event = true;
         break;
+      }
     }
 
-    // Scroll with mouse wheel, if the mouse is not over the toolbox.
-    // The toolbox does scrolling independently from the main area.
-    if (ev.type == SDL_MOUSEWHEEL && !m_toolbox_widget->has_mouse_focus() && !m_layers_widget->has_mouse_focus()) {
+    // Scroll with mouse wheel, if no widget performed actions on the event,
+    // and the mouse isn't over the layers widget.
+    if (ev.type == SDL_MOUSEWHEEL && !widget_performed_event &&
+        !m_layers_widget->has_mouse_focus())
+    {
       float scroll_x = static_cast<float>(ev.wheel.x * -32);
       float scroll_y = static_cast<float>(ev.wheel.y * -32);
       scroll({scroll_x, scroll_y});
@@ -868,6 +881,13 @@ Editor::check_save_prerequisites(const std::function<void ()>& callback) const
     }
   }
 
+}
+
+void
+Editor::add_object(GameObject* obj)
+{
+  m_layers_widget->add_layer(obj);
+  m_scripting_widget->add_object(obj);
 }
 
 void

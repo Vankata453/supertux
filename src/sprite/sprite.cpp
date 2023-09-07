@@ -216,6 +216,12 @@ Sprite::get_current_hitbox_height() const
   return m_action->hitbox_h;
 }
 
+float
+Sprite::get_current_hitbox_rotation() const
+{
+  return m_action->hitbox_rotation;
+}
+
 Rectf
 Sprite::get_current_hitbox() const
 {

@@ -36,6 +36,7 @@
 #include "video/surface_ptr.hpp"
 
 class ButtonWidget;
+class EditorScriptingWidget;
 class GameObject;
 class Level;
 class ObjectGroup;
@@ -146,7 +147,8 @@ public:
     m_overlay_widget->edit_path(path, new_marked_object);
   }
 
-  void add_layer(GameObject* layer) { m_layers_widget->add_layer(layer); }
+  /** Called when a new object is added to the sector. */
+  void add_object(GameObject* obj);
 
   TileMap* get_selected_tilemap() const { return m_layers_widget->get_selected_tilemap(); }
 
@@ -215,6 +217,7 @@ private:
   EditorOverlayWidget* m_overlay_widget;
   EditorToolboxWidget* m_toolbox_widget;
   EditorLayersWidget* m_layers_widget;
+  EditorScriptingWidget* m_scripting_widget;
 
   bool m_enabled;
   SurfacePtr m_bgr_surface;

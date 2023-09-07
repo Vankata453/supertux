@@ -33,7 +33,6 @@
 #include "gui/item_label.hpp"
 #include "gui/item_paths.hpp"
 #include "gui/item_script.hpp"
-#include "gui/item_script_line.hpp"
 #include "gui/item_stringselect.hpp"
 #include "gui/item_textfield.hpp"
 #include "gui/item_list.hpp"
@@ -183,15 +182,6 @@ ItemScript&
 Menu::add_script(const std::string& text, std::string* script, int id)
 {
   auto item = std::make_unique<ItemScript>(text, script, id);
-  auto item_ptr = item.get();
-  add_item(std::move(item));
-  return *item_ptr;
-}
-
-ItemScriptLine&
-Menu::add_script_line(std::string* input, int id)
-{
-  auto item = std::make_unique<ItemScriptLine>(input, id);
   auto item_ptr = item.get();
   add_item(std::move(item));
   return *item_ptr;

@@ -97,6 +97,8 @@ public:
   float get_current_hitbox_width() const;
   /** return height of current action's hitbox */
   float get_current_hitbox_height() const;
+  /** Return rotation of current action's hitbox */
+  float get_current_hitbox_rotation() const;
   /** return current action's hitbox, relative to 0,0 */
   Rectf get_current_hitbox() const;
 

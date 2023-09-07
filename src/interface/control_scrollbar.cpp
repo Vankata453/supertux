@@ -1,5 +1,6 @@
 //  SuperTux
 //  Copyright (C) 2020 A. Semphris <semphris@protonmail.com>
+//                2023 Vankata453
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -24,27 +25,26 @@
 #include "video/video_system.hpp"
 #include "video/viewport.hpp"
 
-ControlScrollbar::ControlScrollbar() :
+ControlScrollbar::ControlScrollbar(const float& total_region, const float& covered_region,
+                                   float& progress, float mouse_wheel_speed) :
+  m_mouse_wheel_speed(mouse_wheel_speed),
   m_scrolling(),
   m_hovering(),
-  m_total_region(),
-  m_covered_region(),
-  m_progress(),
+  m_total_region(total_region),
+  m_covered_region(covered_region),
+  m_progress(progress),
   m_rect(),
   //is_horizontal(),
   last_mouse_pos()
   //zoom_factor()
 {
-  m_covered_region = VideoSystem::current()->get_viewport().get_rect().get_height();
-  m_total_region = 2000;
+  if (m_total_region < m_covered_region)
+    m_total_region = m_covered_region;
 }
 
 void
 ControlScrollbar::draw(DrawingContext& context)
 {
-  m_rect = Rectf(0, 0, 10, context.get_height());
-
-  context.color().draw_filled_rect(m_rect, Color(0.5f, 0.5f, 0.5f, 1.f), 8, LAYER_GUI);
   context.color().draw_filled_rect(get_bar_rect(),
                                    Color(1.f, 1.f, 1.f, (m_hovering || m_scrolling) ? 1.f : 0.5f),
                                    8,
@@ -113,35 +113,47 @@ ControlScrollbar::on_mouse_motion(const SDL_MouseMotionEvent& motion)
 
   m_hovering = get_bar_rect().contains(mouse_pos);
 
-  int new_progress = m_progress + int((mouse_pos.y - last_mouse_pos) * VideoSystem::current()->get_viewport().get_scale().y * float(m_total_region) / float(m_covered_region));
+  float new_progress = m_progress + (mouse_pos.y - last_mouse_pos) * m_total_region / m_covered_region;
   last_mouse_pos = mouse_pos.y;
 
-  if (m_scrolling) {
-
-    m_progress = std::min(m_total_region - m_covered_region, std::max(0, new_progress));
-
-    printf("%d to %d of %d\n", m_progress, m_progress + m_covered_region, m_total_region);
-
-    return true;
-  } else {
+  if (!m_scrolling)
     return false;
-  }
+
+  m_progress = std::min(m_total_region - m_covered_region, std::max(0.f, new_progress));
+  return true;
+}
+
+bool
+ControlScrollbar::on_mouse_wheel(const SDL_MouseWheelEvent& wheel)
+{
+  /** This will always be executed, regardless of the mouse position.
+      The control's parent manager should check conditions, if needed,
+      before calling this function. */
+
+  m_progress -= wheel.y * m_mouse_wheel_speed;
+
+  if (m_progress < 0.f)
+    m_progress = 0.f;
+  else if (m_progress > m_total_region - m_covered_region)
+    m_progress = m_total_region - m_covered_region;
+
+  return true;
 }
 
 Rectf
 ControlScrollbar::get_bar_rect()
 {
   return Rectf(m_rect.get_left(),
-               m_rect.get_top() + static_cast<float>(m_progress)
-                                * static_cast<float>(m_covered_region)
-                                / static_cast<float>(m_total_region),
+               m_rect.get_top() + m_progress
+                                * m_covered_region
+                                / m_total_region,
                m_rect.get_right(),
-               m_rect.get_top() + static_cast<float>(m_progress)
-                                * static_cast<float>(m_covered_region)
-                                / static_cast<float>(m_total_region)
+               m_rect.get_top() + m_progress
+                                * m_covered_region
+                                / m_total_region
                           + m_rect.get_height()
-                          * static_cast<float>(m_covered_region)
-                          / static_cast<float>(m_total_region)
+                          * m_covered_region
+                          / m_total_region
              );
 }
 

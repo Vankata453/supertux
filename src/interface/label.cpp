@@ -95,4 +95,12 @@ InterfaceLabel::get_truncated_text() const
   return temp + "...";
 }
 
+void
+InterfaceLabel::set_rect(const Rectf& rect)
+{
+  m_rect = rect;
 
+  // Width smaller or equal to 0 indicates that text width should be used.
+  if (m_rect.get_width() <= 0.f)
+    m_rect.set_width(Resources::control_font->get_text_width(m_label));
+}

@@ -42,6 +42,14 @@ inline Vector at_angle(Vector const& v, float angle)
   return vec2_from_polar(glm::length(v), angle);
 }
 
+inline void rotate(Vector& v, float angle)
+{
+  const Vector origin = v;
+
+  v.x = origin.x * std::cos(angle) - origin.y * std::sin(angle);
+  v.y = origin.x * std::sin(angle) + origin.y * std::cos(angle);
+}
+
 } // namespace math
 
 #endif

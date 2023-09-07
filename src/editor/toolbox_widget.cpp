@@ -489,7 +489,7 @@ EditorToolboxWidget::on_mouse_wheel(const SDL_MouseWheelEvent& wheel)
     m_using_scroll_wheel = true;
     m_wheel_scroll_amount = wheel.y;
   }
-  return false;
+  return m_has_mouse_focus;
 }
 
 void

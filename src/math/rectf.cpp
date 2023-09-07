@@ -22,10 +22,42 @@
 
 Rectf::Rectf(const Rect& rect) :
   m_p1(static_cast<float>(rect.left),
-     static_cast<float>(rect.top)),
+       static_cast<float>(rect.top)),
   m_size(static_cast<float>(rect.get_width()),
-         static_cast<float>(rect.get_height()))
+         static_cast<float>(rect.get_height())),
+  m_rotation(0.f)
 {
+}
+#include "util/log.hpp"
+std::vector<Vector>
+Rectf::get_corner_positions() const
+{
+  std::vector<Vector> corner_positions = {
+    m_p1,
+    m_p1 + Vector(m_size.width, 0.f),
+    m_p1 + Vector(0.f, m_size.height),
+    m_p1 + Vector(m_size.width, m_size.height)
+  };
+
+  if (m_rotation <= 0.f)
+    return corner_positions; // No need to determine rotated corner positions.
+
+  Vector middle = get_middle();
+
+  for (Vector& pos : corner_positions)
+  {
+    // Translate the position to origin.
+    pos.x -= middle.x;
+    pos.y -= middle.y;
+
+    math::rotate(pos, m_rotation);
+
+    // Translate back.
+    pos.x += middle.x;
+    pos.y += middle.y;
+  }
+
+  return corner_positions;
 }
 
 Rect

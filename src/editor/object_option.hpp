@@ -59,6 +59,8 @@ public:
   virtual std::string to_string() const = 0;
   virtual void add_to_menu(Menu& menu) const = 0;
 
+  virtual bool is_script() const { return false; }
+
   const std::string& get_key() const { return m_key; }
   const std::string& get_text() const { return m_text; }
   unsigned int get_flags() const { return m_flags; }
@@ -262,6 +264,10 @@ public:
   virtual void save(Writer& write) const override;
   virtual std::string to_string() const override;
   virtual void add_to_menu(Menu& menu) const override;
+
+  virtual bool is_script() const override { return true; }
+
+  std::string* get_pointer() const { return m_pointer; }
 
 private:
   std::string* const m_pointer;

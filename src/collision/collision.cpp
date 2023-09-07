@@ -17,9 +17,12 @@
 #include "collision/collision.hpp"
 
 #include <algorithm>
+#include <optional>
 
 #include "math/aatriangle.hpp"
+#include "math/line.hpp"
 #include "math/rectf.hpp"
+#include "util/log.hpp"
 
 namespace collision {
 
@@ -37,14 +40,103 @@ void Constraints::merge_constraints(const Constraints& other)
   hit.crush |= other.hit.crush;
 }
 
-bool intersects(const Rectf& r1, const Rectf& r2)
+namespace {
+
+std::vector<Line> get_axis(const Rectf& rect)
 {
-  if (r1.get_right() < r2.get_left() || r1.get_left() > r2.get_right())
-    return false;
-  if (r1.get_bottom() < r2.get_top() || r1.get_top() > r2.get_bottom())
-    return false;
+  Vector ox(1.f, 0.f);
+  Vector oy(0.f, 1.f);
+
+  rotate(ox, rect.get_rotation());
+  rotate(oy, rect.get_rotation());
+
+  return { Line(rect.get_middle(), ox),
+           Line(rect.get_middle(), oy) };
+}
+
+Vector project(const Line& line, const Vector& dest)
+{
+  const float distance = line.get_direction().x * (dest.x - line.get_origin().x) +
+                         line.get_direction().y * (dest.y - line.get_origin().y);
+
+  return line.get_origin() + line.get_direction() * Vector(distance, distance);
+}
+
+float magnitude(const Vector& vec)
+{
+  return std::sqrt(vec.x * vec.x + vec.y * vec.y);
+}
+
+struct SignedDistance
+{
+  SignedDistance(const float& s, const Vector& c,
+                 const Vector& p) :
+    signed_distance(s),
+    corner(c),
+    projected(p)
+  {}
+
+  float signed_distance;
+  Vector corner;
+  Vector projected;
+};
+
+bool is_projection_collide(const Rectf& r1, const Rectf& r2)
+{
+  const auto lines = get_axis(r2);
+  const auto corners = r1.get_corner_positions();
+
+  for (size_t i = 0; i < lines.size(); i++)
+  {
+    const Line& line = lines.at(i);
+
+    std::optional<SignedDistance> min_distance;
+    std::optional<SignedDistance> max_distance;
+
+    for (const Vector& corner : corners)
+    {
+      const Vector projected = project(line, corner);
+      const Vector cp = project(line, corner) - r2.get_middle();
+      const bool sign = (cp.x * line.get_direction().x) + (cp.y * line.get_direction().y) > 0;
+      const float signed_distance = magnitude(cp) * (sign ? 1.f : -1.f);
+
+      if (!min_distance || min_distance->signed_distance > signed_distance)
+        min_distance = SignedDistance(signed_distance, corner, projected);
+      if (!max_distance || max_distance->signed_distance < signed_distance)
+        max_distance = SignedDistance(signed_distance, corner, projected);
+    }
+
+    const float half_size = (i == 0 ? r2.get_width() : r2.get_height()) / 2;
+
+    if (!(min_distance->signed_distance < 0 && max_distance->signed_distance > 0
+          || std::abs(min_distance->signed_distance) < half_size
+          || std::abs(max_distance->signed_distance) < half_size))
+    {
+      return false;
+    }
+  }
 
   return true;
+}
+
+} // namespace
+
+bool intersects(const Rectf& r1, const Rectf& r2)
+{
+  if (r1.get_rotation() <= 0.f && r2.get_rotation() <= 0.f) // Regular rectangle intersection
+  {
+    if (r1.get_right() < r2.get_left() || r1.get_left() > r2.get_right())
+      return false;
+    if (r1.get_bottom() < r2.get_top() || r1.get_top() > r2.get_bottom())
+      return false;
+
+    return true;
+  }
+  else // Rotated rectangle intersection
+  {
+    return is_projection_collide(r1, r2) &&
+           is_projection_collide(r2, r1);
+  }
 }
 
 //---------------------------------------------------------------------------
