@@ -80,7 +80,7 @@ KeyboardConfig::read(const ReaderMapping& keymap_lisp)
           log_info << "Invalid control '" << control << "' in keymap" << std::endl;
           continue;
         }
-        keymap[static_cast<SDL_Keycode>(key)] = static_cast<Controller::Control>(i);
+        bind_key(static_cast<SDL_Keycode>(key), static_cast<Controller::Control>(i));
       }
     }
   }
