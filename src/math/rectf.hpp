@@ -23,6 +23,7 @@
 #include <SDL.h>
 
 #include "math/anchor_point.hpp"
+#include "math/line.hpp"
 #include "math/sizef.hpp"
 #include "math/vector.hpp"
 
@@ -42,21 +43,22 @@ public:
 public:
   Rectf() :
     m_p1(0.0f, 0.0f),
-    m_size()
+    m_size(),
+    m_angle(0.f)
   { }
 
   Rectf(const Rectf& rhs) = default;
   Rectf& operator=(const Rectf& rhs) = default;
 
   Rectf(const Vector& np1, const Vector& np2) :
-    m_p1(np1), m_size(np2.x - np1.x, np2.y - np1.y)
+    m_p1(np1), m_size(np2.x - np1.x, np2.y - np1.y), m_angle(0.f)
   {
     assert(m_size.width >= 0 &&
            m_size.height >= 0);
   }
 
   Rectf(float x1, float y1, float x2, float y2) :
-    m_p1(x1, y1), m_size(x2 - x1, y2 - y1)
+    m_p1(x1, y1), m_size(x2 - x1, y2 - y1), m_angle(0.f)
   {
     assert(m_size.width >= 0 &&
            m_size.height >= 0);
@@ -64,12 +66,13 @@ public:
 
   Rectf(const Vector& p1, const Sizef& size) :
     m_p1(p1),
-    m_size(size)
+    m_size(size),
+    m_angle(0.f)
   {
   }
 
   Rectf(const SDL_FRect& rect) :
-    m_p1(rect.x, rect.y), m_size(rect.w, rect.h)
+    m_p1(rect.x, rect.y), m_size(rect.w, rect.h), m_angle(0.f)
   {
   }
 
@@ -90,6 +93,9 @@ public:
   float get_top() const { return m_p1.y; }
   float get_bottom() const { return m_p1.y + m_size.height; }
 
+  std::vector<Vector> get_corner_positions() const;
+  std::vector<Line> get_axis() const;
+
   float get_width() const { return m_size.width; }
   float get_height() const { return m_size.height; }
 
@@ -103,17 +109,23 @@ public:
                                             m_p1.y + m_size.height / 2.0f); }
 
   void set_pos(const Vector& v) { m_p1 = v; }
+  void set_size(const Sizef& s) { m_size = s; }
 
   void set_width(float width) { m_size.width = width; }
   void set_height(float height) { m_size.height = height; }
   void set_size(float width, float height) { m_size = Sizef(width, height); }
   Sizef get_size() const { return m_size; }
 
+  const float& get_rotation() const { return m_angle; }
+  void set_rotation(const float& angle) { m_angle = angle; }
+  bool is_rotated() const;
+
   bool empty() const
   {
     return get_width() <= 0 ||
            get_height() <= 0;
   }
+  bool is_square() const;
 
   void move(const Vector& v) { m_p1 += v; }
   Rectf moved(const Vector& v) const { return Rectf(m_p1 + v, m_size); }
@@ -122,16 +134,8 @@ public:
     return v.x >= m_p1.x && v.y >= m_p1.y && v.x < get_right() && v.y < get_bottom();
   }
 
-  bool contains(const Rectf& other) const
-  {
-    // FIXME: This is overlaps(), not contains()!
-    if (m_p1.x >= other.get_right() || other.get_left() >= get_right())
-      return false;
-    if (m_p1.y >= other.get_bottom() || other.get_top() >= get_bottom())
-      return false;
-
-    return true;
-  }
+  // FIXME: This is overlaps(), not contains()!
+  bool contains(const Rectf& other) const;
 
   float distance (const Vector& other, AnchorPoint ap = ANCHOR_MIDDLE) const
   {
@@ -153,8 +157,10 @@ public:
     if (m_size.width + border * 2 < 0.f || m_size.height + border * 2 < 0.f)
       return *this;
 
-    return Rectf(m_p1.x - border, m_p1.y - border,
+    Rectf result(m_p1.x - border, m_p1.y - border,
                  get_right() + border, get_bottom() + border);
+    result.set_rotation(m_angle);
+    return result;
   }
 
   // leave these two public to save the headaches of set/get functions for such
@@ -183,6 +189,7 @@ private:
   /// upper left edge
   Vector m_p1;
   Sizef m_size;
+  float m_angle;
 };
 
 std::ostream& operator<<(std::ostream& out, const Rectf& rect);

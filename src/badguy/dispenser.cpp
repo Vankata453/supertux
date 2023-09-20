@@ -44,7 +44,7 @@ Dispenser::Dispenser(const ReaderMapping& reader) :
 {
   parse_type(reader);
 
-  set_colgroup_active(COLGROUP_MOVING_STATIC);
+  set_colgroup_active(COLGROUP_STATIC);
   SoundManager::current()->preload("sounds/squish.wav");
   reader.get("cycle", m_cycle, 5.0f);
   if (reader.get("gravity", m_gravity)) m_physic.enable_gravity(true);

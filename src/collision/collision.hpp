@@ -19,20 +19,23 @@
 
 #include <limits>
 #include <algorithm>
+#include <vector>
 
 #include "collision/collision_hit.hpp"
 #include "math/fwd.hpp"
+#include "math/line.hpp"
 
 class Rectf;
 class AATriangle;
 
 namespace collision {
 
-class Constraints final
+class Constraints
 {
 public:
   Constraints() :
     hit(),
+    movement(),
     position_left(),
     position_right(),
     position_top(),
@@ -60,40 +63,41 @@ public:
   }
 
 public:
-
-  void constrain_left (float position)
+  void constrain_left(float position)
   {
     position_left = std::max (position_left, position);
   }
 
-  void constrain_right (float position)
+  void constrain_right(float position)
   {
     position_right = std::min (position_right, position);
   }
 
-  void constrain_top (float position)
+  void constrain_top(float position)
   {
     position_top = std::max (position_top, position);
   }
 
-  void constrain_bottom (float position)
+  void constrain_bottom(float position)
   {
     position_bottom = std::min (position_bottom, position);
   }
 
-  void merge_constraints (const Constraints& other);
+  void merge_constraints(const Constraints& other);
 
-  float get_position_left   () const { return position_left;   }
-  float get_position_right  () const { return position_right;  }
-  float get_position_top    () const { return position_top;    }
-  float get_position_bottom () const { return position_bottom; }
+  float get_position_left() const { return position_left;   }
+  float get_position_right() const { return position_right;  }
+  float get_position_top() const { return position_top;    }
+  float get_position_bottom() const { return position_bottom; }
 
-  float get_height () const { return (position_bottom - position_top); }
-  float get_width  () const { return (position_right - position_left); }
+  float get_height() const { return (position_bottom - position_top); }
+  float get_width() const { return (position_right - position_left); }
 
-  float get_x_midpoint () const { return (.5f * (position_left + position_right)); }
+  float get_x_midpoint() const { return (.5f * (position_left + position_right)); }
 
+public:
   CollisionHit hit;
+  Vector movement;
 
 private:
   float position_left;
@@ -116,6 +120,12 @@ bool rectangle_aatriangle(Constraints* constraints, const Rectf& rect,
                           bool& hits_rectangle_bottom);
 
 void set_rectangle_rectangle_constraints(Constraints* constraints, const Rectf& r1, const Rectf& r2);
+
+/** Sets constraints for rotated rectangles.
+
+    NOTE: Only call this function, when the two rectangles overlap!
+*/
+void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1, const Rectf& r2);
 
 bool line_intersects_line(const Vector& line1_start, const Vector& line1_end, const Vector& line2_start, const Vector& line2_end);
 bool intersects_line(const Rectf& r, const Vector& line_start, const Vector& line_end);

@@ -98,6 +98,24 @@ CollisionSystem::draw(DrawingContext& context)
     }
     const Rectf& rect = object->get_bbox();
     context.color().draw_filled_rect(rect, color, LAYER_FOREGROUND1 + 10);
+/**
+    const auto axis = collision::get_axis(rect);
+    for (const Line& line : axis)
+    {
+      context.color().draw_line(line.get_origin() - line.get_direction() * Vector(100.f, 100.f),
+                                line.get_origin() + line.get_direction() * Vector(100.f, 100.f), Color::RED, LAYER_FOREGROUND1 + 11);
+
+      for (auto& object : m_objects)
+      {
+        const auto corners = object->get_bbox().get_corner_positions();
+        for (const Vector& corner : corners)
+        {
+          context.color().draw_line(collision::project(line, corner),
+                                    line.get_origin(), Color::GREEN, LAYER_FOREGROUND1 + 12);
+        }
+      }
+    }
+* */
   }
 }
 
@@ -122,6 +140,17 @@ collision::Constraints check_collisions(const Vector& obj_movement, const Rectf&
     return constraints;
   if (moving_object != nullptr && other_object != nullptr && !moving_object->collides(*other_object, dummy))
     return constraints;
+
+  // Calculate intersection for rotated rectangles.
+  if (moving_obj_rect.is_rotated() || grown_other_obj_rect.is_rotated())
+  {
+    if (other_object && moving_object &&
+        other_object->collision(*moving_object, dummy) == ABORT_MOVE)
+      return constraints;
+
+    collision::set_rotated_rectangle_constraints(&constraints, moving_obj_rect, grown_other_obj_rect);
+    return constraints;
+  }
 
   // Calculate intersection.
   const float itop    = moving_obj_rect.get_bottom() - grown_other_obj_rect.get_top();
@@ -297,6 +326,16 @@ CollisionSystem::collision_tile_attributes(const Rectf& dest, const Vector& mov)
 static void get_hit_normal(const Rectf& r1, const Rectf& r2, CollisionHit& hit,
                            Vector& normal)
 {
+  if (r1.is_rotated() || r2.is_rotated())
+  {
+    collision::Constraints constraints;
+    collision::set_rotated_rectangle_constraints(&constraints, r1, r2);
+
+    hit = std::move(constraints.hit);
+    normal = std::move(constraints.movement);
+    return;
+  }
+
   const float itop = r1.get_bottom() - r2.get_top();
   const float ibottom = r2.get_bottom() - r1.get_top();
   const float ileft = r1.get_right() - r2.get_left();

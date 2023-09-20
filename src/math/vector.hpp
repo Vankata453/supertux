@@ -19,9 +19,12 @@
 
 #include <math.h>
 #include <iosfwd>
+
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <glm/gtx/io.hpp>
+
+#include "math/util.hpp"
 
 using Vector = glm::vec2;
 
@@ -40,6 +43,20 @@ inline float angle(Vector const& v)
 inline Vector at_angle(Vector const& v, float angle)
 {
   return vec2_from_polar(glm::length(v), angle);
+}
+
+inline float magnitude(const Vector& v)
+{
+  return std::sqrt(v.x * v.x + v.y * v.y);
+}
+
+inline void rotate(Vector& v, float angle)
+{
+  const float theta = angle * PI / 180.f;
+  const Vector origin = v;
+
+  v.x = origin.x * std::cos(theta) - origin.y * std::sin(theta);
+  v.y = origin.x * std::sin(theta) + origin.y * std::cos(theta);
 }
 
 } // namespace math

@@ -19,14 +19,147 @@
 #include <ostream>
 
 #include "math/rect.hpp"
+#include "supertux/constants.hpp"
 
 Rectf::Rectf(const Rect& rect) :
   m_p1(static_cast<float>(rect.left),
-     static_cast<float>(rect.top)),
+       static_cast<float>(rect.top)),
   m_size(static_cast<float>(rect.get_width()),
-         static_cast<float>(rect.get_height()))
+         static_cast<float>(rect.get_height())),
+  m_angle(0.f)
 {
 }
+
+
+std::vector<Vector>
+Rectf::get_corner_positions() const
+{
+  std::vector<Vector> corner_positions = {
+    m_p1,
+    m_p1 + Vector(m_size.width, 0.f),
+    m_p1 + Vector(0.f, m_size.height),
+    m_p1 + Vector(m_size.width, m_size.height)
+  };
+
+  if (!is_rotated())
+    return corner_positions; // No need to determine rotated corner positions.
+
+  const Vector middle = get_middle();
+
+  for (Vector& pos : corner_positions)
+  {
+    pos -= middle; // Translate the position to origin.
+    math::rotate(pos, m_angle);
+    pos += middle; // Translate back.
+  }
+
+  return corner_positions;
+}
+
+std::vector<Line>
+Rectf::get_axis() const
+{
+  Vector ox(1.f, 0.f);
+  Vector oy(0.f, 1.f);
+
+  math::rotate(ox, m_angle);
+  math::rotate(oy, m_angle);
+
+  const Vector middle = get_middle();
+  return { Line(middle, ox),
+           Line(middle, oy) };
+}
+
+bool
+Rectf::is_rotated() const
+{
+  // Check 1: Make sure angle is bigger than 0.
+  // Check 2: Make sure angle isn't divisible by 180.
+  // Check 3: If the rectangle is a square, make sure angle isn't divisble by 90.
+  return m_angle > 0.f && fmodf(m_angle, 180.f) >= EPSILON &&
+         !(is_square() && fmodf(m_angle, 90.f) < EPSILON);
+}
+
+bool
+Rectf::is_square() const
+{
+  // Loose comparison, check is inconsistent otherwise.
+  return fabsf(m_size.width - m_size.height) < EPSILON;
+}
+
+
+static bool projections_overlap(const Rectf& r1, const Rectf& r2)
+{
+  /** Check adapted from: https://stackoverflow.com/a/62028170 */
+
+  /** NOTE: To perform a valid collision check, make sure this function
+            is ran twice, the rectangle arguments being swapped the second time.
+            The 2 projections of each rectangle should overlap the respective other rectangle
+            for collision to occur. */
+
+  const auto axis2 = r2.get_axis();
+  const auto corners1 = r1.get_corner_positions();
+
+  for (size_t i = 0; i < axis2.size(); i++)
+  {
+    const Line& line = axis2.at(i);
+
+    float min_distance = 0.f;
+    float max_distance = 0.f;
+
+    for (const Vector& corner : corners1)
+    {
+      const Vector projected = line.project(corner);
+      const Vector corner_projection = projected - r2.get_middle();
+      const bool sign = (corner_projection.x * line.get_direction().x) + (corner_projection.y * line.get_direction().y) > 0;
+      const float distance = math::magnitude(corner_projection) * (sign ? 1.f : -1.f);
+
+      if (min_distance == 0.f || min_distance > distance)
+        min_distance = distance;
+      if (max_distance == 0.f || max_distance < distance)
+        max_distance = distance;
+    }
+
+    const float half_size = (i == 0 ? r2.get_width() : r2.get_height()) / 2;
+
+    /**
+      MAIN OVERLAP CHECK
+ 
+      1D check to ensure the projection overlaps the rectangle.
+      If it doesn't, the rectangles do not overlap.
+    */
+    if (!(min_distance < 0 && max_distance > 0 ||
+          fabsf(min_distance) < half_size ||
+          fabsf(max_distance) < half_size))
+      return false;
+  }
+
+  // Since the main overlap check has passed for both the X and Y projections,
+  // half of a collision check is successful.
+  // To do a full collision check, this function should be called once again
+  // with both rectangles swapped as arguments.
+  return true;
+}
+
+bool
+Rectf::contains(const Rectf& other) const
+{
+  if (!is_rotated() && !other.is_rotated()) // Regular rectangle overlap
+  {
+    if (m_p1.x >= other.get_right() || other.get_left() >= get_right())
+      return false;
+    if (m_p1.y >= other.get_bottom() || other.get_top() >= get_bottom())
+      return false;
+  }
+  else // Rotated rectangle overlap
+  {
+    return projections_overlap(*this, other) &&
+           projections_overlap(other, *this);
+  }
+
+  return true;
+}
+
 
 Rect
 Rectf::to_rect() const

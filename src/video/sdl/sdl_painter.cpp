@@ -360,7 +360,7 @@ SDLPainter::draw_filled_rect(const FillRectRequest& request)
 
   const float radius = std::min(std::min(rect.h / 2, rect.w / 2), request.radius);
 
-  if (radius > 0.f)
+  if (request.rect.get_rotation() <= 0.f && radius > 0.f)
   {
     const int slices = static_cast<int>(radius);
 
@@ -412,7 +412,23 @@ SDLPainter::draw_filled_rect(const FillRectRequest& request)
     {
       SDL_SetRenderDrawBlendMode(m_sdl_renderer, SDL_BLENDMODE_BLEND);
       SDL_SetRenderDrawColor(m_sdl_renderer, r, g, b, a);
-      SDL_RenderFillRectF(m_sdl_renderer, &rect);
+      if (request.rect.get_rotation() <= 0.f) // FIXME: Rotated rectangles are drawn just with lines
+      {
+        SDL_RenderFillRectF(m_sdl_renderer, &rect);
+      }
+      else
+      {
+        auto corner_positions = request.rect.get_corner_positions();
+
+        SDL_RenderDrawLineF(m_sdl_renderer, corner_positions[0].x, corner_positions[0].y,
+                                            corner_positions[1].x, corner_positions[1].y);
+        SDL_RenderDrawLineF(m_sdl_renderer, corner_positions[2].x, corner_positions[2].y,
+                                            corner_positions[3].x, corner_positions[3].y);
+        SDL_RenderDrawLineF(m_sdl_renderer, corner_positions[0].x, corner_positions[0].y,
+                                            corner_positions[2].x, corner_positions[2].y);
+        SDL_RenderDrawLineF(m_sdl_renderer, corner_positions[1].x, corner_positions[1].y,
+                                            corner_positions[3].x, corner_positions[3].y);
+      }
     }
   }
 }
@@ -481,14 +497,10 @@ SDLPainter::draw_line(const LineRequest& request)
   Uint8 b = static_cast<Uint8>(request.color.blue * 255);
   Uint8 a = static_cast<Uint8>(request.color.alpha * 255);
 
-  int x1 = static_cast<int>(request.pos.x);
-  int y1 = static_cast<int>(request.pos.y);
-  int x2 = static_cast<int>(request.dest_pos.x);
-  int y2 = static_cast<int>(request.dest_pos.y);
-
   SDL_SetRenderDrawBlendMode(m_sdl_renderer, SDL_BLENDMODE_BLEND);
   SDL_SetRenderDrawColor(m_sdl_renderer, r, g, b, a);
-  SDL_RenderDrawLine(m_sdl_renderer, x1, y1, x2, y2);
+  SDL_RenderDrawLineF(m_sdl_renderer, request.pos.x, request.pos.y,
+                                      request.dest_pos.x, request.dest_pos.y);
 }
 
 namespace {
