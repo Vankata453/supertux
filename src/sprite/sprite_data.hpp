@@ -62,6 +62,9 @@ private:
     /** Hitbox height */
     float hitbox_h;
 
+    /** Hitbox rotation */
+    float hitbox_rotation;
+
     /** Frames per second */
     float fps;
 

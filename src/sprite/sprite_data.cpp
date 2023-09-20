@@ -35,6 +35,7 @@ SpriteData::Action::Action() :
   y_offset(0),
   hitbox_w(0),
   hitbox_h(0),
+  hitbox_rotation(0),
   fps(10),
   loops(-1),
   loop_frame(1),
@@ -114,6 +115,9 @@ SpriteData::parse_action(const ReaderMapping& mapping)
   {
     switch (hitbox.size())
     {
+      case 5:
+        action->hitbox_rotation = hitbox[4];
+        [[fallthrough]];
       case 4:
         action->hitbox_h = hitbox[3];
         action->hitbox_w = hitbox[2];

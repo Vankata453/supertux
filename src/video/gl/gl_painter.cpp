@@ -291,16 +291,13 @@ GLPainter::draw_filled_rect(const FillRectRequest& request)
   }
   else
   {
-    const float x = request.rect.get_left();
-    const float y = request.rect.get_top();
-    const float w = request.rect.get_width();
-    const float h = request.rect.get_height();
+    const auto corner_positions = request.rect.get_corner_positions();
 
     const float vertices[] = {
-      x,   y,
-      x+w, y,
-      x+w, y+h,
-      x,   y+h
+      corner_positions[0].x, corner_positions[0].y,
+      corner_positions[1].x, corner_positions[1].y,
+      corner_positions[3].x, corner_positions[3].y,
+      corner_positions[2].x, corner_positions[2].y
     };
 
     context.set_positions(vertices, sizeof(vertices));

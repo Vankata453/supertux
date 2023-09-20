@@ -121,6 +121,15 @@ public:
     m_bbox.set_size(w, h);
   }
 
+  /** sets the moving object's bbox rotation. Be careful
+      when using this function. There are no collision detection
+      checks performed here so bad things could happen. */
+  void set_rotation(float rotation)
+  {
+    m_dest.set_rotation(rotation);
+    m_bbox.set_rotation(rotation);
+  }
+
   CollisionGroup get_group() const
   {
     return m_group;

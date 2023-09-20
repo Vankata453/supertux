@@ -291,6 +291,7 @@ Canvas::draw_filled_rect(const Rectf& rect, const Color& color, float radius, in
 
   request->rect = Rectf(apply_translate(rect.p1())*scale(),
                         rect.get_size()*scale());
+  request->rect.set_rotation(rect.get_rotation());
   request->color = color;
   request->color.alpha = color.alpha * m_context.transform().alpha;
   request->radius = radius;
