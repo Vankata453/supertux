@@ -224,7 +224,7 @@ struct NearestCornerPoint
   {}
 
   const Vector& corner;
-  const float point;
+  float point;
 };
 
 enum class NearestCornerHorizontalCompareType
@@ -246,6 +246,7 @@ NearestCornerPoint get_nearest_corner_point_x(const Vector& a, const Vector& b,
       return { points[i], result };
   }
 
+  assert(false);
   return { points[0], math::get_nearest_point_x(a, b, points[0]) };
 }
 
@@ -262,12 +263,20 @@ NearestCornerPoint get_nearest_corner_point_y(const Vector& a, const Vector& b,
   for (int i = (reversed ? static_cast<int>(points.size()) - 1 : 0);
        (reversed ? i >= 0 : i < static_cast<int>(points.size())); i += (reversed ? -1 : 1))
   {
-    const float result = math::get_nearest_point_y(a, b, points[i], true);
-    if ((compare_type == NearestCornerVerticalCompareType::TOP && points[i].y <= result) ||
-        (compare_type == NearestCornerVerticalCompareType::BOTTOM && points[i].y >= result))
-      return { points[i], result };
+    float result = math::get_nearest_point_y(a, b, points[i], true);
+
+    if (compare_type == NearestCornerVerticalCompareType::TOP) // TOP
+    {
+      if (points[i].y <= result)
+        return { points[i], std::min(result, b.y) }; // Limit the bottommost point.
+    }
+    else if (points[i].y >= result) // BOTTOM
+    {
+      return { points[i], std::max(result, a.y) }; // Limit the topmost point.
+    }
   }
 
+  assert(false);
   return { points[0], math::get_nearest_point_y(a, b, points[0]) };
 }
 
@@ -304,7 +313,6 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
   std::sort(corners2_y.begin(), corners2_y.end(), vector_y_sorter);
 
   const Vector middle1 = r1.get_middle();
-  const float max_size1 = std::max(r1.get_width(), r2.get_height());
 
   /**
     Determine the rotated rectangle type of rectangle 2.
@@ -356,7 +364,7 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
   {
     if (middle1.x <= corners2_y[0].x && middle1.y < corners2_x[0].y) /** Left */
     {
-      const auto point_y = get_nearest_corner_point_y(bottommost_corner, corners2_y[0], corners1_y, NearestCornerVerticalCompareType::BOTTOM);
+      const auto point_y = get_nearest_corner_point_y(corners2_y[0], bottommost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
       constraints->constrain_bottom(point_y.point);
 
       constraints->movement.y = point_y.corner.y - point_y.point;
@@ -411,7 +419,7 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
     {
       const Vector& line_start_corner = (rotated2 ? bottommost_corner : topmost_corner);
 
-      const auto point_y = get_nearest_corner_point_y(line_start_corner, corners2_y[0], corners1_y, NearestCornerVerticalCompareType::BOTTOM);
+      const auto point_y = get_nearest_corner_point_y(corners2_y[0], line_start_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
       constraints->constrain_bottom(point_y.point);
 
       constraints->movement.y = point_y.corner.y - point_y.point;
