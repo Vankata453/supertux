@@ -360,7 +360,7 @@ SDLPainter::draw_filled_rect(const FillRectRequest& request)
 
   const float radius = std::min(std::min(rect.h / 2, rect.w / 2), request.radius);
 
-  if (request.rect.get_rotation() <= 0.f && radius > 0.f)
+  if (!request.rect.is_rotated() && radius > 0.f)
   {
     const int slices = static_cast<int>(radius);
 
@@ -412,7 +412,7 @@ SDLPainter::draw_filled_rect(const FillRectRequest& request)
     {
       SDL_SetRenderDrawBlendMode(m_sdl_renderer, SDL_BLENDMODE_BLEND);
       SDL_SetRenderDrawColor(m_sdl_renderer, r, g, b, a);
-      if (request.rect.get_rotation() <= 0.f) // FIXME: Rotated rectangles are drawn just with lines
+      if (!request.rect.is_rotated())
       {
         SDL_RenderFillRectF(m_sdl_renderer, &rect);
       }
@@ -420,14 +420,17 @@ SDLPainter::draw_filled_rect(const FillRectRequest& request)
       {
         auto corner_positions = request.rect.get_corner_positions();
 
-        SDL_RenderDrawLineF(m_sdl_renderer, corner_positions[0].x, corner_positions[0].y,
-                                            corner_positions[1].x, corner_positions[1].y);
-        SDL_RenderDrawLineF(m_sdl_renderer, corner_positions[2].x, corner_positions[2].y,
-                                            corner_positions[3].x, corner_positions[3].y);
-        SDL_RenderDrawLineF(m_sdl_renderer, corner_positions[0].x, corner_positions[0].y,
-                                            corner_positions[2].x, corner_positions[2].y);
-        SDL_RenderDrawLineF(m_sdl_renderer, corner_positions[1].x, corner_positions[1].y,
-                                            corner_positions[3].x, corner_positions[3].y);
+        /** Draw the rotated rectangle, using 2 triangles. */
+        TriangleRequest triangle;
+        triangle.color = request.color;
+
+        triangle.pos1 = std::move(corner_positions[0]);
+        triangle.pos2 = std::move(corner_positions[1]);
+        triangle.pos3 = std::move(corner_positions[2]);
+        draw_triangle(triangle);
+
+        triangle.pos1 = std::move(corner_positions[3]);
+        draw_triangle(triangle);
       }
     }
   }
