@@ -19,10 +19,8 @@
 #include <algorithm>
 
 #include "math/aatriangle.hpp"
-#include "math/line.hpp"
 #include "math/rectf.hpp"
 #include "supertux/constants.hpp"
-#include "util/log.hpp"
 
 namespace collision {
 
@@ -304,9 +302,9 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
   assert(has_rotation1 || has_rotation2);
 
   /** Prepare variables. */
-  auto corners1_x = r1.get_corner_positions();
+  auto corners1_x = r1.get_corners();
   auto corners1_y = corners1_x;
-  auto corners2_x = r2.get_corner_positions();
+  auto corners2_x = r2.get_corners();
   auto corners2_y = corners2_x;
 
   // Sort the corners of both rectangles in ascending order, based on their X positions.

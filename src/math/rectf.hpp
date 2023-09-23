@@ -32,6 +32,10 @@ class Rect;
 class Rectf final
 {
 public:
+  typedef std::vector<Vector> Corners;
+  typedef std::pair<Line, Line> Axis;
+
+public:
   static Rectf from_center(const Vector& center, const Sizef& size)
   {
     return Rectf(center.x - size.width / 2.0f,
@@ -50,33 +54,33 @@ public:
   Rectf(const Rectf& rhs) = default;
   Rectf& operator=(const Rectf& rhs) = default;
 
-  Rectf(const Vector& np1, const Vector& np2) :
-    m_p1(np1), m_size(np2.x - np1.x, np2.y - np1.y), m_angle(0.f)
+  Rectf(const Vector& np1, const Vector& np2, float angle = 0.f) :
+    m_p1(np1), m_size(np2.x - np1.x, np2.y - np1.y), m_angle(angle)
   {
     assert(m_size.width >= 0 &&
            m_size.height >= 0);
   }
 
-  Rectf(float x1, float y1, float x2, float y2) :
-    m_p1(x1, y1), m_size(x2 - x1, y2 - y1), m_angle(0.f)
+  Rectf(float x1, float y1, float x2, float y2, float angle = 0.f) :
+    m_p1(x1, y1), m_size(x2 - x1, y2 - y1), m_angle(angle)
   {
     assert(m_size.width >= 0 &&
            m_size.height >= 0);
   }
 
-  Rectf(const Vector& p1, const Sizef& size) :
+  Rectf(const Vector& p1, const Sizef& size, float angle = 0.f) :
     m_p1(p1),
     m_size(size),
-    m_angle(0.f)
+    m_angle(angle)
   {
   }
 
-  Rectf(const SDL_FRect& rect) :
-    m_p1(rect.x, rect.y), m_size(rect.w, rect.h), m_angle(0.f)
+  Rectf(const SDL_FRect& rect, float angle = 0.f) :
+    m_p1(rect.x, rect.y), m_size(rect.w, rect.h), m_angle(angle)
   {
   }
 
-  Rectf(const Rect& rect);
+  Rectf(const Rect& rect, float angle = 0.f);
 
   bool operator==(const Rectf& other) const
   {
@@ -93,8 +97,8 @@ public:
   float get_top() const { return m_p1.y; }
   float get_bottom() const { return m_p1.y + m_size.height; }
 
-  std::vector<Vector> get_corner_positions() const;
-  std::vector<Line> get_axis() const;
+  Corners get_corners() const;
+  Axis get_axis() const;
 
   float get_width() const { return m_size.width; }
   float get_height() const { return m_size.height; }
@@ -130,9 +134,7 @@ public:
   void move(const Vector& v) { m_p1 += v; }
   Rectf moved(const Vector& v) const { return Rectf(m_p1 + v, m_size); }
 
-  bool contains(const Vector& v) const {
-    return v.x >= m_p1.x && v.y >= m_p1.y && v.x < get_right() && v.y < get_bottom();
-  }
+  bool contains(const Vector& v) const;
 
   // FIXME: This is overlaps(), not contains()!
   bool contains(const Rectf& other) const;
@@ -157,10 +159,9 @@ public:
     if (m_size.width + border * 2 < 0.f || m_size.height + border * 2 < 0.f)
       return *this;
 
-    Rectf result(m_p1.x - border, m_p1.y - border,
-                 get_right() + border, get_bottom() + border);
-    result.set_rotation(m_angle);
-    return result;
+    return Rectf(m_p1.x - border, m_p1.y - border,
+                 get_right() + border, get_bottom() + border,
+                 m_angle);
   }
 
   // leave these two public to save the headaches of set/get functions for such

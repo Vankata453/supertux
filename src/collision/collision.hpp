@@ -19,18 +19,16 @@
 
 #include <limits>
 #include <algorithm>
-#include <vector>
 
 #include "collision/collision_hit.hpp"
 #include "math/fwd.hpp"
-#include "math/line.hpp"
 
 class Rectf;
 class AATriangle;
 
 namespace collision {
 
-class Constraints
+class Constraints final
 {
 public:
   Constraints() :

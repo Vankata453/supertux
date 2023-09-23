@@ -21,18 +21,18 @@
 #include "math/rect.hpp"
 #include "supertux/constants.hpp"
 
-Rectf::Rectf(const Rect& rect) :
+Rectf::Rectf(const Rect& rect, float angle) :
   m_p1(static_cast<float>(rect.left),
        static_cast<float>(rect.top)),
   m_size(static_cast<float>(rect.get_width()),
          static_cast<float>(rect.get_height())),
-  m_angle(0.f)
+  m_angle(angle)
 {
 }
 
 
-std::vector<Vector>
-Rectf::get_corner_positions() const
+Rectf::Corners
+Rectf::get_corners() const
 {
   std::vector<Vector> corner_positions = {
     m_p1,
@@ -56,7 +56,7 @@ Rectf::get_corner_positions() const
   return corner_positions;
 }
 
-std::vector<Line>
+Rectf::Axis
 Rectf::get_axis() const
 {
   Vector ox(1.f, 0.f);
@@ -88,29 +88,27 @@ Rectf::is_square() const
 }
 
 
-static bool projections_overlap(const Rectf& r1, const Rectf& r2)
+static bool projections_overlap(const Rectf::Corners& corners1, const Rectf& r2)
 {
   /** Check adapted from: https://stackoverflow.com/a/62028170 */
 
-  /** NOTE: To perform a valid collision check, make sure this function
-            is ran twice, the rectangle arguments being swapped the second time.
+  /** NOTE: To perform a valid collision check for rectangles, make sure this function is ran twice,
+            the corners of the first/second rectangle, and the second/first rectangle being provided as arguments.
             The 2 projections of each rectangle should overlap the respective other rectangle
             for collision to occur. */
 
   const auto axis2 = r2.get_axis();
-  const auto corners1 = r1.get_corner_positions();
 
-  for (size_t i = 0; i < axis2.size(); i++)
+  for (int i = 0; i < 2; i++)
   {
-    const Line& line = axis2.at(i);
+    const Line& line = (i == 0 ? axis2.first : axis2.second);
 
     float min_distance = 0.f;
     float max_distance = 0.f;
 
     for (const Vector& corner : corners1)
     {
-      const Vector projected = line.project(corner);
-      const Vector corner_projection = projected - r2.get_middle();
+      const Vector corner_projection = line.project(corner) - r2.get_middle();
       const bool sign = (corner_projection.x * line.get_direction().x) + (corner_projection.y * line.get_direction().y) > 0;
       const float distance = math::magnitude(corner_projection) * (sign ? 1.f : -1.f);
 
@@ -124,7 +122,7 @@ static bool projections_overlap(const Rectf& r1, const Rectf& r2)
 
     /**
       MAIN OVERLAP CHECK
- 
+
       1D check to ensure the projection overlaps the rectangle.
       If it doesn't, the rectangles do not overlap.
     */
@@ -134,28 +132,31 @@ static bool projections_overlap(const Rectf& r1, const Rectf& r2)
       return false;
   }
 
-  // Since the main overlap check has passed for both the X and Y projections,
-  // half of a collision check is successful.
-  // To do a full collision check, this function should be called once again
-  // with both rectangles swapped as arguments.
   return true;
+}
+
+bool
+Rectf::contains(const Vector& v) const
+{
+  if (is_rotated()) // Rotated rectangle overlap
+    return projections_overlap({ v }, *this);
+
+  // Regular rectangle overlap
+  return v.x >= m_p1.x && v.y >= m_p1.y && v.x < get_right() && v.y < get_bottom();
 }
 
 bool
 Rectf::contains(const Rectf& other) const
 {
-  if (!is_rotated() && !other.is_rotated()) // Regular rectangle overlap
-  {
-    if (m_p1.x >= other.get_right() || other.get_left() >= get_right())
-      return false;
-    if (m_p1.y >= other.get_bottom() || other.get_top() >= get_bottom())
-      return false;
-  }
-  else // Rotated rectangle overlap
-  {
-    return projections_overlap(*this, other) &&
-           projections_overlap(other, *this);
-  }
+  if (is_rotated() || other.is_rotated()) // Rotated rectangle overlap
+    return projections_overlap(get_corners(),       other) &&
+           projections_overlap(other.get_corners(), *this);
+
+  // Regular rectangle overlap
+  if (m_p1.x >= other.get_right() || other.get_left() >= get_right())
+    return false;
+  if (m_p1.y >= other.get_bottom() || other.get_top() >= get_bottom())
+    return false;
 
   return true;
 }

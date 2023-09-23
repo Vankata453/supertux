@@ -98,24 +98,6 @@ CollisionSystem::draw(DrawingContext& context)
     }
     const Rectf& rect = object->get_bbox();
     context.color().draw_filled_rect(rect, color, LAYER_FOREGROUND1 + 10);
-/**
-    const auto axis = collision::get_axis(rect);
-    for (const Line& line : axis)
-    {
-      context.color().draw_line(line.get_origin() - line.get_direction() * Vector(100.f, 100.f),
-                                line.get_origin() + line.get_direction() * Vector(100.f, 100.f), Color::RED, LAYER_FOREGROUND1 + 11);
-
-      for (auto& object : m_objects)
-      {
-        const auto corners = object->get_bbox().get_corner_positions();
-        for (const Vector& corner : corners)
-        {
-          context.color().draw_line(collision::project(line, corner),
-                                    line.get_origin(), Color::GREEN, LAYER_FOREGROUND1 + 12);
-        }
-      }
-    }
-* */
   }
 }
 

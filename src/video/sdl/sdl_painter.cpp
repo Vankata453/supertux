@@ -418,18 +418,18 @@ SDLPainter::draw_filled_rect(const FillRectRequest& request)
       }
       else
       {
-        auto corner_positions = request.rect.get_corner_positions();
+        auto corners = request.rect.get_corners();
 
         /** Draw the rotated rectangle, using 2 triangles. */
         TriangleRequest triangle;
         triangle.color = request.color;
 
-        triangle.pos1 = std::move(corner_positions[0]);
-        triangle.pos2 = std::move(corner_positions[1]);
-        triangle.pos3 = std::move(corner_positions[2]);
+        triangle.pos1 = std::move(corners[0]);
+        triangle.pos2 = std::move(corners[1]);
+        triangle.pos3 = std::move(corners[2]);
         draw_triangle(triangle);
 
-        triangle.pos1 = std::move(corner_positions[3]);
+        triangle.pos1 = std::move(corners[3]);
         draw_triangle(triangle);
       }
     }
