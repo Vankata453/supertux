@@ -118,9 +118,9 @@ const float DOWN_SLIDE_ACCEL = 1000.f; /** < Acceleration for sliding DOWN slope
 const float UP_SLIDE_ACCEL = 1100.f; /**< Acceleration for sliding UP slopes */
 
 /* Tux's collision rectangle */
-const float TUX_WIDTH = 31.8f;
-const float RUNNING_TUX_WIDTH = 34;
-const float SMALL_TUX_HEIGHT = 30.8f;
+const float TUX_WIDTH = 100.f;
+const float RUNNING_TUX_WIDTH = 100.f;
+const float SMALL_TUX_HEIGHT = 100.f;
 const float BIG_TUX_HEIGHT = 62.8f;
 const float DUCKED_TUX_HEIGHT = 31.8f;
 
