@@ -217,12 +217,17 @@ bool vector_y_sorter(const Vector& lhs, const Vector& rhs)
   return lhs.x < rhs.x;
 }
 
-struct NearestCornerPoint
+class NearestCornerPoint
 {
+public:
   NearestCornerPoint(const Vector& c, const float& p) :
     corner(c), point(p)
   {}
 
+  float get_distance_x() const { return fabsf(point - corner.x); }
+  float get_distance_y() const { return fabsf(point - corner.y); }
+
+public:
   const Vector& corner;
   float point;
 };
@@ -233,7 +238,8 @@ enum class NearestCornerHorizontalCompareType
   RIGHT
 };
 NearestCornerPoint get_nearest_corner_point_x(const Vector& a, const Vector& b,
-                                              const std::vector<Vector>& points, NearestCornerHorizontalCompareType compare_type)
+                                              const std::vector<Vector>& points,
+                                              NearestCornerHorizontalCompareType compare_type)
 {
   const bool reversed = (compare_type == NearestCornerHorizontalCompareType::RIGHT);
 
@@ -246,7 +252,6 @@ NearestCornerPoint get_nearest_corner_point_x(const Vector& a, const Vector& b,
       return { points[i], result };
   }
 
-  assert(false);
   return { points[0], math::get_nearest_point_x(a, b, points[0]) };
 }
 
@@ -256,7 +261,8 @@ enum class NearestCornerVerticalCompareType
   BOTTOM
 };
 NearestCornerPoint get_nearest_corner_point_y(const Vector& a, const Vector& b,
-                                              const std::vector<Vector>& points, NearestCornerVerticalCompareType compare_type)
+                                              const std::vector<Vector>& points,
+                                              NearestCornerVerticalCompareType compare_type)
 {
   const bool reversed = (compare_type == NearestCornerVerticalCompareType::BOTTOM);
 
@@ -276,7 +282,6 @@ NearestCornerPoint get_nearest_corner_point_y(const Vector& a, const Vector& b,
     }
   }
 
-  assert(false);
   return { points[0], math::get_nearest_point_y(a, b, points[0]) };
 }
 
@@ -319,14 +324,14 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
 
     NONE: Not rotated, or rotated at 90 degrees.
 
-    RHOMBUS:      / \          FACING_LEFT:      __________     FACING_RIGHT:     ___________
-                /     \                         /         /                       \          \
-              /         \                      /         /                         \          \
-            /             \                   /         /                           \          \
-            \             /                  /         /                             \          \
-              \         /                   /         /                               \          \
-                \     /                    /         /                                 \          \
-                  \ /                     /_________/                                   \__________\
+    RHOMBUS:      / \          FACING_LEFT:     ___________         FACING_RIGHT:      __________
+                /     \                         \          \                          /         /
+              /         \                        \          \                        /         /
+            /             \                       \          \                      /         /
+            \             /                        \          \                    /         /
+              \         /                           \          \                  /         /
+                \     /                              \          \                /         /
+                  \ /                                 \__________\              /_________/
   */
   RotatedRectangleType type2 = RotatedRectangleType::NONE;
 
@@ -344,12 +349,11 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
                          (rotation > 90.f && rotation < 135.f))) ||
         (size.width < size.height && rotation <= 90.f) ||
         (size.width > size.height && rotation > 90.f))
-      type2 = RotatedRectangleType::FACING_LEFT;
-    else
       type2 = RotatedRectangleType::FACING_RIGHT;
+    else
+      type2 = RotatedRectangleType::FACING_LEFT;
   }
 
-  const bool rotated1 = (has_rotation1 && fmodf(r1.get_rotation(), 180.f) != 90.f);
   const bool rotated2 = (type2 != RotatedRectangleType::NONE);
 
   /**
@@ -359,57 +363,21 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
   const Vector& topmost_corner = (type2 == RotatedRectangleType::RHOMBUS ? corners2_y[2] : corners2_y[1]);
   const Vector& bottommost_corner = (type2 == RotatedRectangleType::RHOMBUS ? corners2_y[1] : corners2_y[2]);
 
-  if (type2 == RotatedRectangleType::RHOMBUS ||
-      type2 == RotatedRectangleType::FACING_LEFT) /** RHOMBUS, FACING_LEFT */
-  {
-    if (middle1.x <= corners2_y[0].x && middle1.y < corners2_x[0].y) /** Left */
-    {
-      const auto point_y = get_nearest_corner_point_y(corners2_y[0], bottommost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
-      constraints->constrain_bottom(point_y.point);
-
-      constraints->movement.y = point_y.corner.y - point_y.point;
-      constraints->hit.bottom = true;
-
-      if (!rotated1)
-      {
-        const auto point_x = get_nearest_corner_point_x(bottommost_corner, corners2_y[0], corners1_x, NearestCornerHorizontalCompareType::RIGHT);
-        constraints->constrain_right(point_x.point);
-        constraints->hit.right = true;
-      }
-      return;
-    }
-
-    if (middle1.x >= corners2_y[3].x && middle1.y > corners2_x[3].y) /** Right */
-    {
-      const auto point_y = get_nearest_corner_point_y(topmost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
-      constraints->constrain_top(point_y.point + SHIFT_DELTA);
-
-      constraints->movement.y = point_y.corner.y - point_y.point + SHIFT_DELTA;
-      constraints->hit.top = true;
-
-      if (!rotated1)
-      {
-        const auto point_x = get_nearest_corner_point_x(topmost_corner, corners2_y[3], corners1_x, NearestCornerHorizontalCompareType::LEFT);
-        constraints->constrain_left(point_x.point);
-        constraints->hit.left = true;
-      }
-      return;
-    }
-  }
-  else /** NONE, FACING_RIGHT */
+  if (type2 == RotatedRectangleType::NONE ||
+      type2 == RotatedRectangleType::FACING_LEFT) /** NONE, FACING_LEFT */
   {
     if (middle1.x <= corners2_y[3].x && middle1.y > (rotated2 ? corners2_x[0].y : corners2_x[1].y)) /** Left */
     {
       const auto point_y = get_nearest_corner_point_y(topmost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
-      constraints->constrain_top(point_y.point + SHIFT_DELTA);
+      constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y() + SHIFT_DELTA);
 
-      constraints->movement.y = point_y.corner.y - point_y.point + SHIFT_DELTA;
+      constraints->movement.y -= point_y.get_distance_y() - SHIFT_DELTA;
       constraints->hit.top = true;
 
-      if (!rotated1 && rotated2)
+      if (!has_rotation1 && rotated2)
       {
         const auto point_x = get_nearest_corner_point_x(topmost_corner, corners2_y[3], corners1_x, NearestCornerHorizontalCompareType::RIGHT);
-        constraints->constrain_right(point_x.point - SHIFT_DELTA);
+        constraints->constrain_right(corners1_x[3].x - point_x.get_distance_x() - SHIFT_DELTA);
         constraints->hit.right = true;
       }
       return;
@@ -420,15 +388,51 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
       const Vector& line_start_corner = (rotated2 ? bottommost_corner : topmost_corner);
 
       const auto point_y = get_nearest_corner_point_y(corners2_y[0], line_start_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
-      constraints->constrain_bottom(point_y.point);
+      constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
 
-      constraints->movement.y = point_y.corner.y - point_y.point;
+      constraints->movement.y += point_y.get_distance_y();
       constraints->hit.bottom = true;
 
-      if (!rotated1 && rotated2)
+      if (!has_rotation1 && rotated2)
       {
         const auto point_x = get_nearest_corner_point_x(line_start_corner, corners2_y[0], corners1_x, NearestCornerHorizontalCompareType::LEFT);
-        constraints->constrain_left(point_x.point + SHIFT_DELTA);
+        constraints->constrain_left(corners1_x[0].x + point_x.get_distance_x() + SHIFT_DELTA);
+        constraints->hit.left = true;
+      }
+      return;
+    }
+  }
+  else /** RHOMBUS, FACING_RIGHT */
+  {
+    if (middle1.x <= corners2_y[0].x && middle1.y < corners2_x[0].y) /** Left */
+    {
+      const auto point_y = get_nearest_corner_point_y(corners2_y[0], bottommost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
+      constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
+
+      constraints->movement.y += point_y.get_distance_y();
+      constraints->hit.bottom = true;
+
+      if (!has_rotation1)
+      {
+        const auto point_x = get_nearest_corner_point_x(bottommost_corner, corners2_y[0], corners1_x, NearestCornerHorizontalCompareType::RIGHT);
+        constraints->constrain_right(corners1_x[3].x - point_x.get_distance_x());
+        constraints->hit.right = true;
+      }
+      return;
+    }
+
+    if (middle1.x >= corners2_y[3].x && middle1.y > corners2_x[3].y) /** Right */
+    {
+      const auto point_y = get_nearest_corner_point_y(topmost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
+      constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y() + SHIFT_DELTA);
+
+      constraints->movement.y -= point_y.get_distance_y() - SHIFT_DELTA;
+      constraints->hit.top = true;
+
+      if (!has_rotation1)
+      {
+        const auto point_x = get_nearest_corner_point_x(topmost_corner, corners2_y[3], corners1_x, NearestCornerHorizontalCompareType::LEFT);
+        constraints->constrain_left(corners1_x[0].x + point_x.get_distance_x());
         constraints->hit.left = true;
       }
       return;
@@ -442,36 +446,35 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
   const Vector& leftmost_corner = corners2_x[0];
   const Vector& rightmost_corner = corners2_x[3];
 
-  if (type2 == RotatedRectangleType::RHOMBUS ||
-      type2 == RotatedRectangleType::FACING_LEFT) /** RHOMBUS, FACING_LEFT */
+  if (type2 == RotatedRectangleType::NONE) /** NONE: Top and bottom are placed on the left and right, respectfully. */
   {
-    if (middle1.y <= rightmost_corner.y) /** Top */
+    if (middle1.x < corners2_y[0].x && middle1.y <= corners2_y[2].y) /** Top (Left) */
     {
-      const auto point_y = get_nearest_corner_point_y(corners2_y[0], rightmost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
-      constraints->constrain_bottom(point_y.point);
+      const auto point_x = get_nearest_corner_point_x(corners2_y[0], corners2_y[2], corners1_x, NearestCornerHorizontalCompareType::RIGHT);
+      constraints->constrain_right(corners1_x[3].x - point_x.get_distance_x());
 
-      constraints->movement.y = point_y.corner.y - point_y.point;
-      constraints->hit.bottom = true;
+      constraints->movement.x += point_x.get_distance_x();
+      constraints->hit.right = true;
       return;
     }
 
-    if (middle1.y >= leftmost_corner.y) /** Bottom */
+    if (middle1.y >= corners2_y[1].y) /** Bottom (Right) */
     {
-      const auto point_y = get_nearest_corner_point_y(leftmost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
-      constraints->constrain_top(point_y.point + SHIFT_DELTA);
+      const auto point_x = get_nearest_corner_point_x(corners2_y[1], corners2_y[3], corners1_x, NearestCornerHorizontalCompareType::LEFT);
+      constraints->constrain_left(corners1_x[0].x + point_x.get_distance_x());
 
-      constraints->movement.y = point_y.corner.y - point_y.point + SHIFT_DELTA;
-      constraints->hit.top = true;
+      constraints->movement.x -= point_x.get_distance_x();
+      constraints->hit.left = true;
     }
   }
-  else if (type2 == RotatedRectangleType::FACING_RIGHT) /** FACING_RIGHT */
+  else if (type2 == RotatedRectangleType::FACING_LEFT) /** FACING_LEFT */
   {
     if (middle1.y <= leftmost_corner.y) /** Top */
     {
       const auto point_y = get_nearest_corner_point_y(corners2_y[0], leftmost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
-      constraints->constrain_bottom(point_y.point);
+      constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
 
-      constraints->movement.y = point_y.corner.y - point_y.point;
+      constraints->movement.y += point_y.get_distance_y();
       constraints->hit.bottom = true;
       return;
     }
@@ -479,31 +482,31 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
     if (middle1.y >= rightmost_corner.y) /** Bottom */
     {
       const auto point_y = get_nearest_corner_point_y(rightmost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
-      constraints->constrain_top(point_y.point + SHIFT_DELTA);
+      constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y() + SHIFT_DELTA);
 
-      constraints->movement.y = point_y.corner.y - point_y.point + SHIFT_DELTA;
+      constraints->movement.y -= point_y.get_distance_y() + SHIFT_DELTA;
       constraints->hit.top = true;
     }
   }
-  else /** NONE: Top and bottom are placed on the left and right, respectfully. */
+  else /** RHOMBUS, FACING_RIGHT */
   {
-    if (middle1.x < corners2_y[0].x && middle1.y <= corners2_y[2].y) /** Top */
+    if (middle1.y <= rightmost_corner.y) /** Top */
     {
-      const auto point_x = get_nearest_corner_point_x(corners2_y[0], corners2_y[2], corners1_x, NearestCornerHorizontalCompareType::RIGHT);
-      constraints->constrain_right(point_x.point);
+      const auto point_y = get_nearest_corner_point_y(corners2_y[0], rightmost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
+      constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
 
-      constraints->movement.x = point_x.corner.x - point_x.point;
-      constraints->hit.right = true;
+      constraints->movement.y += point_y.get_distance_y();
+      constraints->hit.bottom = true;
       return;
     }
 
-    if (middle1.y >= corners2_y[1].y) /** Bottom */
+    if (middle1.y >= leftmost_corner.y) /** Bottom */
     {
-      const auto point_x = get_nearest_corner_point_x(corners2_y[1], corners2_y[3], corners1_x, NearestCornerHorizontalCompareType::LEFT);
-      constraints->constrain_left(point_x.point);
+      const auto point_y = get_nearest_corner_point_y(leftmost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
+      constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y() + SHIFT_DELTA);
 
-      constraints->movement.x = point_x.corner.x - point_x.point;
-      constraints->hit.left = true;
+      constraints->movement.y -= point_y.get_distance_y();
+      constraints->hit.top = true;
     }
   }
 }
