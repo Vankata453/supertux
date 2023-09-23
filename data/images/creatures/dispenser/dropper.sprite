@@ -1,7 +1,7 @@
 (supertux-sprite
  (action
   (name "dropper")
-  (hitbox 2 3 64 64 45)
+  (hitbox 2 3 64 32)
   (images "dropper.png"))
 
  (action

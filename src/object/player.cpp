@@ -243,7 +243,6 @@ Player::Player(PlayerStatus& player_status, const std::string& name_, int player
   SoundManager::current()->preload("sounds/splash.wav");
   SoundManager::current()->preload("sounds/grow.wav");
   m_col.set_size(TUX_WIDTH, is_big() ? BIG_TUX_HEIGHT : SMALL_TUX_HEIGHT);
-  //m_col.set_rotation(45.f);
 
   m_sprite->set_angle(0.0f);
   //m_santahatsprite->set_angle(0.0f);
