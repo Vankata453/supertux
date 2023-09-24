@@ -361,8 +361,8 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
   if (type2 == RotatedRectangleType::NONE ||
       type2 == RotatedRectangleType::FACING_LEFT) /** NONE, FACING_LEFT */
   {
-    const Vector& topmost_corner = (rotated2 ? corners2_x[0] : corners2_x[1]);
-    const Vector& bottommost_corner = (rotated2 ? corners2_x[3] : corners2_x[2]);
+    const Vector& topmost_corner = (rotated2 ? corners2_x[0] : corners2_y[1]);
+    const Vector& bottommost_corner = (rotated2 ? corners2_x[3] : corners2_y[2]);
 
     if (middle1.x <= corners2_y[3].x && middle1.y > topmost_corner.y) /** Left */
     {
