@@ -295,8 +295,8 @@ GLPainter::draw_filled_rect(const FillRectRequest& request)
     const float vertices[] = {
       corners[0].x, corners[0].y,
       corners[1].x, corners[1].y,
-      corners[2].x, corners[2].y,
-      corners[3].x, corners[3].y
+      corners[3].x, corners[3].y,
+      corners[2].x, corners[2].y
     };
 
     context.set_positions(vertices, sizeof(vertices));
