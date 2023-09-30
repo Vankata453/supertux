@@ -104,7 +104,8 @@ CollisionSystem::draw(DrawingContext& context)
 namespace {
 
 collision::Constraints check_collisions(const Vector& obj_movement, const Rectf& moving_obj_rect, const Rectf& other_obj_rect,
-                                        CollisionObject* moving_object = nullptr, CollisionObject* other_object = nullptr)
+                                        CollisionObject* moving_object = nullptr, CollisionObject* other_object = nullptr,
+                                        bool horizontal = false)
 {
   collision::Constraints constraints;
 
@@ -130,7 +131,8 @@ collision::Constraints check_collisions(const Vector& obj_movement, const Rectf&
         other_object->collision(*moving_object, dummy) == ABORT_MOVE)
       return constraints;
 
-    collision::set_rotated_rectangle_constraints(&constraints, moving_obj_rect, grown_other_obj_rect);
+    collision::set_rotated_rectangle_constraints(&constraints, moving_obj_rect, grown_other_obj_rect,
+                                                 obj_movement, horizontal);
     return constraints;
   }
 
@@ -142,7 +144,7 @@ collision::Constraints check_collisions(const Vector& obj_movement, const Rectf&
 
   bool shiftout = false;
 
-  if (fabsf(obj_movement.y) > fabsf(obj_movement.x)) {
+  if (fabsf(obj_movement.y) > (horizontal ? 0.f : fabsf(obj_movement.x))) {
     if (ileft < SHIFT_DELTA) {
       constraints.constrain_right(grown_other_obj_rect.get_left());
       shiftout = true;
@@ -304,14 +306,18 @@ CollisionSystem::collision_tile_attributes(const Rectf& dest, const Vector& mov)
   return result;
 }
 
-/** Fills the CollisionHit and Normal vector between two intersecting rectangles. */
-static void get_hit_normal(const Rectf& r1, const Rectf& r2, CollisionHit& hit,
-                           Vector& normal)
+/** Fills the CollisionHit and Normal vector between two intersecting objects. */
+void
+CollisionSystem::get_hit_normal(CollisionObject* object1, CollisionObject* object2,
+                                CollisionHit& hit, Vector& normal) const
 {
+  const Rectf& r1 = object1->m_dest;
+  const Rectf& r2 = object2->m_dest;
+
   if (r1.is_rotated() || r2.is_rotated())
   {
     collision::Constraints constraints;
-    collision::set_rotated_rectangle_constraints(&constraints, r1, r2);
+    collision::set_rotated_rectangle_constraints(&constraints, r1, r2, object1->m_movement);
 
     hit = std::move(constraints.hit);
     normal = std::move(constraints.movement);
@@ -356,7 +362,7 @@ CollisionSystem::collision_object(CollisionObject* object1, CollisionObject* obj
   CollisionHit hit;
   if (intersects(object1->m_dest, object2->m_dest)) {
     Vector normal(0.0f, 0.0f);
-    get_hit_normal(r1, r2, hit, normal);
+    get_hit_normal(object1, object2, hit, normal);
 
     if (!object1->collides(*object2, hit))
       return;
@@ -388,9 +394,9 @@ CollisionSystem::collision_object(CollisionObject* object1, CollisionObject* obj
 void
 CollisionSystem::collision_static(collision::Constraints* constraints,
                                   const Vector& movement, const Rectf& dest,
-                                  CollisionObject& object)
+                                  CollisionObject& object, bool horizontal)
 {
-  collision_tilemap(constraints, movement, dest, object);
+  collision_tilemap(constraints, horizontal ? Vector(0, movement.y) : movement, dest, object);
 
   // Collision with other (static) objects.
   for (auto* static_object : m_objects)
@@ -403,7 +409,7 @@ CollisionSystem::collision_static(collision::Constraints* constraints,
         static_object != &object)
     {
       collision::Constraints new_constraints = check_collisions(
-        movement, dest, static_object->m_dest, &object, static_object);
+        movement, dest, static_object->m_dest, &object, static_object, horizontal);
 
       if (new_constraints.hit.bottom)
         static_object->collision_moving_object_bottom(object);
@@ -428,7 +434,7 @@ CollisionSystem::collision_static_constrains(CollisionObject& object)
   Rectf& dest = object.m_dest;
 
   for (int i = 0; i < 2; ++i) {
-    collision_static(&constraints, Vector(0, movement.y), dest, object);
+    collision_static(&constraints, movement, dest, object, true);
     if (!constraints.has_constraints())
       break;
 
@@ -598,8 +604,7 @@ CollisionSystem::update()
       if (intersects(object->m_dest, object_2->m_dest)) {
         Vector normal(0.0f, 0.0f);
         CollisionHit hit;
-        get_hit_normal(object->m_dest, object_2->m_dest,
-                       hit, normal);
+        get_hit_normal(object, object_2, hit, normal);
         if (!object->collides(*object_2, hit))
           continue;
         if (!object_2->collides(*object, hit))

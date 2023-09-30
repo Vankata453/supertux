@@ -71,7 +71,7 @@ private:
       no collisions) */
   void collision_static(collision::Constraints* constraints,
                         const Vector& movement, const Rectf& dest,
-                        CollisionObject& object);
+                        CollisionObject& object, bool horizontal = false);
 
   void collision_tilemap(collision::Constraints* constraints,
                          const Vector& movement, const Rectf& dest,
@@ -82,6 +82,9 @@ private:
   void collision_object(CollisionObject* object1, CollisionObject* object2) const;
 
   void collision_static_constrains(CollisionObject& object);
+
+  void get_hit_normal(CollisionObject* object1, CollisionObject* object2,
+                      CollisionHit& hit, Vector& normal) const;
 
 private:
   Sector& m_sector;

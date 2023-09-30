@@ -16,6 +16,8 @@
 
 #include "math/line.hpp"
 
+#include <glm/glm.hpp>
+
 Vector
 Line::project(const Vector& dest) const
 {
@@ -27,6 +29,12 @@ Line::project(const Vector& dest) const
 
 
 namespace math {
+
+Vector get_line_center(const Vector& a, const Vector& b)
+{
+  return glm::distance(a, b) / 2 + a;
+}
+
 
 float get_nearest_point_x(const Vector& a, const Vector& b,
                           const Vector& p, bool allow_outside_line)

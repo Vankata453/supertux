@@ -52,6 +52,8 @@ private:
 
 namespace math {
 
+Vector get_line_center(const Vector& a, const Vector& b);
+
 float get_nearest_point_x(const Vector& a, const Vector& b,
                           const Vector& p, bool allow_outside_line = false);
 float get_nearest_point_y(const Vector& a, const Vector& b,

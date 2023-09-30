@@ -24,11 +24,13 @@
 #include <glm/ext.hpp>
 #include <glm/gtx/io.hpp>
 
-#include "math/util.hpp"
-
 using Vector = glm::vec2;
 
 namespace math {
+
+bool x_y_sorter(const Vector& lhs, const Vector& rhs);
+bool y_x_sorter(const Vector& lhs, const Vector& rhs);
+
 
 inline Vector vec2_from_polar(float length, float angle)
 {
@@ -50,14 +52,7 @@ inline float magnitude(const Vector& v)
   return std::sqrt(v.x * v.x + v.y * v.y);
 }
 
-inline void rotate(Vector& v, float angle)
-{
-  const float theta = angle * PI / 180.f;
-  const Vector origin = v;
-
-  v.x = origin.x * std::cos(theta) - origin.y * std::sin(theta);
-  v.y = origin.x * std::sin(theta) + origin.y * std::cos(theta);
-}
+void rotate(Vector& v, float angle);
 
 } // namespace math
 
