@@ -454,7 +454,7 @@ GameSession::setup()
     ScreenManager::current()->push_screen(std::unique_ptr<Screen>(new LevelIntro(level.get(), best_level_statistics, m_savegame.get_player_status())));
   } else if (m_start_run_timer && g_run_timer < 0.f) {
     g_run_timer = 0.f;
-    g_run_timer_stopped = false;
+    g_run_timer_captured_time = -1.f;
   }
   ScreenManager::current()->set_screen_fade(std::unique_ptr<ScreenFade>(new FadeIn(1)));
   end_seq_started = false;

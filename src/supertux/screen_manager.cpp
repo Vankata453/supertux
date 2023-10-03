@@ -159,14 +159,11 @@ ScreenManager::draw_player_pos(DrawingContext& context)
 }
 
 void
-ScreenManager::draw_run_timer(DrawingContext& context)
+ScreenManager::draw_run_timer(DrawingContext& context, const float& timer, float offset_x)
 {
-  if (g_run_timer < 0.f)
-    return;
-
   /** Convert seconds to a string in the format of "hh:mm:ss.milliseconds".
       See https://stackoverflow.com/a/58696275. */
-  int ms = static_cast<int>(g_run_timer * 1000.f);
+  int ms = static_cast<int>(timer * 1000.f);
 
   int h = ms / (1000 * 60 * 60);
   ms -= h * (1000 * 60 * 60);
@@ -182,7 +179,7 @@ ScreenManager::draw_run_timer(DrawingContext& context)
       << ':' << std::setw(2) << s << '.' << std::setw(3) << ms;
 
   context.draw_text(Resources::normal_font, out.str(),
-                    Vector(SCREEN_WIDTH / 2, 20.f), ALIGN_CENTER, LAYER_HUD);
+                    Vector(SCREEN_WIDTH / 2 + offset_x, 20.f), ALIGN_CENTER, LAYER_HUD);
 }
 
 void
@@ -213,7 +210,18 @@ ScreenManager::draw(DrawingContext& context)
   }
 
   // Draw RTA speedrun timer, if available.
-  draw_run_timer(context);
+  if (g_run_timer >= 0.f)
+  {
+    if (g_run_timer_captured_time >= 0)
+    {
+      draw_run_timer(context, g_run_timer_captured_time, -100.f);
+      draw_run_timer(context, g_run_timer, 100.f);
+    }
+    else
+    {
+      draw_run_timer(context, g_run_timer);
+    }
+  }
 
   // if a screenshot was requested, pass request on to drawing_context
   if (m_screenshot_requested)
@@ -244,9 +252,6 @@ ScreenManager::update_gamelogic(float elapsed_time)
   scripting::Scripting::current()->update_debugger();
   scripting::TimeScheduler::instance->update(game_time);
 
-  if (g_run_timer >= 0.f && !g_run_timer_stopped)
-    g_run_timer += elapsed_time;
-
   if (!m_screen_stack.empty())
   {
     m_screen_stack.back()->update(elapsed_time);
@@ -270,9 +275,6 @@ ScreenManager::process_events()
   while (SDL_PollEvent(&event))
   {
     InputManager::current()->process_event(event);
-
-    if (InputManager::current()->get_controller()->pressed(Controller::STOP_RUN_TIMER))
-      g_run_timer_stopped = true; // Stop run timer
 
     m_menu_manager->event(event);
 
@@ -335,6 +337,9 @@ ScreenManager::process_events()
         break;
     }
   }
+
+  if (InputManager::current()->get_controller()->pressed(Controller::CAPTURE_RUN_TIMER))
+    g_run_timer_captured_time = (g_run_timer_captured_time < 0.f ? g_run_timer : -1.f); // Capture/uncapture run timer
 }
 
 bool
@@ -445,6 +450,8 @@ ScreenManager::run(DrawingContext &context)
       elapsed_ticks -= ticks_per_frame;
       float timestep = 1.0 / LOGICAL_FPS;
       real_time += timestep;
+      if (g_run_timer >= 0.f)
+        g_run_timer += timestep; // Update run timer
       timestep *= m_speed;
       game_time += timestep;
 

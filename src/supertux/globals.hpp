@@ -36,11 +36,11 @@ extern std::unique_ptr<Config> g_config;
 extern float game_time;
 extern float real_time;
 
-/** Real time (real_time) at the time of the start and end of an RTA speedrun.
+/** Real time (real_time) counter for an RTA speedrun.
     Started when the first level of a worldmap is entered and the black screen has been exited.
-    Ended manually by the user, using the respective control. */
+    Captured/uncaptured manually by the user, using the respective control. */
 extern float g_run_timer;
-extern bool g_run_timer_stopped;
+extern float g_run_timer_captured_time;
 
 extern float g_game_speed;
 

@@ -38,7 +38,7 @@ KeyboardMenu::KeyboardMenu(InputManager& input_manager) :
   add_controlfield(Controller::PEEK_RIGHT, _("Peek Right"));
   add_controlfield(Controller::PEEK_UP,    _("Peek Up"));
   add_controlfield(Controller::PEEK_DOWN,  _("Peek Down"));
-  add_controlfield(Controller::STOP_RUN_TIMER,  _("Stop Run Timer"));
+  add_controlfield(Controller::CAPTURE_RUN_TIMER,  _("Capture Run Timer"));
   if (g_config->developer_mode) {
     add_controlfield(Controller::CONSOLE, _("Console"));
   }
@@ -138,8 +138,8 @@ KeyboardMenu::refresh()
   if (micf) micf->change_input(get_key_name(kbd_cfg.reversemap_key(Controller::PEEK_UP)));
   micf = dynamic_cast<ItemControlField*>(&get_item_by_id((int) Controller::PEEK_DOWN));
   if (micf) micf->change_input(get_key_name(kbd_cfg.reversemap_key(Controller::PEEK_DOWN)));
-  micf = dynamic_cast<ItemControlField*>(&get_item_by_id((int) Controller::STOP_RUN_TIMER));
-  if (micf) micf->change_input(get_key_name(kbd_cfg.reversemap_key(Controller::STOP_RUN_TIMER)));
+  micf = dynamic_cast<ItemControlField*>(&get_item_by_id((int) Controller::CAPTURE_RUN_TIMER));
+  if (micf) micf->change_input(get_key_name(kbd_cfg.reversemap_key(Controller::CAPTURE_RUN_TIMER)));
 
   if (g_config->developer_mode) {
     micf = dynamic_cast<ItemControlField*>(&get_item_by_id((int) Controller::CHEAT_MENU));

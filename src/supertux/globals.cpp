@@ -27,7 +27,7 @@ float game_time = 0;
 float real_time = 0;
 
 float g_run_timer = -1.f;
-bool g_run_timer_stopped = false;
+float g_run_timer_captured_time = -1.f;
 
 float g_game_speed = 1.0f;
 
