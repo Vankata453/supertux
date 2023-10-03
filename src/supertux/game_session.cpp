@@ -452,8 +452,9 @@ GameSession::setup()
     levelintro_shown = true;
     active = false;
     ScreenManager::current()->push_screen(std::unique_ptr<Screen>(new LevelIntro(level.get(), best_level_statistics, m_savegame.get_player_status())));
-  } else if (m_start_run_timer && g_run_start_time < 0.f) {
-    g_run_start_time = real_time;
+  } else if (m_start_run_timer && g_run_timer < 0.f) {
+    g_run_timer = 0.f;
+    g_run_timer_stopped = false;
   }
   ScreenManager::current()->set_screen_fade(std::unique_ptr<ScreenFade>(new FadeIn(1)));
   end_seq_started = false;

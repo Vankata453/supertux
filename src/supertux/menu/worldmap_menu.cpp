@@ -48,9 +48,8 @@ WorldmapMenu::menu_action(MenuItem* item)
       MenuManager::instance().clear_menu_stack();
       ScreenManager::current()->pop_screen();
 
-      // Reset RTA run timer variables.
-      g_run_start_time = -1.f;
-      g_run_end_time = -1.f;
+      // Reset RTA run timer.
+      g_run_timer = -1.f;
       break;
   }
 }

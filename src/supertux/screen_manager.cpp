@@ -161,12 +161,12 @@ ScreenManager::draw_player_pos(DrawingContext& context)
 void
 ScreenManager::draw_run_timer(DrawingContext& context)
 {
-  if (g_run_start_time < 0.f)
+  if (g_run_timer < 0.f)
     return;
 
   /** Convert seconds to a string in the format of "hh:mm:ss.milliseconds".
       See https://stackoverflow.com/a/58696275. */
-  int ms = static_cast<int>(((g_run_end_time < 0.f ? real_time : g_run_end_time) - g_run_start_time) * 1000.f);
+  int ms = static_cast<int>(g_run_timer * 1000.f);
 
   int h = ms / (1000 * 60 * 60);
   ms -= h * (1000 * 60 * 60);
@@ -244,6 +244,9 @@ ScreenManager::update_gamelogic(float elapsed_time)
   scripting::Scripting::current()->update_debugger();
   scripting::TimeScheduler::instance->update(game_time);
 
+  if (g_run_timer >= 0.f && !g_run_timer_stopped)
+    g_run_timer += elapsed_time;
+
   if (!m_screen_stack.empty())
   {
     m_screen_stack.back()->update(elapsed_time);
@@ -268,9 +271,8 @@ ScreenManager::process_events()
   {
     InputManager::current()->process_event(event);
 
-    if (InputManager::current()->get_controller()->pressed(Controller::STOP_RUN_TIMER)
-        && g_run_end_time < 0.f)
-      g_run_end_time = real_time; // Stop run timer
+    if (InputManager::current()->get_controller()->pressed(Controller::STOP_RUN_TIMER))
+      g_run_timer_stopped = true; // Stop run timer
 
     m_menu_manager->event(event);
 
