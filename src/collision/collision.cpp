@@ -332,11 +332,6 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
   }
 
   /**
-    Determine whether rectangle 1 is truly rotated (rotated and not at 90 degrees).
-  */
-  const bool rotated1 = (has_rotation1 && fmodf(r1.get_rotation(), 90.f) >= EPSILON);
-
-  /**
     DETERMINE CONSTRAINTS
 
     NOTE: Topmost/bottommost corner variables represent the topmost and bottommost corner
@@ -345,10 +340,21 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
           so they are determined from there.
   */
 
+  const Vector& topmost_corner = (type2 == RotatedRectangleType::NONE ? corners2_x[2] :
+                                  (type2 == RotatedRectangleType::FACING_LEFT ? corners2_x[0] : corners2_x[3]));
+  const Vector& bottommost_corner = (type2 == RotatedRectangleType::NONE ? corners2_x[1] :
+                                     (type2 == RotatedRectangleType::FACING_LEFT ? corners2_x[3] : corners2_x[0]));
+
+  /**
+    DETERMINE HORIZONTAL CONSTRAINTS
+  */
+
   if (type2 == RotatedRectangleType::NONE) /** NONE: Second rectangle is not rotated, or rotated at exactly 90 degrees. */
   {
-    const Vector& topmost_corner = corners2_x[2];
-    const Vector& bottommost_corner = corners2_x[1];
+    /**
+      Determine whether rectangle 1 is truly rotated (rotated and not at 90 degrees).
+    */
+    const bool rotated1 = (has_rotation1 && fmodf(r1.get_rotation(), 90.f) >= EPSILON);
 
     // SHIFT_DELTA or a smaller value has to be subtracted for left/right constraints
     // to avoid a bug, letting the first rectangle pass through.
@@ -373,132 +379,102 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
       constraints->hit.left = true;
       return;
     }
-
-    if (corners1_x[0].y - movement.y <= topmost_corner.y) /** Top */
+  }
+  else if (type2 == RotatedRectangleType::FACING_LEFT) /** FACING_LEFT */
+  {
+    if (corners1_x[3].x - movement.x <= corners2_y[3].x && corners1_x[3].y - movement.y >= topmost_corner.y) /** Left */
     {
-      const auto point_y = get_nearest_corner_point_y(corners2_y[0], topmost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
-      constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
-
-      constraints->movement.y += point_y.get_distance_y();
-      constraints->hit.bottom = true;
-      return;
-    }
-
-    if (corners1_x[3].y - movement.y >= bottommost_corner.y) /** Bottom */
-    {
-      const auto point_y = get_nearest_corner_point_y(bottommost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
+      const auto point_y = get_nearest_corner_point_y(topmost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
       constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y());
 
       constraints->movement.y -= point_y.get_distance_y();
       constraints->hit.top = true;
+
+      if (!has_rotation1)
+      {
+        const auto point_x = get_nearest_corner_point_x(topmost_corner, corners2_y[3], corners1_x, NearestCornerHorizontalCompareType::RIGHT);
+        constraints->constrain_right(corners1_x[3].x - point_x.get_distance_x());
+        constraints->hit.right = true;
+      }
+      return;
+    }
+
+    if (corners1_x[0].x - movement.x >= corners2_y[0].x && corners1_x[0].y - movement.y <= bottommost_corner.y) /** Right */
+    {
+      const auto point_y = get_nearest_corner_point_y(corners2_y[0], bottommost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
+      constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
+
+      constraints->movement.y += point_y.get_distance_y();
+      constraints->hit.bottom = true;
+
+      if (!has_rotation1)
+      {
+        const auto point_x = get_nearest_corner_point_x(bottommost_corner, corners2_y[0], corners1_x, NearestCornerHorizontalCompareType::LEFT);
+        constraints->constrain_left(corners1_x[0].x + point_x.get_distance_x());
+        constraints->hit.left = true;
+      }
       return;
     }
   }
-  else /** RHOMBUS, ROTATED_LEFT, ROTATED_RIGHT. */
+  else /** RHOMBUS, FACING_RIGHT */
   {
-    const Vector& topmost_corner = (type2 == RotatedRectangleType::FACING_LEFT ? corners2_x[0] : corners2_x[3]);
-    const Vector& bottommost_corner = (type2 == RotatedRectangleType::FACING_LEFT ? corners2_x[3] : corners2_x[0]);
-
-    /**
-      DETERMINE HORIZONTAL CONSTRAINTS
-    */
-
-    if (type2 == RotatedRectangleType::FACING_LEFT) /** FACING_LEFT */
+    if (corners1_x[3].x - movement.x <= corners2_y[0].x && corners1_x[3].y - movement.y <= bottommost_corner.y) /** Left */
     {
-      if (corners1_x[3].x - movement.x <= corners2_y[3].x && corners1_x[3].y - movement.y >= topmost_corner.y) /** Left */
-      {
-        const auto point_y = get_nearest_corner_point_y(topmost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
-        constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y());
-
-        constraints->movement.y -= point_y.get_distance_y();
-        constraints->hit.top = true;
-
-        if (!has_rotation1)
-        {
-          const auto point_x = get_nearest_corner_point_x(topmost_corner, corners2_y[3], corners1_x, NearestCornerHorizontalCompareType::RIGHT);
-          constraints->constrain_right(corners1_x[3].x - point_x.get_distance_x());
-          constraints->hit.right = true;
-        }
-        return;
-      }
-
-      if (corners1_x[0].x - movement.x >= corners2_y[0].x && corners1_x[0].y - movement.y <= bottommost_corner.y) /** Right */
-      {
-        const auto point_y = get_nearest_corner_point_y(corners2_y[0], bottommost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
-        constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
-
-        constraints->movement.y += point_y.get_distance_y();
-        constraints->hit.bottom = true;
-
-        if (!has_rotation1)
-        {
-          const auto point_x = get_nearest_corner_point_x(bottommost_corner, corners2_y[0], corners1_x, NearestCornerHorizontalCompareType::LEFT);
-          constraints->constrain_left(corners1_x[0].x + point_x.get_distance_x());
-          constraints->hit.left = true;
-        }
-        return;
-      }
-    }
-    else /** RHOMBUS, FACING_RIGHT */
-    {
-      if (corners1_x[3].x - movement.x <= corners2_y[0].x && corners1_x[3].y - movement.y <= bottommost_corner.y) /** Left */
-      {
-        const auto point_y = get_nearest_corner_point_y(corners2_y[0], bottommost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
-        constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
-
-        constraints->movement.y += point_y.get_distance_y();
-        constraints->hit.bottom = true;
-
-        if (!has_rotation1)
-        {
-          const auto point_x = get_nearest_corner_point_x(bottommost_corner, corners2_y[0], corners1_x, NearestCornerHorizontalCompareType::RIGHT);
-          constraints->constrain_right(corners1_x[3].x - point_x.get_distance_x());
-          constraints->hit.right = true;
-        }
-        return;
-      }
-
-      if (corners1_x[0].x - movement.x >= corners2_y[3].x && corners1_x[0].y - movement.y >= topmost_corner.y) /** Right */
-      {
-        const auto point_y = get_nearest_corner_point_y(topmost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
-        constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y());
-
-        constraints->movement.y -= point_y.get_distance_y();
-        constraints->hit.top = true;
-
-        if (!has_rotation1)
-        {
-          const auto point_x = get_nearest_corner_point_x(topmost_corner, corners2_y[3], corners1_x, NearestCornerHorizontalCompareType::LEFT);
-          constraints->constrain_left(corners1_x[0].x + point_x.get_distance_x());
-          constraints->hit.left = true;
-        }
-        return;
-      }
-    }
-
-    /**
-      DETERMINE VERTICAL CONSTRAINTS
-    */
-
-    if ((type2 == RotatedRectangleType::FACING_LEFT ? corners1_x[3].y : corners1_x[0].y) - movement.y <= topmost_corner.y) /** Top */
-    {
-      const auto point_y = get_nearest_corner_point_y(corners2_y[0], topmost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
+      const auto point_y = get_nearest_corner_point_y(corners2_y[0], bottommost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
       constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
 
       constraints->movement.y += point_y.get_distance_y();
       constraints->hit.bottom = true;
+
+      if (!has_rotation1)
+      {
+        const auto point_x = get_nearest_corner_point_x(bottommost_corner, corners2_y[0], corners1_x, NearestCornerHorizontalCompareType::RIGHT);
+        constraints->constrain_right(corners1_x[3].x - point_x.get_distance_x());
+        constraints->hit.right = true;
+      }
       return;
     }
 
-    if ((type2 == RotatedRectangleType::FACING_LEFT ? corners1_x[0].y : corners1_x[3].y) - movement.y >= bottommost_corner.y) /** Bottom */
+    if (corners1_x[0].x - movement.x >= corners2_y[3].x && corners1_x[0].y - movement.y >= topmost_corner.y) /** Right */
     {
-      const auto point_y = get_nearest_corner_point_y(bottommost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
+      const auto point_y = get_nearest_corner_point_y(topmost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
       constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y());
 
       constraints->movement.y -= point_y.get_distance_y();
       constraints->hit.top = true;
+
+      if (!has_rotation1)
+      {
+        const auto point_x = get_nearest_corner_point_x(topmost_corner, corners2_y[3], corners1_x, NearestCornerHorizontalCompareType::LEFT);
+        constraints->constrain_left(corners1_x[0].x + point_x.get_distance_x());
+        constraints->hit.left = true;
+      }
       return;
     }
+  }
+
+  /**
+    DETERMINE VERTICAL CONSTRAINTS
+  */
+
+  if ((type2 == RotatedRectangleType::FACING_LEFT ? corners1_x[3].y : corners1_x[0].y) - movement.y <= corners2_y[1].y) /** Top */
+  {
+    const auto point_y = get_nearest_corner_point_y(corners2_y[0], topmost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
+    constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
+
+    constraints->movement.y += point_y.get_distance_y();
+    constraints->hit.bottom = true;
+    return;
+  }
+
+  if ((type2 == RotatedRectangleType::FACING_LEFT ? corners1_x[0].y : corners1_x[3].y) - movement.y >= corners2_y[2].y) /** Bottom */
+  {
+    const auto point_y = get_nearest_corner_point_y(bottommost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
+    constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y());
+
+    constraints->movement.y -= point_y.get_distance_y();
+    constraints->hit.top = true;
+    return;
   }
 
   /** None of the checks have passed, but we know the rectangles overlap.
