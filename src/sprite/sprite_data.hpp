@@ -62,8 +62,11 @@ private:
     /** Hitbox height */
     float hitbox_h;
 
-    /** Hitbox rotation */
-    float hitbox_rotation;
+    /** Hitbox rotation angle */
+    float hitbox_angle;
+
+    /** Whether the hitbox is unisolid */
+    bool hitbox_unisolid;
 
     /** Frames per second */
     float fps;

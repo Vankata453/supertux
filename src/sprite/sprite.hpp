@@ -89,6 +89,8 @@ public:
   int get_width() const;
   int get_height() const;
 
+  /** Return the "unisolid" property for the current action's hitbox. */
+  bool is_current_hitbox_unisolid() const;
   /** return x-offset of current action's hitbox, relative to start of image */
   float get_current_hitbox_x_offset() const;
   /** return y-offset of current action's hitbox, relative to start of image */
@@ -97,8 +99,8 @@ public:
   float get_current_hitbox_width() const;
   /** return height of current action's hitbox */
   float get_current_hitbox_height() const;
-  /** Return rotation of current action's hitbox */
-  float get_current_hitbox_rotation() const;
+  /** Return rotation angle of current action's hitbox */
+  float get_current_hitbox_angle() const;
   /** return current action's hitbox, relative to 0,0 */
   Rectf get_current_hitbox() const;
 

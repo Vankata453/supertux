@@ -35,7 +35,8 @@ SpriteData::Action::Action() :
   y_offset(0),
   hitbox_w(0),
   hitbox_h(0),
-  hitbox_rotation(0),
+  hitbox_angle(0.f),
+  hitbox_unisolid(false),
   fps(10),
   loops(-1),
   loop_frame(1),
@@ -116,7 +117,7 @@ SpriteData::parse_action(const ReaderMapping& mapping)
     switch (hitbox.size())
     {
       case 5:
-        action->hitbox_rotation = hitbox[4];
+        action->hitbox_angle = hitbox[4];
         [[fallthrough]];
       case 4:
         action->hitbox_h = hitbox[3];
@@ -131,6 +132,7 @@ SpriteData::parse_action(const ReaderMapping& mapping)
         throw std::runtime_error("hitbox should specify 2/4 coordinates");
     }
   }
+  mapping.get("unisolid", action->hitbox_unisolid);
   mapping.get("fps", action->fps);
   if (mapping.get("loops", action->loops))
   {
