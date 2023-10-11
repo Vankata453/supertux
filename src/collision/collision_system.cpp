@@ -114,7 +114,7 @@ collision::Constraints check_collisions(const Vector& obj_movement, const Rectf&
   // adjacent or at least extremely close.
   const Rectf grown_other_obj_rect = other_obj_rect.grown(EPSILON);
 
-  if (!collision::intersects(moving_obj_rect, grown_other_obj_rect))
+  if (!moving_obj_rect.contains(grown_other_obj_rect))
     return constraints;
   
   const CollisionHit dummy;
@@ -306,10 +306,10 @@ CollisionSystem::collision_tile_attributes(const Rectf& dest, const Vector& mov)
   return result;
 }
 
-/** Fills the CollisionHit and Normal vector between two intersecting objects. */
+/** Fills the CollisionHit between two intersecting objects. */
 void
-CollisionSystem::get_hit_normal(CollisionObject* object1, CollisionObject* object2,
-                                CollisionHit& hit, Vector& normal) const
+CollisionSystem::get_hit(CollisionObject* object1, CollisionObject* object2,
+                         CollisionHit& hit) const
 {
   const Rectf& r1 = object1->m_dest;
   const Rectf& r2 = object2->m_dest;
@@ -318,9 +318,7 @@ CollisionSystem::get_hit_normal(CollisionObject* object1, CollisionObject* objec
   {
     collision::Constraints constraints;
     collision::set_rotated_rectangle_constraints(&constraints, r1, r2, object1->m_movement);
-
     hit = std::move(constraints.hit);
-    normal = std::move(constraints.movement);
     return;
   }
 
@@ -335,18 +333,18 @@ CollisionSystem::get_hit_normal(CollisionObject* object1, CollisionObject* objec
   if (vert_penetration < horiz_penetration) {
     if (itop < ibottom) {
       hit.bottom = true;
-      normal.y = vert_penetration;
+      hit.normal.y = vert_penetration;
     } else {
       hit.top = true;
-      normal.y = -vert_penetration;
+      hit.normal.y = -vert_penetration;
     }
   } else {
     if (ileft < iright) {
       hit.right = true;
-      normal.x = horiz_penetration;
+      hit.normal.x = horiz_penetration;
     } else {
       hit.left = true;
-      normal.x = -horiz_penetration;
+      hit.normal.x = -horiz_penetration;
     }
   }
 }
@@ -360,9 +358,8 @@ CollisionSystem::collision_object(CollisionObject* object1, CollisionObject* obj
   const Rectf& r2 = object2->m_dest;
 
   CollisionHit hit;
-  if (intersects(object1->m_dest, object2->m_dest)) {
-    Vector normal(0.0f, 0.0f);
-    get_hit_normal(object1, object2, hit, normal);
+  if (r1.contains(r2)) {
+    get_hit(object1, object2, hit);
 
     if (!object1->collides(*object2, hit))
       return;
@@ -378,15 +375,15 @@ CollisionSystem::collision_object(CollisionObject* object1, CollisionObject* obj
     std::swap(hit.top, hit.bottom);
     HitResponse response2 = object2->collision(*object1, hit);
     if (response1 == CONTINUE && response2 == CONTINUE) {
-      normal *= (0.5f + EPSILON);
-      object1->m_dest.move(-normal);
-      object2->m_dest.move(normal);
+      hit.normal *= (0.5f + EPSILON);
+      object1->m_dest.move(-hit.normal);
+      object2->m_dest.move(hit.normal);
     } else if (response1 == CONTINUE && response2 == FORCE_MOVE) {
-      normal *= (1 + EPSILON);
-      object1->m_dest.move(-normal);
+      hit.normal *= (1 + EPSILON);
+      object1->m_dest.move(-hit.normal);
     } else if (response1 == FORCE_MOVE && response2 == CONTINUE) {
-      normal *= (1 + EPSILON);
-      object2->m_dest.move(normal);
+      hit.normal *= (1 + EPSILON);
+      object2->m_dest.move(hit.normal);
     }
   }
 }
@@ -426,11 +423,9 @@ CollisionSystem::collision_static_constrains(CollisionObject& object)
 {
   using namespace collision;
 
-  const float infinity = (std::numeric_limits<float>::has_infinity ? std::numeric_limits<float>::infinity() : std::numeric_limits<float>::max());
-
   Constraints constraints;
   const Vector movement = object.get_movement();
-  Vector pressure = Vector(0,0);
+  Vector pressure;
   Rectf& dest = object.m_dest;
 
   for (int i = 0; i < 2; ++i) {
@@ -439,7 +434,7 @@ CollisionSystem::collision_static_constrains(CollisionObject& object)
       break;
 
     // Apply calculated horizontal constraints.
-    if (constraints.get_position_bottom() < infinity) {
+    if (constraints.constrained_bottom()) {
       float height = constraints.get_height();
       if (height < object.get_bbox().get_height()) {
         // We're crushed, but ignore this for now, we'll get this again
@@ -450,7 +445,7 @@ CollisionSystem::collision_static_constrains(CollisionObject& object)
         dest.set_bottom(constraints.get_position_bottom() - EPSILON);
         dest.set_top(dest.get_bottom() - object.get_bbox().get_height());
       }
-    } else if (constraints.get_position_top() > -infinity) {
+    } else if (constraints.constrained_top()) {
       dest.set_top(constraints.get_position_top() + EPSILON);
       dest.set_bottom(dest.get_top() + object.get_bbox().get_height());
     }
@@ -471,9 +466,9 @@ CollisionSystem::collision_static_constrains(CollisionObject& object)
       break;
 
     // Apply calculated vertical constraints.
-    const float width = constraints.get_width();
+    if (constraints.constrained_vertically()) {
+      const float width = constraints.get_width();
 
-    if (width < infinity) {
       if (width + SHIFT_DELTA < object.get_bbox().get_width()) {
         // We're crushed, but ignore this for now, we'll get this again
         // later if we're really crushed or things will solve itself when
@@ -484,10 +479,10 @@ CollisionSystem::collision_static_constrains(CollisionObject& object)
         dest.set_left(xmid - object.get_bbox().get_width()/2);
         dest.set_right(xmid + object.get_bbox().get_width()/2);
       }
-    } else if (constraints.get_position_right() < infinity) {
+    } else if (constraints.constrained_right()) {
       dest.set_right(constraints.get_position_right() - EPSILON);
       dest.set_left(dest.get_right() - object.get_bbox().get_width());
-    } else if (constraints.get_position_left() > -infinity) {
+    } else if (constraints.constrained_left()) {
       dest.set_left(constraints.get_position_left() + EPSILON);
       dest.set_right(dest.get_left() + object.get_bbox().get_width());
     }
@@ -504,7 +499,7 @@ CollisionSystem::collision_static_constrains(CollisionObject& object)
   if (pressure.y > 0) {
     constraints = Constraints();
     collision_static(&constraints, movement, dest, object);
-    if (constraints.get_position_bottom() < infinity) {
+    if (constraints.constrained_bottom()) {
       const float height = constraints.get_height ();
 
       if (height + SHIFT_DELTA < object.get_bbox().get_height()) {
@@ -521,7 +516,7 @@ CollisionSystem::collision_static_constrains(CollisionObject& object)
   if (pressure.x > 0) {
     constraints = Constraints();
     collision_static(&constraints, movement, dest, object);
-    if (constraints.get_position_right() < infinity) {
+    if (constraints.constrained_right()) {
       float width = constraints.get_width ();
       if (width + SHIFT_DELTA < object.get_bbox().get_width()) {
         CollisionHit h;
@@ -601,10 +596,9 @@ CollisionSystem::update()
          || !object_2->is_valid())
         continue;
 
-      if (intersects(object->m_dest, object_2->m_dest)) {
-        Vector normal(0.0f, 0.0f);
+      if (object->m_dest.contains(object_2->m_dest)) {
         CollisionHit hit;
-        get_hit_normal(object, object_2, hit, normal);
+        get_hit(object, object_2, hit);
         if (!object->collides(*object_2, hit))
           continue;
         if (!object_2->collides(*object, hit))
@@ -689,7 +683,7 @@ CollisionSystem::is_free_of_statics(const Rectf& rect, const CollisionObject* ig
     if (object == ignore_object) continue;
     if (!object->is_valid()) continue;
     if (object->get_group() == COLGROUP_STATIC) {
-      if (intersects(rect, object->get_bbox())) return false;
+      if (rect.contains(object->get_bbox())) return false;
     }
   }
 
@@ -709,7 +703,7 @@ CollisionSystem::is_free_of_movingstatics(const Rectf& rect, const CollisionObje
     if ((object->get_group() == COLGROUP_MOVING)
         || (object->get_group() == COLGROUP_MOVING_STATIC)
         || (object->get_group() == COLGROUP_STATIC)) {
-      if (intersects(rect, object->get_bbox())) return false;
+      if (rect.contains(object->get_bbox())) return false;
     }
   }
 

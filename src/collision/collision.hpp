@@ -17,7 +17,6 @@
 #ifndef HEADER_SUPERTUX_COLLISION_COLLISION_HPP
 #define HEADER_SUPERTUX_COLLISION_COLLISION_HPP
 
-#include <limits>
 #include <algorithm>
 
 #include "collision/collision_hit.hpp"
@@ -30,34 +29,24 @@ namespace collision {
 
 class Constraints final
 {
+private:
+  static const float s_infinity;
+
 public:
   Constraints() :
     hit(),
-    movement(),
-    position_left(),
-    position_right(),
-    position_top(),
-    position_bottom()
-  {
-    float infinity = (std::numeric_limits<float>::has_infinity ?
-                      std::numeric_limits<float>::infinity() :
-                      std::numeric_limits<float>::max());
-    position_left = -infinity;
-    position_right = infinity;
-    position_top = -infinity;
-    position_bottom = infinity;
-  }
+    position_left(-s_infinity),
+    position_right(s_infinity),
+    position_top(-s_infinity),
+    position_bottom(s_infinity)
+  {}
 
   bool has_constraints() const
   {
-    float infinity = (std::numeric_limits<float>::has_infinity ?
-                      std::numeric_limits<float>::infinity() :
-                      std::numeric_limits<float>::max());
-    return
-      position_left   > -infinity ||
-      position_right  <  infinity ||
-      position_top    > -infinity ||
-      position_bottom <  infinity;
+    return constrained_left() ||
+           constrained_right() ||
+           constrained_top() ||
+           constrained_bottom();
   }
 
 public:
@@ -83,10 +72,18 @@ public:
 
   void merge_constraints(const Constraints& other);
 
-  float get_position_left() const { return position_left;   }
-  float get_position_right() const { return position_right;  }
-  float get_position_top() const { return position_top;    }
+  float get_position_left() const { return position_left; }
+  float get_position_right() const { return position_right; }
+  float get_position_top() const { return position_top; }
   float get_position_bottom() const { return position_bottom; }
+
+  inline bool constrained_left() const { return position_left > -s_infinity; }
+  inline bool constrained_right() const { return position_right < s_infinity; }
+  inline bool constrained_top() const { return position_top > -s_infinity; }
+  inline bool constrained_bottom() const { return position_bottom < s_infinity; }
+
+  inline bool constrained_horizontally() const { return get_height() < s_infinity; }
+  inline bool constrained_vertically() const { return get_width() < s_infinity; }
 
   float get_height() const { return (position_bottom - position_top); }
   float get_width() const { return (position_right - position_left); }
@@ -95,7 +92,6 @@ public:
 
 public:
   CollisionHit hit;
-  Vector movement;
 
 private:
   float position_left;
@@ -103,9 +99,6 @@ private:
   float position_top;
   float position_bottom;
 };
-
-/** checks if 2 rectangle intersect each other */
-bool intersects(const Rectf& r1, const Rectf& r2);
 
 /** does collision detection between a rectangle and an axis aligned triangle
  * Returns true in case of a collision and fills in the hit structure then.

@@ -50,13 +50,15 @@ public:
     top(false),
     bottom(false),
     crush(false),
-    slope_normal(0.0f, 0.0f)
+    normal(),
+    slope_normal()
   {}
 
   bool left, right;
   bool top, bottom;
   bool crush;
 
+  Vector normal;
   Vector slope_normal;
 };
 
