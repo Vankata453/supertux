@@ -16,6 +16,7 @@
 
 #include "math/rectf.hpp"
 
+#include <algorithm>
 #include <ostream>
 
 #include "math/rect.hpp"
@@ -32,7 +33,7 @@ Rectf::Rectf(const Rect& rect, float angle) :
 
 
 Rectf::Corners
-Rectf::get_corners() const
+Rectf::get_corners(const std::function<bool (const Vector&, const Vector&)>& sorter) const
 {
   std::vector<Vector> corner_positions = {
     m_p1,
@@ -52,6 +53,9 @@ Rectf::get_corners() const
     math::rotate(pos, m_angle);
     pos += middle; // Translate back.
   }
+
+  if (sorter)
+    std::sort(corner_positions.begin(), corner_positions.end(), sorter);
 
   return corner_positions;
 }

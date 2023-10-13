@@ -18,6 +18,7 @@
 #define HEADER_SUPERTUX_MATH_RECTF_HPP
 
 #include <assert.h>
+#include <functional>
 #include <iosfwd>
 
 #include <SDL.h>
@@ -97,7 +98,7 @@ public:
   float get_top() const { return m_p1.y; }
   float get_bottom() const { return m_p1.y + m_size.height; }
 
-  Corners get_corners() const;
+  Corners get_corners(const std::function<bool (const Vector&, const Vector&)>& sorter = {}) const;
   Axis get_axis() const;
 
   float get_width() const { return m_size.width; }

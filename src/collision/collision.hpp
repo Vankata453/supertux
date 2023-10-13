@@ -117,7 +117,7 @@ void set_rectangle_rectangle_constraints(Constraints* constraints, const Rectf& 
     NOTE: Only call this function, when the two rectangles overlap!
 */
 void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1, const Rectf& r2,
-                                       const Vector& movement, bool horizontal = false);
+                                       const Vector& movement, bool unisolid, bool horizontal = false);
 
 bool line_intersects_line(const Vector& line1_start, const Vector& line1_end, const Vector& line2_start, const Vector& line2_end);
 bool intersects_line(const Rectf& r, const Vector& line_start, const Vector& line_end);

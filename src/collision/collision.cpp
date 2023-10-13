@@ -274,9 +274,13 @@ enum class RotatedRectangleType
 } // namespace
 
 void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1, const Rectf& r2,
-                                       const Vector& movement, bool horizontal)
+                                       const Vector& movement, bool unisolid, bool horizontal)
 {
   /** This function assumes rectangles 1 and 2 overlap. */
+
+  // If rectangle 2 is unisolid, rectangle 1 should either not be moving or falling down.
+  if (unisolid && movement.y < 0.f)
+    return;
 
   const bool has_rotation1 = r1.is_rotated();
   const bool has_rotation2 = r2.is_rotated();
@@ -465,11 +469,10 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
       const bool on_edge = (rotated1 && (on_left_edge || corners1_y[3].x - movement.x > corners2_y[0].x));
 
       const Vector& corner_a = (on_edge ? (on_left_edge ? corners1_x[3] : corners1_x[0]) : corners2_y[0]);
-      const Vector& corner_b = (on_edge ? corners1_y[3] : topmost_corner);
 
       if ((on_edge ? corner_a.y : corners1_x[3].y) - movement.y <= topmost_corner.y) /** Top */
       {
-        const auto point_y = get_nearest_corner_point_y(corner_a, corner_b, on_edge ? corners2_y : corners1_y,
+        const auto point_y = get_nearest_corner_point_y(corner_a, on_edge ? corners1_y[3] : topmost_corner, on_edge ? corners2_y : corners1_y,
                                                         on_edge ? NearestCornerVerticalCompareType::TOP : NearestCornerVerticalCompareType::BOTTOM);
         constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
 
@@ -485,11 +488,10 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
       const bool on_edge = (rotated1 && (on_left_edge || corners1_y[0].x - movement.x > bottommost_corner.x));
 
       const Vector& corner_a = (on_edge ? (on_left_edge ? corners1_x[3] : corners1_x[0]) : bottommost_corner);
-      const Vector& corner_b = (on_edge ? corners1_y[0] : corners2_y[3]);
 
       if ((on_edge ? corner_a.y : corners1_x[0].y) - movement.y >= bottommost_corner.y) /** Bottom */
       {
-        const auto point_y = get_nearest_corner_point_y(corner_a, corner_b, on_edge ? corners2_y : corners1_y,
+        const auto point_y = get_nearest_corner_point_y(corner_a, on_edge ? corners1_y[0] : corners2_y[3], on_edge ? corners2_y : corners1_y,
                                                         on_edge ? NearestCornerVerticalCompareType::BOTTOM : NearestCornerVerticalCompareType::TOP);
         constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y());
 
@@ -507,11 +509,10 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
       const bool on_edge = (rotated1 && (on_left_edge || corners1_y[0].x - movement.x > corners2_y[3].x));
 
       const Vector& corner_a = (on_edge ? (on_left_edge ? corners1_x[3] : corners1_x[0]) : bottommost_corner);
-      const Vector& corner_b = (on_edge ? corners1_y[0] : corners2_y[3]);
 
       if ((on_edge ? corner_a.y : corners1_x[3].y) - movement.y >= bottommost_corner.y) /** Bottom */
       {
-        const auto point_y = get_nearest_corner_point_y(corner_a, corner_b, on_edge ? corners2_y : corners1_y,
+        const auto point_y = get_nearest_corner_point_y(corner_a, on_edge ? corners1_y[0] : corners2_y[3], on_edge ? corners2_y : corners1_y,
                                                         on_edge ? NearestCornerVerticalCompareType::BOTTOM : NearestCornerVerticalCompareType::TOP);
         constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y());
 
@@ -527,11 +528,10 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
       const bool on_edge = (rotated1 && (on_left_edge || corners1_y[3].x - movement.x > topmost_corner.x));
 
       const Vector& corner_a = (on_edge ? (on_left_edge ? corners1_x[3] : corners1_x[0]) : corners2_y[0]);
-      const Vector& corner_b = (on_edge ? corners1_y[3] : topmost_corner);
 
       if ((on_edge ? corner_a.y : corners1_x[0].y) - movement.y <= topmost_corner.y) /** Top */
       {
-        const auto point_y = get_nearest_corner_point_y(corner_a, corner_b, on_edge ? corners2_y : corners1_y,
+        const auto point_y = get_nearest_corner_point_y(corner_a, on_edge ? corners1_y[3] : topmost_corner, on_edge ? corners2_y : corners1_y,
                                                         on_edge ? NearestCornerVerticalCompareType::TOP : NearestCornerVerticalCompareType::BOTTOM);
         constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
 
@@ -544,6 +544,9 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
 
   /** None of the checks have passed, but we know the rectangles overlap.
       Determine shiftout to left/right or top/bottom. */
+
+  if (unisolid)
+    return; // Do not determine shiftout on collision with unisolid rectangles.
 
   const Vector middle1 = r1.get_middle();
 

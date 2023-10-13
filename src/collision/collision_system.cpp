@@ -101,8 +101,23 @@ CollisionSystem::draw(DrawingContext& context)
 
     // If unisolid, draw a line on top of the rectangle.
     if (object->is_unisolid())
-      context.color().draw_line(rect.p1(), Vector(rect.get_right(), rect.get_top()),
-                                Color::YELLOW, LAYER_FOREGROUND1 + 11);
+    {
+      if (rect.is_rotated())
+      {
+        const auto corners = rect.get_corners(math::y_x_sorter);
+
+        context.color().draw_line(corners[0], corners[1],
+                                  Color::YELLOW, LAYER_FOREGROUND1 + 11);
+        if (fmodf(rect.get_rotation(), 90.f) >= EPSILON)
+          context.color().draw_line(corners[0], corners[2],
+                                    Color::YELLOW, LAYER_FOREGROUND1 + 11);
+      }
+      else
+      {
+        context.color().draw_line(rect.p1(), Vector(rect.get_right(), rect.get_top()),
+                                  Color::YELLOW, LAYER_FOREGROUND1 + 11);
+      }
+    }
   }
 }
 
@@ -121,95 +136,119 @@ collision::Constraints check_collisions(const Vector& obj_movement, const Rectf&
 
   if (!moving_obj_rect.contains(grown_other_obj_rect))
     return constraints;
-  
-  const CollisionHit dummy;
+
+  static const CollisionHit dummy;
 
   if (other_object != nullptr && moving_object != nullptr && !other_object->collides(*moving_object, dummy))
     return constraints;
   if (moving_object != nullptr && other_object != nullptr && !moving_object->collides(*other_object, dummy))
     return constraints;
 
-  // Calculate intersection for rotated rectangles.
-  if (moving_obj_rect.is_rotated() || grown_other_obj_rect.is_rotated())
-  {
-    if (other_object && moving_object &&
-        other_object->collision(*moving_object, dummy) == ABORT_MOVE)
-      return constraints;
+  const bool rotated_collision = (moving_obj_rect.is_rotated() || grown_other_obj_rect.is_rotated());
+  const bool other_obj_unisolid = (other_object && other_object->is_unisolid());
 
+  /** Perform shiftout. */
+
+  // Rotated collision shiftout is calculated after many other checks.
+  // Don't perform shiftout on collision with unisolid objects.
+  if (!rotated_collision && !other_obj_unisolid)
+  {
+    if (fabsf(obj_movement.y) > (horizontal ? 0.f : fabsf(obj_movement.x)))
+    {
+      if (moving_obj_rect.get_right() - grown_other_obj_rect.get_left() < SHIFT_DELTA)
+      {
+        constraints.constrain_right(grown_other_obj_rect.get_left());
+        return constraints;
+      }
+      if (grown_other_obj_rect.get_right() - moving_obj_rect.get_left() < SHIFT_DELTA)
+      {
+        constraints.constrain_left(grown_other_obj_rect.get_right());
+        return constraints;
+      }
+    }
+    else
+    {
+      if (moving_obj_rect.get_bottom() - grown_other_obj_rect.get_top() < SHIFT_DELTA)
+      {
+        constraints.constrain_bottom(grown_other_obj_rect.get_top());
+        return constraints;
+      }
+      if (grown_other_obj_rect.get_bottom() - moving_obj_rect.get_top() < SHIFT_DELTA)
+      {
+        constraints.constrain_top(grown_other_obj_rect.get_bottom());
+        return constraints;
+      }
+    }
+  }
+
+  /** Notify the other object of the collision. */
+
+  if (other_object && moving_object)
+  {
+    const HitResponse response = other_object->collision(*moving_object, dummy);
+    if (response == ABORT_MOVE)
+      return constraints;
+  }
+
+  /** Check for special collision cases. */
+
+  if (rotated_collision) /** Rotated rectangle collision */
+  {
     collision::set_rotated_rectangle_constraints(&constraints, moving_obj_rect, grown_other_obj_rect,
-                                                 obj_movement, horizontal);
+                                                 obj_movement, other_obj_unisolid, horizontal);
+
+    if (other_obj_unisolid && !constraints.constrained_bottom())
+      return collision::Constraints(); // Constrain only on fall on top of an unisolid object.
+
     return constraints;
   }
 
-  // Calculate intersection.
+  if (other_obj_unisolid) /** Unisolid bounding box collision */
+  {
+    // Constrain only on fall on top of an unisolid object.
+    if (moving_obj_rect.get_bottom() - obj_movement.y <= grown_other_obj_rect.get_top())
+    {
+      constraints.constrain_bottom(grown_other_obj_rect.get_top());
+      constraints.hit.bottom = true;
+    }
+
+    return constraints;
+  }
+
+  /** Determine non-rotated rectangle constraints. */
+
   const float itop    = moving_obj_rect.get_bottom() - grown_other_obj_rect.get_top();
   const float ibottom = grown_other_obj_rect.get_bottom() - moving_obj_rect.get_top();
   const float ileft   = moving_obj_rect.get_right() - grown_other_obj_rect.get_left();
   const float iright  = grown_other_obj_rect.get_right() - moving_obj_rect.get_left();
 
-  bool shiftout = false;
+  const float vert_penetration = std::min(itop, ibottom);
+  const float horiz_penetration = std::min(ileft, iright);
 
-  if (!other_object || !other_object->is_unisolid())
+  if (vert_penetration < horiz_penetration)
   {
-    if (fabsf(obj_movement.y) > (horizontal ? 0.f : fabsf(obj_movement.x))) {
-      if (ileft < SHIFT_DELTA) {
-        constraints.constrain_right(grown_other_obj_rect.get_left());
-        shiftout = true;
-      } else if (iright < SHIFT_DELTA) {
-        constraints.constrain_left(grown_other_obj_rect.get_right());
-        shiftout = true;
-      }
-    } else {
-      // Shiftout bottom/top.
-      if (itop < SHIFT_DELTA) {
-        constraints.constrain_bottom(grown_other_obj_rect.get_top());
-        shiftout = true;
-      } else if (ibottom < SHIFT_DELTA) {
-        constraints.constrain_top(grown_other_obj_rect.get_bottom());
-        shiftout = true;
-      }
+    if (itop < ibottom)
+    {
+      constraints.constrain_bottom(grown_other_obj_rect.get_top());
+      constraints.hit.bottom = true;
+    }
+    else
+    {
+      constraints.constrain_top(grown_other_obj_rect.get_bottom());
+      constraints.hit.top = true;
     }
   }
-
-  if (!shiftout)
+  else
   {
-    if (other_object != nullptr && moving_object != nullptr) {
-      const HitResponse response = other_object->collision(*moving_object, dummy);
-      if (response == ABORT_MOVE)
-        return constraints;
-    }
-
-    if (other_object && other_object->is_unisolid())
+    if (ileft < iright)
     {
-      // Constrain only on fall on top of the unisolid object.
-      if (moving_obj_rect.get_bottom() - obj_movement.y <= grown_other_obj_rect.get_top())
-      {
-        constraints.constrain_bottom(grown_other_obj_rect.get_top());
-        constraints.hit.bottom = true;
-      }
-
-      return constraints;
+      constraints.constrain_right(grown_other_obj_rect.get_left());
+      constraints.hit.right = true;
     }
-
-    const float vert_penetration = std::min(itop, ibottom);
-    const float horiz_penetration = std::min(ileft, iright);
-
-    if (vert_penetration < horiz_penetration) {
-      if (itop < ibottom) {
-        constraints.constrain_bottom(grown_other_obj_rect.get_top());
-        constraints.hit.bottom = true;
-      } else {
-        constraints.constrain_top(grown_other_obj_rect.get_bottom());
-        constraints.hit.top = true;
-      }
-    } else {
-      if (ileft < iright) {
-        constraints.constrain_right(grown_other_obj_rect.get_left());
-        constraints.hit.right = true;
-      } else {
-        constraints.constrain_left(grown_other_obj_rect.get_right());
-        constraints.hit.left = true;
-      }
+    else
+    {
+      constraints.constrain_left(grown_other_obj_rect.get_right());
+      constraints.hit.left = true;
     }
   }
 
@@ -333,11 +372,13 @@ CollisionSystem::get_hit(CollisionObject* object1, CollisionObject* object2,
 {
   const Rectf& r1 = object1->m_dest;
   const Rectf& r2 = object2->m_dest;
+  const bool unisolid = object2->is_unisolid();
 
   if (r1.is_rotated() || r2.is_rotated())
   {
     collision::Constraints constraints;
-    collision::set_rotated_rectangle_constraints(&constraints, r1, r2, object1->m_movement);
+    collision::set_rotated_rectangle_constraints(&constraints, r1, r2,
+                                                 object1->m_movement, unisolid);
     hit = std::move(constraints.hit);
     return;
   }
@@ -349,6 +390,17 @@ CollisionSystem::get_hit(CollisionObject* object1, CollisionObject* object2,
 
   const float vert_penetration = std::min(itop, ibottom);
   const float horiz_penetration = std::min(ileft, iright);
+
+  if (unisolid)
+  {
+    // Apply movement only on top collision with an unisolid object.
+    if (vert_penetration < horiz_penetration && itop < ibottom)
+    {
+      hit.bottom = true;
+      hit.normal.y = vert_penetration;
+    }
+    return;
+  }
 
   if (vert_penetration < horiz_penetration) {
     if (itop < ibottom) {
@@ -413,7 +465,7 @@ CollisionSystem::collision_static(collision::Constraints* constraints,
                                   const Vector& movement, const Rectf& dest,
                                   CollisionObject& object, bool horizontal)
 {
-  collision_tilemap(constraints, horizontal ? Vector(0, movement.y) : movement, dest, object);
+  collision_tilemap(constraints, horizontal ? Vector(0.f, movement.y) : movement, dest, object);
 
   // Collision with other (static) objects.
   for (auto* static_object : m_objects)
