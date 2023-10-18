@@ -592,21 +592,28 @@ TileMap::resize(int new_width, int new_height, int fill_id,
     apply_offset_y(fill_id, yoffset);
 }
 
-void TileMap::resize(const Size& newsize, const Size& resize_offset) {
+void
+TileMap::resize(const Size& newsize, const Size& resize_offset)
+{
   resize(newsize.width, newsize.height, 0, resize_offset.width, resize_offset.height);
 }
 
 Rect
-TileMap::get_tiles_overlapping(const Rectf &rect) const
+TileMap::get_tiles_overlapping(const Rectf& rect) const
 {
   Rectf rect2 = rect;
   rect2.move(-m_offset);
 
-  int t_left   = std::max(0     , int(floorf(rect2.get_left  () / 32)));
-  int t_right  = std::min(m_width , int(ceilf (rect2.get_right () / 32)));
-  int t_top    = std::max(0     , int(floorf(rect2.get_top   () / 32)));
-  int t_bottom = std::min(m_height, int(ceilf (rect2.get_bottom() / 32)));
-  return Rect(t_left, t_top, t_right, t_bottom);
+  auto corners = rect2.get_corners(math::x_y_sorter);
+  const float left = corners[0].x;
+  const float right = corners[3].x;
+
+  std::sort(corners.begin(), corners.end(), math::y_x_sorter);
+
+  return Rect(std::max(0, static_cast<int>(floorf(left / 32.f))),
+              std::max(0, static_cast<int>(floorf(corners[0].y / 32.f))),
+              std::min(m_width, static_cast<int>(ceilf(right / 32.f))),
+              std::min(m_height, static_cast<int>(ceilf(corners[3].y / 32.f))));
 }
 
 void

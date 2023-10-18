@@ -69,32 +69,35 @@ CollisionSystem::remove(CollisionObject* object)
 void
 CollisionSystem::draw(DrawingContext& context)
 {
-  const Color violet(0.5f, 0.0f, 1.0f, 0.75f);
-  const Color red(1.0f, 0.0f, 0.0f, 0.75f);
-  const Color red_bright(1.0f, 0.5f, 0.5f, 0.75f);
-  const Color cyan(0.0f, 1.0f, 1.0f, 0.75f);
-  const Color orange(1.0f, 0.5f, 0.0f, 0.75f);
-  const Color green_bright(0.7f, 1.0f, 0.7f, 0.75f);
-  for (auto& object : m_objects) {
+  static const Color violet(0.5f, 0.0f, 1.0f, 0.75f);
+  static const Color red(1.0f, 0.0f, 0.0f, 0.75f);
+  static const Color red_bright(1.0f, 0.5f, 0.5f, 0.75f);
+  static const Color cyan(0.0f, 1.0f, 1.0f, 0.75f);
+  static const Color orange(1.0f, 0.5f, 0.0f, 0.75f);
+  static const Color green_bright(0.7f, 1.0f, 0.7f, 0.75f);
+
+  for (auto& object : m_objects)
+  {
     Color color;
-    switch (object->get_group()) {
-    case COLGROUP_MOVING_STATIC:
-      color = violet;
-      break;
-    case COLGROUP_MOVING:
-      color = red;
-      break;
-    case COLGROUP_MOVING_ONLY_STATIC:
-      color = red_bright;
-      break;
-    case COLGROUP_STATIC:
-      color = cyan;
-      break;
-    case COLGROUP_TOUCHABLE:
-      color = orange;
-      break;
-    default:
-      color = green_bright;
+    switch (object->get_group())
+    {
+      case COLGROUP_MOVING_STATIC:
+        color = violet;
+        break;
+      case COLGROUP_MOVING:
+        color = red;
+        break;
+      case COLGROUP_MOVING_ONLY_STATIC:
+        color = red_bright;
+        break;
+      case COLGROUP_STATIC:
+        color = cyan;
+        break;
+      case COLGROUP_TOUCHABLE:
+        color = orange;
+        break;
+      default:
+        color = green_bright;
     }
     const Rectf& rect = object->get_bbox();
     context.color().draw_filled_rect(rect, color, LAYER_FOREGROUND1 + 10);
@@ -262,16 +265,10 @@ CollisionSystem::collision_tilemap(collision::Constraints* constraints,
                                    const Vector& movement, const Rectf& dest,
                                    CollisionObject& object) const
 {
-  // calculate rectangle where the object will move
-  const float x1 = dest.get_left();
-  const float x2 = dest.get_right();
-  const float y1 = dest.get_top();
-  const float y2 = dest.get_bottom();
-
   for (auto* solids : m_sector.get_solid_tilemaps())
   {
     // Test with all tiles in this rectangle.
-    const Rect test_tiles = solids->get_tiles_overlapping(Rectf(x1, y1, x2, y2));
+    const Rect test_tiles = solids->get_tiles_overlapping(dest);
 
     bool hits_bottom = false;
 
@@ -330,19 +327,16 @@ CollisionSystem::collision_tilemap(collision::Constraints* constraints,
 uint32_t
 CollisionSystem::collision_tile_attributes(const Rectf& dest, const Vector& mov) const
 {
-  const float x1 = dest.get_left();
-  const float y1 = dest.get_top();
-  const float x2 = dest.get_right();
-  const float y2 = dest.get_bottom();
-
   uint32_t result = 0;
   for (auto& solids: m_sector.get_solid_tilemaps())
   {
     // Test with all tiles in this rectangle.
-    const Rect test_tiles = solids->get_tiles_overlapping(Rectf(x1, y1, x2, y2));
+    const Rect test_tiles = solids->get_tiles_overlapping(dest);
 
     // For ice (only), add a little fudge to recognize tiles Tux is standing on.
-    const Rect test_tiles_ice = solids->get_tiles_overlapping(Rectf(x1, y1, x2, y2 + SHIFT_DELTA));
+    Rectf dest_ice = dest;
+    dest_ice.set_bottom(dest_ice.get_bottom() + SHIFT_DELTA);
+    const Rect test_tiles_ice = solids->get_tiles_overlapping(dest_ice);
 
     for (int x = test_tiles.left; x < test_tiles.right; ++x) {
       int y;
@@ -429,34 +423,35 @@ CollisionSystem::collision_object(CollisionObject* object1, CollisionObject* obj
   const Rectf& r1 = object1->m_dest;
   const Rectf& r2 = object2->m_dest;
 
+  if (!r1.contains(r2))
+    return;
+
   CollisionHit hit;
-  if (r1.contains(r2)) {
-    get_hit(object1, object2, hit);
+  get_hit(object1, object2, hit);
 
-    if (!object1->collides(*object2, hit))
-      return;
-    std::swap(hit.left, hit.right);
-    std::swap(hit.top, hit.bottom);
-    if (!object2->collides(*object1, hit))
-      return;
-    std::swap(hit.left, hit.right);
-    std::swap(hit.top, hit.bottom);
+  if (!object1->collides(*object2, hit))
+    return;
+  std::swap(hit.left, hit.right);
+  std::swap(hit.top, hit.bottom);
+  if (!object2->collides(*object1, hit))
+    return;
+  std::swap(hit.left, hit.right);
+  std::swap(hit.top, hit.bottom);
 
-    HitResponse response1 = object1->collision(*object2, hit);
-    std::swap(hit.left, hit.right);
-    std::swap(hit.top, hit.bottom);
-    HitResponse response2 = object2->collision(*object1, hit);
-    if (response1 == CONTINUE && response2 == CONTINUE) {
-      hit.normal *= (0.5f + EPSILON);
-      object1->m_dest.move(-hit.normal);
-      object2->m_dest.move(hit.normal);
-    } else if (response1 == CONTINUE && response2 == FORCE_MOVE) {
-      hit.normal *= (1 + EPSILON);
-      object1->m_dest.move(-hit.normal);
-    } else if (response1 == FORCE_MOVE && response2 == CONTINUE) {
-      hit.normal *= (1 + EPSILON);
-      object2->m_dest.move(hit.normal);
-    }
+  HitResponse response1 = object1->collision(*object2, hit);
+  std::swap(hit.left, hit.right);
+  std::swap(hit.top, hit.bottom);
+  HitResponse response2 = object2->collision(*object1, hit);
+  if (response1 == CONTINUE && response2 == CONTINUE) {
+    hit.normal *= (0.5f + EPSILON);
+    object1->m_dest.move(-hit.normal);
+    object2->m_dest.move(hit.normal);
+  } else if (response1 == CONTINUE && response2 == FORCE_MOVE) {
+    hit.normal *= (1 + EPSILON);
+    object1->m_dest.move(-hit.normal);
+  } else if (response1 == FORCE_MOVE && response2 == CONTINUE) {
+    hit.normal *= (1 + EPSILON);
+    object2->m_dest.move(hit.normal);
   }
 }
 
@@ -496,7 +491,7 @@ CollisionSystem::collision_static_constrains(CollisionObject& object)
   using namespace collision;
 
   Constraints constraints;
-  const Vector movement = object.get_movement();
+  const Vector& movement = object.get_movement();
   Vector pressure;
   Rectf& dest = object.m_dest;
 

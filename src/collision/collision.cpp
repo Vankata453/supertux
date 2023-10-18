@@ -16,13 +16,11 @@
 
 #include "collision/collision.hpp"
 
-#include <algorithm>
 #include <limits>
 
 #include "math/aatriangle.hpp"
 #include "math/rectf.hpp"
 #include "supertux/constants.hpp"
-#include "util/log.hpp"
 
 namespace collision {
 
@@ -360,16 +358,12 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
 
   if (type2 == RotatedRectangleType::NONE) /** NONE: Second rectangle is not rotated, or rotated at exactly 90 degrees. */
   {
-    // SHIFT_DELTA or a smaller value may have to be subtracted for left/right constraints
-    // to avoid a bug, letting the first rectangle pass through.
-    const float offset = (rotated1 ? SHIFT_DELTA : 0.f);
-
     if (corners1_x[3].x - movement.x <= corners2_x[0].x) /** Left */
     {
       const auto point_x = get_nearest_corner_point_x(corners2_y[0], bottommost_corner, corners1_x, NearestCornerHorizontalCompareType::RIGHT);
-      constraints->constrain_right(corners1_x[3].x - point_x.get_distance_x() - offset);
+      constraints->constrain_right(corners1_x[3].x - point_x.get_distance_x() - (corners1_x[3].x - r1.get_right()));
 
-      constraints->hit.normal.x += point_x.get_distance_x() + offset;
+      constraints->hit.normal.x += point_x.get_distance_x();
       constraints->hit.right = true;
       return;
     }
@@ -377,9 +371,9 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
     if (corners1_x[0].x - movement.x >= corners2_x[3].x) /** Right */
     {
       const auto point_x = get_nearest_corner_point_x(topmost_corner, corners2_y[3], corners1_x, NearestCornerHorizontalCompareType::LEFT);
-      constraints->constrain_left(corners1_x[0].x + point_x.get_distance_x() + offset);
+      constraints->constrain_left(corners1_x[0].x + point_x.get_distance_x() - (corners1_x[0].x - r1.get_left()));
 
-      constraints->hit.normal.x -= point_x.get_distance_x() - offset;
+      constraints->hit.normal.x -= point_x.get_distance_x();
       constraints->hit.left = true;
       return;
     }
@@ -389,7 +383,7 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
     if (corners1_x[3].x - movement.x <= corners2_y[3].x && corners1_x[3].y - movement.y >= topmost_corner.y) /** Left */
     {
       const auto point_y = get_nearest_corner_point_y(topmost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
-      constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y());
+      constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y() - (corners1_y[0].y - r1.get_top()));
 
       constraints->hit.normal.y -= point_y.get_distance_y();
       constraints->hit.top = true;
@@ -397,7 +391,7 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
       if (!has_rotation1)
       {
         const auto point_x = get_nearest_corner_point_x(topmost_corner, corners2_y[3], corners1_x, NearestCornerHorizontalCompareType::RIGHT);
-        constraints->constrain_right(corners1_x[3].x - point_x.get_distance_x());
+        constraints->constrain_right(corners1_x[3].x - point_x.get_distance_x() - (corners1_x[3].x - r1.get_right()));
         constraints->hit.right = true;
       }
       return;
@@ -406,7 +400,7 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
     if (corners1_x[0].x - movement.x >= corners2_y[0].x && corners1_x[0].y - movement.y <= bottommost_corner.y) /** Right */
     {
       const auto point_y = get_nearest_corner_point_y(corners2_y[0], bottommost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
-      constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
+      constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y() - (corners1_y[3].y - r1.get_bottom()));
 
       constraints->hit.normal.y += point_y.get_distance_y();
       constraints->hit.bottom = true;
@@ -414,7 +408,7 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
       if (!has_rotation1)
       {
         const auto point_x = get_nearest_corner_point_x(bottommost_corner, corners2_y[0], corners1_x, NearestCornerHorizontalCompareType::LEFT);
-        constraints->constrain_left(corners1_x[0].x + point_x.get_distance_x());
+        constraints->constrain_left(corners1_x[0].x + point_x.get_distance_x() - (corners1_x[0].x - r1.get_left()));
         constraints->hit.left = true;
       }
       return;
@@ -425,7 +419,7 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
     if (corners1_x[3].x - movement.x <= corners2_y[0].x && corners1_x[3].y - movement.y <= bottommost_corner.y) /** Left */
     {
       const auto point_y = get_nearest_corner_point_y(corners2_y[0], bottommost_corner, corners1_y, NearestCornerVerticalCompareType::BOTTOM);
-      constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
+      constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y() - (corners1_y[3].y - r1.get_bottom()));
 
       constraints->hit.normal.y += point_y.get_distance_y();
       constraints->hit.bottom = true;
@@ -433,7 +427,7 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
       if (!has_rotation1)
       {
         const auto point_x = get_nearest_corner_point_x(bottommost_corner, corners2_y[0], corners1_x, NearestCornerHorizontalCompareType::RIGHT);
-        constraints->constrain_right(corners1_x[3].x - point_x.get_distance_x());
+        constraints->constrain_right(corners1_x[3].x - point_x.get_distance_x() - (corners1_x[3].x - r1.get_right()));
         constraints->hit.right = true;
       }
       return;
@@ -442,7 +436,7 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
     if (corners1_x[0].x - movement.x >= corners2_y[3].x && corners1_x[0].y - movement.y >= topmost_corner.y) /** Right */
     {
       const auto point_y = get_nearest_corner_point_y(topmost_corner, corners2_y[3], corners1_y, NearestCornerVerticalCompareType::TOP);
-      constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y());
+      constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y() - (corners1_y[0].y - r1.get_top()));
 
       constraints->hit.normal.y -= point_y.get_distance_y();
       constraints->hit.top = true;
@@ -450,7 +444,7 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
       if (!has_rotation1)
       {
         const auto point_x = get_nearest_corner_point_x(topmost_corner, corners2_y[3], corners1_x, NearestCornerHorizontalCompareType::LEFT);
-        constraints->constrain_left(corners1_x[0].x + point_x.get_distance_x());
+        constraints->constrain_left(corners1_x[0].x + point_x.get_distance_x() - (corners1_x[0].x - r1.get_left()));
         constraints->hit.left = true;
       }
       return;
@@ -474,7 +468,7 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
       {
         const auto point_y = get_nearest_corner_point_y(corner_a, on_edge ? corners1_y[3] : topmost_corner, on_edge ? corners2_y : corners1_y,
                                                         on_edge ? NearestCornerVerticalCompareType::TOP : NearestCornerVerticalCompareType::BOTTOM);
-        constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
+        constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y() - (corners1_y[3].y - r1.get_bottom()));
 
         constraints->hit.normal.y += point_y.get_distance_y();
         constraints->hit.bottom = true;
@@ -493,7 +487,7 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
       {
         const auto point_y = get_nearest_corner_point_y(corner_a, on_edge ? corners1_y[0] : corners2_y[3], on_edge ? corners2_y : corners1_y,
                                                         on_edge ? NearestCornerVerticalCompareType::BOTTOM : NearestCornerVerticalCompareType::TOP);
-        constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y());
+        constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y() - (corners1_y[0].y - r1.get_top()));
 
         constraints->hit.normal.y -= point_y.get_distance_y();
         constraints->hit.top = true;
@@ -514,7 +508,7 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
       {
         const auto point_y = get_nearest_corner_point_y(corner_a, on_edge ? corners1_y[0] : corners2_y[3], on_edge ? corners2_y : corners1_y,
                                                         on_edge ? NearestCornerVerticalCompareType::BOTTOM : NearestCornerVerticalCompareType::TOP);
-        constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y());
+        constraints->constrain_top(corners1_y[0].y + point_y.get_distance_y() - (corners1_y[0].y - r1.get_top()));
 
         constraints->hit.normal.y -= point_y.get_distance_y();
         constraints->hit.top = true;
@@ -533,7 +527,7 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
       {
         const auto point_y = get_nearest_corner_point_y(corner_a, on_edge ? corners1_y[3] : topmost_corner, on_edge ? corners2_y : corners1_y,
                                                         on_edge ? NearestCornerVerticalCompareType::TOP : NearestCornerVerticalCompareType::BOTTOM);
-        constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y());
+        constraints->constrain_bottom(corners1_y[3].y - point_y.get_distance_y() - (corners1_y[3].y - r1.get_bottom()));
 
         constraints->hit.normal.y += point_y.get_distance_y();
         constraints->hit.bottom = true;
@@ -553,16 +547,20 @@ void set_rotated_rectangle_constraints(Constraints* constraints, const Rectf& r1
   if (fabsf(movement.y) > (horizontal ? 0.f : fabsf(movement.x)))
   {
     if (middle1.x < r2.get_middle().x) /** LEFT */
-      constraints->constrain_right(has_rotation2 ? math::get_nearest_point_x(corners2_x[0], corners2_x[1], middle1) : r2.get_left());
+      constraints->constrain_right((has_rotation2 ? math::get_nearest_point_x(corners2_x[0], corners2_x[1], middle1) : r2.get_left()) -
+                                   (corners1_x[3].x - r1.get_right()));
     else /** RIGHT */
-      constraints->constrain_left(has_rotation2 ? math::get_nearest_point_x(corners2_x[2], corners2_x[3], middle1) : r2.get_right());
+      constraints->constrain_left((has_rotation2 ? math::get_nearest_point_x(corners2_x[2], corners2_x[3], middle1) : r2.get_right()) -
+                                  (corners1_x[0].x - r1.get_left()));
   }
   else
   {
     if (middle1.y < r2.get_middle().y) /** TOP */
-      constraints->constrain_bottom(has_rotation2 ? math::get_nearest_point_y(corners2_y[0], corners2_y[1], middle1) : r2.get_top());
+      constraints->constrain_bottom((has_rotation2 ? math::get_nearest_point_y(corners2_y[0], corners2_y[1], middle1) : r2.get_top()) -
+                                    (corners1_y[3].y - r1.get_bottom()));
     else /** BOTTOM */
-      constraints->constrain_top(has_rotation2 ? math::get_nearest_point_y(corners2_y[2], corners2_y[3], middle1) : r2.get_bottom());
+      constraints->constrain_top((has_rotation2 ? math::get_nearest_point_y(corners2_y[2], corners2_y[3], middle1) : r2.get_bottom()) -
+                                 (corners1_y[0].y - r1.get_top()));
   }
 }
 
