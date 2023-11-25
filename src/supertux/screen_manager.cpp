@@ -179,7 +179,7 @@ ScreenManager::draw_run_timer(DrawingContext& context, const float& timer, float
       << ':' << std::setw(2) << s << '.' << std::setw(3) << ms;
 
   context.draw_text(Resources::normal_font, out.str(),
-                    Vector(SCREEN_WIDTH / 2 + offset_x, 20.f), ALIGN_CENTER, LAYER_HUD);
+                    Vector(SCREEN_WIDTH / 2 + offset_x, 20.f), ALIGN_CENTER, LAYER_GUI + 1000);
 }
 
 void
