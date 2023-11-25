@@ -159,7 +159,14 @@ ScreenManager::draw_player_pos(DrawingContext& context)
 }
 
 void
-ScreenManager::draw_run_timer(DrawingContext& context, const float& timer, float offset_x)
+ScreenManager::draw_run_timers(DrawingContext& context, float timer, float offset_x)
+{
+  draw_run_timer(context, timer, offset_x, false); // IGT time
+  draw_run_timer(context, timer / 1.042031552f, offset_x, true); // RTA time
+}
+
+void
+ScreenManager::draw_run_timer(DrawingContext& context, float timer, float offset_x, bool rta)
 {
   /** Convert seconds to a string in the format of "hh:mm:ss.milliseconds".
       See https://stackoverflow.com/a/58696275. */
@@ -178,8 +185,9 @@ ScreenManager::draw_run_timer(DrawingContext& context, const float& timer, float
   out << std::setfill('0') << std::setw(2) << h << ':' << std::setw(2) << m
       << ':' << std::setw(2) << s << '.' << std::setw(3) << ms;
 
-  context.draw_text(Resources::normal_font, out.str(),
-                    Vector(SCREEN_WIDTH / 2 + offset_x, 20.f), ALIGN_CENTER, LAYER_GUI + 1000);
+  context.draw_text(rta ? Resources::normal_font : Resources::small_font, out.str(),
+                    Vector(SCREEN_WIDTH / 2 + offset_x, (rta ? 30.f : 10.f)),
+                    ALIGN_CENTER, LAYER_GUI + 1000);
 }
 
 void
@@ -214,12 +222,12 @@ ScreenManager::draw(DrawingContext& context)
   {
     if (g_run_timer_captured_time >= 0)
     {
-      draw_run_timer(context, g_run_timer_captured_time, -100.f);
-      draw_run_timer(context, g_run_timer, 100.f);
+      draw_run_timers(context, g_run_timer_captured_time, -100.f);
+      draw_run_timers(context, g_run_timer, 100.f);
     }
     else
     {
-      draw_run_timer(context, g_run_timer);
+      draw_run_timers(context, g_run_timer);
     }
   }
 
