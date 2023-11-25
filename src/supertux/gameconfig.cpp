@@ -156,6 +156,8 @@ Config::load()
       }
     }
   }
+
+  config_lisp.get("run-timer", g_run_timer);
 }
 
 void
@@ -221,6 +223,8 @@ Config::save()
     writer.end_list("addon");
   }
   writer.end_list("addons");
+
+  writer.write("run-timer", g_run_timer);
 
   writer.end_list("supertux-config");
 }
