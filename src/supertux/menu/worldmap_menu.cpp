@@ -18,7 +18,6 @@
 
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
-#include "supertux/globals.hpp"
 #include "supertux/menu/menu_storage.hpp"
 #include "supertux/menu/options_menu.hpp"
 #include "supertux/screen_fade.hpp"
@@ -47,9 +46,6 @@ WorldmapMenu::menu_action(MenuItem* item)
     case MNID_QUITWORLDMAP:
       MenuManager::instance().clear_menu_stack();
       ScreenManager::current()->pop_screen();
-
-      // Reset RTA run timer.
-      g_run_timer = -1.f;
       break;
   }
 }
