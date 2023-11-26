@@ -47,6 +47,10 @@ public:
   /** Big font for menu titles and headers in text scrolls */
   static FontPtr big_font;
 
+  /** Normal and small bitmap fonts will be forced for drawing the run timer. */
+  static FontPtr normal_font_bitmap;
+  static FontPtr small_font_bitmap;
+
   static SurfacePtr checkbox;
   static SurfacePtr checkbox_checked;
   static SurfacePtr back;

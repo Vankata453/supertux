@@ -36,6 +36,10 @@ FontPtr Resources::normal_font;
 FontPtr Resources::small_font;
 FontPtr Resources::big_font;
 
+/** Normal and small bitmap fonts will be forced for drawing the run timer. */
+FontPtr Resources::normal_font_bitmap;
+FontPtr Resources::small_font_bitmap;
+
 SurfacePtr Resources::checkbox;
 SurfacePtr Resources::checkbox_checked;
 SurfacePtr Resources::back;
@@ -52,12 +56,14 @@ Resources::load()
   mouse_cursor.reset(new MouseCursor(SpriteManager::current()->create("images/engine/menu/mousecursor.sprite")));
   MouseCursor::set_current(mouse_cursor.get());
 
+  normal_font_bitmap.reset(new BitmapFont(BitmapFont::VARIABLE, "fonts/white.stf"));
+  small_font_bitmap.reset(new BitmapFont(BitmapFont::VARIABLE, "fonts/white-small.stf", 1));
   if (g_debug.get_use_bitmap_fonts())
   {
     console_font.reset(new BitmapFont(BitmapFont::FIXED, "fonts/andale12.stf", 1));
     fixed_font.reset(new BitmapFont(BitmapFont::FIXED, "fonts/white.stf"));
-    normal_font.reset(new BitmapFont(BitmapFont::VARIABLE, "fonts/white.stf"));
-    small_font.reset(new BitmapFont(BitmapFont::VARIABLE, "fonts/white-small.stf", 1));
+    normal_font = normal_font_bitmap;
+    small_font = small_font_bitmap;
     big_font.reset(new BitmapFont(BitmapFont::VARIABLE, "fonts/white-big.stf", 3));
   }
   else
@@ -113,6 +119,8 @@ Resources::unload()
   normal_font.reset();
   small_font.reset();
   big_font.reset();
+  normal_font_bitmap.reset();
+  small_font_bitmap.reset();
 
   mouse_cursor.reset();
 }

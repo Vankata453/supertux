@@ -182,7 +182,7 @@ ScreenManager::draw_run_timer(DrawingContext& context, float timer, float offset
   out << std::setfill('0') << std::setw(2) << h << ':' << std::setw(2) << m
       << ':' << std::setw(2) << s << '.' << std::setw(3) << ms;
 
-  context.color().draw_text(rta ? Resources::normal_font : Resources::small_font, out.str(),
+  context.color().draw_text(rta ? Resources::normal_font_bitmap : Resources::small_font_bitmap, out.str(),
                             Vector(SCREEN_WIDTH / 2 + offset_x, (rta ? 60.f : 40.f)),
                             ALIGN_CENTER, LAYER_GUI + 1000);
 }
