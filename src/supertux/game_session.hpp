@@ -160,7 +160,7 @@ private:
 
   bool end_seq_started;
 
-  const bool m_start_run_timer;
+  bool m_start_run_timer;
 
 private:
   GameSession(const GameSession&);

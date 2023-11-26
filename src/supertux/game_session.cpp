@@ -86,7 +86,7 @@ GameSession::GameSession(const std::string& levelfile_, Savegame& savegame, Stat
   max_ice_bullets_at_start(),
   active(false),
   end_seq_started(false),
-  m_start_run_timer(start_run_timer)
+  m_start_run_timer(start_run_timer && g_run_timer < 0.f)
 {
   if (restart_level() != 0)
     throw std::runtime_error ("Initializing the level failed.");
@@ -160,6 +160,7 @@ GameSession::restart_level(bool after_death)
   }
   if(after_death == true) {
     currentsector->resume_music();
+    m_start_run_timer = false; // Do not allow first-level resets after death
   }
   else {
     SoundManager::current()->stop_music();
@@ -295,6 +296,10 @@ GameSession::toggle_pause()
 void
 GameSession::abort_level()
 {
+  // If this GameSession has started the timer, perform a first-level reset
+  if (m_start_run_timer)
+    g_run_timer = -1.f;
+
   MenuManager::instance().clear_menu_stack();
   ScreenManager::current()->pop_screen();
   currentsector->player->set_bonus(bonus_at_start);
@@ -452,7 +457,7 @@ GameSession::setup()
     levelintro_shown = true;
     active = false;
     ScreenManager::current()->push_screen(std::unique_ptr<Screen>(new LevelIntro(level.get(), best_level_statistics, m_savegame.get_player_status())));
-  } else if (m_start_run_timer && g_run_timer < 0.f) {
+  } else if (m_start_run_timer) {
     g_run_timer = 0.f;
     g_run_timer_captured_time = -1.f;
   }
