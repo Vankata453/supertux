@@ -159,7 +159,7 @@ void
 ScreenManager::draw_run_timers(DrawingContext& context, float timer, float offset_x)
 {
   draw_run_timer(context, timer, offset_x, false); // IGT time
-  draw_run_timer(context, timer / 1.042031552f, offset_x, true); // RTA time
+  draw_run_timer(context, timer / 1.041864092f, offset_x, true); // RTA time
 }
 
 void
