@@ -750,18 +750,9 @@ INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/images
                   ${CMAKE_CURRENT_SOURCE_DIR}/data/locale
                   DESTINATION ${INSTALL_SUBDIR_SHARE})
 
-IF(CMAKE_BUILD_TYPE MATCHES Release)
-  INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/levels
-                    DESTINATION ${INSTALL_SUBDIR_SHARE}
-                    PATTERN "data/levels/test" EXCLUDE
-                    PATTERN "data/levels/test_old" EXCLUDE
-                    PATTERN "data/levels/incubator" EXCLUDE
-                    PATTERN "data/levels/misc/menu.stl.in" EXCLUDE)
-ELSE()
-  INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/levels
-                    DESTINATION ${INSTALL_SUBDIR_SHARE}
-                    PATTERN "data/levels/misc/menu.stl.in" EXCLUDE)
-ENDIF()
+INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/levels
+                  DESTINATION ${INSTALL_SUBDIR_SHARE}
+                  PATTERN "data/levels/misc/menu.stl.in" EXCLUDE)
 
 INSTALL(FILES "${CMAKE_BINARY_DIR}/data/levels/misc/menu.stl" DESTINATION "${INSTALL_SUBDIR_SHARE}/levels/misc")
 
