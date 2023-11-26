@@ -16,104 +16,91 @@
 
 #include "object/moving_sprite.hpp"
 
-#include "sprite/sprite.hpp"
-#include "sprite/sprite_manager.hpp"
-#include "util/log.hpp"
-#include "util/reader_mapping.hpp"
-
+#include <math.h>
 #include <physfs.h>
-#include <stdexcept>
+
+#include "editor/editor.hpp"
+#include "math/random.hpp"
+#include "math/util.hpp"
+#include "object/sprite_particle.hpp"
+#include "sprite/sprite_manager.hpp"
+#include "supertux/sector.hpp"
+#include "util/reader_mapping.hpp"
+#include "util/writer.hpp"
 
 MovingSprite::MovingSprite(const Vector& pos, const std::string& sprite_name_,
                            int layer_, CollisionGroup collision_group) :
-  sprite_name(sprite_name_),
-  sprite(),
-  layer(layer_)
+  m_sprite_name(sprite_name_),
+  m_default_sprite_name(sprite_name_),
+  m_sprite(SpriteManager::current()->create(m_sprite_name)),
+  m_layer(layer_)
 {
-  bbox.set_pos(pos);
-  sprite = SpriteManager::current()->create(sprite_name);
-  bbox.set_size(sprite->get_current_hitbox_width(), sprite->get_current_hitbox_height());
+  m_col.m_bbox.set_pos(pos);
+  m_col.m_bbox.set_size(m_sprite->get_current_hitbox_width(), m_sprite->get_current_hitbox_height());
   set_group(collision_group);
 }
 
 MovingSprite::MovingSprite(const ReaderMapping& reader, const Vector& pos, int layer_, CollisionGroup collision_group) :
-  sprite_name(),
-  sprite(),
-  layer(layer_)
+  MovingObject(reader),
+  m_sprite_name(),
+  m_default_sprite_name(),
+  m_sprite(),
+  m_layer(layer_)
 {
-  bbox.set_pos(pos);
-  if (!reader.get("sprite", sprite_name))
+  m_col.m_bbox.set_pos(pos);
+  if (!reader.get("sprite", m_sprite_name))
     throw std::runtime_error("no sprite name set");
 
-  sprite = SpriteManager::current()->create(sprite_name);
-  bbox.set_size(sprite->get_current_hitbox_width(), sprite->get_current_hitbox_height());
+  //m_default_sprite_name = m_sprite_name;
+  m_sprite = SpriteManager::current()->create(m_sprite_name);
+  m_col.m_bbox.set_size(m_sprite->get_current_hitbox_width(), m_sprite->get_current_hitbox_height());
   set_group(collision_group);
 }
 
 MovingSprite::MovingSprite(const ReaderMapping& reader, const std::string& sprite_name_, int layer_, CollisionGroup collision_group) :
-  sprite_name(sprite_name_),
-  sprite(),
-  layer(layer_)
+  MovingObject(reader),
+  m_sprite_name(sprite_name_),
+  m_default_sprite_name(sprite_name_),
+  m_sprite(),
+  m_layer(layer_)
 {
-  reader.get("x", bbox.p1.x);
-  reader.get("y", bbox.p1.y);
-  reader.get("sprite", this->sprite_name);
+  reader.get("x", m_col.m_bbox.get_left());
+  reader.get("y", m_col.m_bbox.get_top());
+  reader.get("sprite", m_sprite_name);
 
-  //make the sprite go defaut when the sprite file is invalid
-  if (sprite_name.empty() || !PHYSFS_exists(sprite_name.c_str())) {
-    sprite_name = sprite_name_;
+  //Make the sprite go default when the sprite file is invalid
+  if (m_sprite_name.empty() || !PHYSFS_exists(m_sprite_name.c_str())) {
+    m_sprite = SpriteManager::current()->create(m_default_sprite_name);
+  } else {
+    m_sprite = SpriteManager::current()->create(m_sprite_name);
   }
 
-  sprite = SpriteManager::current()->create(this->sprite_name);
-  bbox.set_size(sprite->get_current_hitbox_width(), sprite->get_current_hitbox_height());
+  m_col.m_bbox.set_size(m_sprite->get_current_hitbox_width(), m_sprite->get_current_hitbox_height());
   set_group(collision_group);
 }
 
 MovingSprite::MovingSprite(const ReaderMapping& reader, int layer_, CollisionGroup collision_group) :
-  sprite_name(),
-  sprite(),
-  layer(layer_)
+  MovingObject(reader),
+  m_sprite_name(),
+  m_default_sprite_name(),
+  m_sprite(),
+  m_layer(layer_)
 {
-  reader.get("x", bbox.p1.x);
-  reader.get("y", bbox.p1.y);
-  if (!reader.get("sprite", sprite_name))
+  reader.get("x", m_col.m_bbox.get_left());
+  reader.get("y", m_col.m_bbox.get_top());
+  if (!reader.get("sprite", m_sprite_name))
     throw std::runtime_error("no sprite name set");
 
-  sprite = SpriteManager::current()->create(sprite_name);
-  bbox.set_size(sprite->get_current_hitbox_width(), sprite->get_current_hitbox_height());
+  //m_default_sprite_name = m_sprite_name;
+  m_sprite = SpriteManager::current()->create(m_sprite_name);
+  m_col.m_bbox.set_size(m_sprite->get_current_hitbox_width(), m_sprite->get_current_hitbox_height());
   set_group(collision_group);
-}
-
-MovingSprite::MovingSprite(const MovingSprite& other) :
-  MovingObject(other),
-  sprite_name(),
-  sprite(other.sprite->clone()),
-  layer(other.layer)
-{
-}
-/*
-  MovingSprite&
-  MovingSprite::operator=(const MovingSprite& other)
-  {
-  if (this == &other)
-  return *this;
-
-  delete sprite;
-  sprite = new Sprite(*other.sprite);
-
-  layer = other.layer;
-
-  return *this;
-  }
-*/
-MovingSprite::~MovingSprite()
-{
 }
 
 void
 MovingSprite::draw(DrawingContext& context)
 {
-  sprite->draw(context, get_pos(), layer);
+  m_sprite->draw(context.color(), get_pos(), m_layer);
 }
 
 void
@@ -124,56 +111,80 @@ MovingSprite::update(float )
 std::string
 MovingSprite::get_sprite_name() const
 {
-  return sprite_name;
+  return m_sprite_name;
 }
 
 void
 MovingSprite::set_action(const std::string& action, int loops)
 {
-  sprite->set_action(action, loops);
-  set_size(sprite->get_current_hitbox_width(), sprite->get_current_hitbox_height());
+  m_sprite->set_action(action, loops);
+  m_col.set_size(m_sprite->get_current_hitbox_width(), m_sprite->get_current_hitbox_height());
 }
 
 void
 MovingSprite::set_action_centered(const std::string& action, int loops)
 {
-  Vector old_size = bbox.get_size().as_vector();
-  sprite->set_action(action, loops);
-  set_size(sprite->get_current_hitbox_width(), sprite->get_current_hitbox_height());
-  set_pos(get_pos() - (bbox.get_size().as_vector() - old_size) / 2);
+  Vector old_size = m_col.m_bbox.get_size().as_vector();
+  m_sprite->set_action(action, loops);
+  m_col.set_size(m_sprite->get_current_hitbox_width(), m_sprite->get_current_hitbox_height());
+  set_pos(get_pos() - (m_col.m_bbox.get_size().as_vector() - old_size) / 2);
 }
 
 void
 MovingSprite::set_action(const std::string& action, int loops, AnchorPoint anchorPoint)
 {
-  Rectf old_bbox = bbox;
-  sprite->set_action(action, loops);
-  float w = sprite->get_current_hitbox_width();
-  float h = sprite->get_current_hitbox_height();
-  set_size(w, h);
+  Rectf old_bbox = m_col.m_bbox;
+  m_sprite->set_action(action, loops);
+  float w = m_sprite->get_current_hitbox_width();
+  float h = m_sprite->get_current_hitbox_height();
+  m_col.set_size(w, h);
   set_pos(get_anchor_pos(old_bbox, w, h, anchorPoint));
 }
 
-void MovingSprite::change_sprite(const std::string& new_sprite_name)
+void
+MovingSprite::change_sprite(const std::string& new_sprite_name)
 {
-  sprite_name = new_sprite_name;
-  sprite = SpriteManager::current()->create(sprite_name);
+  m_sprite_name = new_sprite_name;
+  m_sprite = SpriteManager::current()->create(m_sprite_name);
 }
 
-ObjectSettings MovingSprite::get_settings()
+ObjectSettings
+MovingSprite::get_settings()
 {
   ObjectSettings result = MovingObject::get_settings();
-  ObjectOption spr(MN_FILE, _("Sprite"), &sprite_name, "sprite");
-  spr.select.push_back(".sprite");
-  result.options.push_back(spr);
+
+  result.add_sprite(_("Sprite"), &m_sprite_name, "sprite", m_default_sprite_name);
+
+  result.reorder({"sprite", "x", "y"});
+
   return result;
 }
 
-void MovingSprite::after_editor_set()
+void
+MovingSprite::after_editor_set()
 {
-  std::string current_action = sprite->get_action();
-  sprite = SpriteManager::current()->create(sprite_name);
-  sprite->set_action(current_action);
+  std::string current_action = m_sprite->get_action();
+  m_sprite = SpriteManager::current()->create(m_sprite_name);
+  m_sprite->set_action(current_action);
+}
+
+void
+MovingSprite::spawn_explosion_sprites(int count, const std::string& sprite_path)
+{
+    for (int i = 0; i < count; i++) {
+      Vector ppos = m_col.m_bbox.get_middle();
+      float angle = graphicsRandom.randf(-math::PI_2, math::PI_2);
+      float velocity = graphicsRandom.randf(350, 400);
+      float vx = sinf(angle)*velocity;
+      float vy = -cosf(angle)*velocity;
+      Vector pspeed = Vector(vx, vy);
+      Vector paccel = Vector(0, Sector::get().get_gravity()*10);
+      Sector::get().add<SpriteParticle>(sprite_path,
+                                             "default",
+                                             ppos, ANCHOR_MIDDLE,
+                                             pspeed, paccel,
+                                             LAYER_OBJECTS-1);
+  }
 }
 
 /* EOF */

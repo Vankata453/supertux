@@ -18,19 +18,29 @@
 #define HEADER_SUPERTUX_SCRIPTING_CAMERA_HPP
 
 #ifndef SCRIPTING_API
+#include "scripting/game_object.hpp"
+
 class Camera;
 #endif
 
 namespace scripting {
 
-class Camera
+class Camera final
+#ifndef SCRIPTING_API
+  : public GameObject<::Camera>
+#endif
 {
 public:
 #ifndef SCRIPTING_API
-  Camera(::Camera* camera);
-  ~Camera();
+public:
+  using GameObject::GameObject;
+
+private:
+  Camera(const Camera&) = delete;
+  Camera& operator=(const Camera&) = delete;
 #endif
 
+public:
   void reload_config();
 
   /** Shake the camera */
@@ -41,17 +51,9 @@ public:
   void set_mode(const std::string& mode);
   /** Scroll camera to position x,y in scrolltime seconds */
   void scroll_to(float x, float y, float scrolltime);
-
-#ifndef SCRIPTING_API
-  ::Camera* camera;
-
-private:
-  Camera(const Camera&);
-  Camera& operator=(const Camera&);
-#endif
 };
 
-}
+} // namespace scripting
 
 #endif
 

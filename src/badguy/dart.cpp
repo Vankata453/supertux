@@ -19,7 +19,6 @@
 #include "audio/sound_manager.hpp"
 #include "audio/sound_source.hpp"
 #include "sprite/sprite.hpp"
-#include "supertux/object_factory.hpp"
 
 namespace {
 const float DART_SPEED = 200;
@@ -29,30 +28,26 @@ static const std::string DART_SOUND = "sounds/flame.wav";
 
 Dart::Dart(const ReaderMapping& reader) :
   BadGuy(reader, "images/creatures/dart/dart.sprite"),
-  parent(0),
+  parent(nullptr),
   sound_source()
 {
-  physic.enable_gravity(false);
-  countMe = false;
+  m_physic.enable_gravity(false);
+  m_countMe = false;
   SoundManager::current()->preload(DART_SOUND);
   SoundManager::current()->preload("sounds/darthit.wav");
   SoundManager::current()->preload("sounds/stomp.wav");
 }
 
-Dart::Dart(const Vector& pos, Direction d, const BadGuy* parent_ = 0) :
+Dart::Dart(const Vector& pos, Direction d, const BadGuy* parent_ = nullptr) :
   BadGuy(pos, d, "images/creatures/dart/dart.sprite"),
   parent(parent_),
   sound_source()
 {
-  physic.enable_gravity(false);
-  countMe = false;
+  m_physic.enable_gravity(false);
+  m_countMe = false;
   SoundManager::current()->preload(DART_SOUND);
   SoundManager::current()->preload("sounds/darthit.wav");
   SoundManager::current()->preload("sounds/stomp.wav");
-}
-
-Dart::~Dart()
-{
 }
 
 bool
@@ -68,8 +63,8 @@ Dart::updatePointers(const GameObject* from_object, GameObject* to_object)
 void
 Dart::initialize()
 {
-  physic.set_velocity_x(dir == LEFT ? -::DART_SPEED : ::DART_SPEED);
-  sprite->set_action(dir == LEFT ? "flying-left" : "flying-right");
+  m_physic.set_velocity_x(m_dir == Direction::LEFT ? -::DART_SPEED : ::DART_SPEED);
+  m_sprite->set_action(m_dir == Direction::LEFT ? "flying-left" : "flying-right");
 }
 
 void
@@ -91,9 +86,9 @@ Dart::deactivate()
 }
 
 void
-Dart::active_update(float elapsed_time)
+Dart::active_update(float dt_sec)
 {
-  BadGuy::active_update(elapsed_time);
+  BadGuy::active_update(dt_sec);
   sound_source->set_position(get_pos());
 }
 
@@ -143,13 +138,6 @@ void Dart::play_looping_sounds()
   if (sound_source) {
     sound_source->play();
   }
-}
-
-void
-Dart::after_editor_set()
-{
-  BadGuy::after_editor_set();
-  sprite->set_action(dir == LEFT ? "flying-left" : "flying-right");
 }
 
 /* EOF */

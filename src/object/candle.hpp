@@ -19,39 +19,31 @@
 
 #include "object/moving_sprite.hpp"
 #include "scripting/candle.hpp"
-#include "scripting/exposed_object.hpp"
+#include "squirrel/exposed_object.hpp"
 
 /**
  * A burning candle: Simple, scriptable level decoration.
  */
-class Candle : public MovingSprite,
+class Candle final : public MovingSprite,
                public ExposedObject<Candle, scripting::Candle>
 {
 public:
-  Candle(const ReaderMapping& lisp);
-  virtual void draw(DrawingContext& context);
+  Candle(const ReaderMapping& mapping);
+  virtual void draw(DrawingContext& context) override;
 
-  HitResponse collision(GameObject& other, const CollisionHit& hit);
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual std::string get_class() const override { return "candle"; }
+  virtual std::string get_display_name() const override { return _("Candle"); }
 
-  /**
-   * @name Scriptable Methods
-   * @{
-   */
+  virtual ObjectSettings get_settings() override;
+  virtual void after_editor_set() override;
+
+  /** @name Scriptable Methods
+      @{ */
   void puff_smoke(); /**< spawn a puff of smoke */
   bool get_burning() const; /**< returns true if candle is lighted */
   void set_burning(bool burning); /**< true: light candle, false: extinguish candle */
-  /**
-   * @}
-   */
-  std::string get_class() const {
-    return "candle";
-  }
-  std::string get_display_name() const {
-    return _("Candle");
-  }
-
-  virtual ObjectSettings get_settings();
-  virtual void after_editor_set();
+  /** @} */
 
 private:
   bool burning; /**< true if candle is currently lighted */
@@ -60,6 +52,9 @@ private:
   SpritePtr candle_light_1; /**< drawn to lightmap */
   SpritePtr candle_light_2; /**< drawn to lightmap (alternative image) */
 
+private:
+  Candle(const Candle&) = delete;
+  Candle& operator=(const Candle&) = delete;
 };
 
 #endif

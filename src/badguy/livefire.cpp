@@ -17,10 +17,10 @@
 #include "badguy/livefire.hpp"
 
 #include "audio/sound_manager.hpp"
+#include "editor/editor.hpp"
 #include "object/player.hpp"
 #include "object/sprite_particle.hpp"
 #include "sprite/sprite.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
 
 LiveFire::LiveFire(const ReaderMapping& reader) :
@@ -30,14 +30,14 @@ LiveFire::LiveFire(const ReaderMapping& reader) :
 {
   walk_speed = 80;
   max_drop_height = 20;
-  lightsprite->set_color(Color(1.0f, 1.0f, 1.0f));
-  glowing = true;
+  m_lightsprite->set_color(Color(1.0f, 1.0f, 1.0f));
+  m_glowing = true;
 }
 
 void
 LiveFire::collision_solid(const CollisionHit& hit)
 {
-  if(state != STATE_WALKING) {
+  if (state != STATE_WALKING) {
     BadGuy::collision_solid(hit);
     return;
   }
@@ -47,51 +47,51 @@ LiveFire::collision_solid(const CollisionHit& hit)
 HitResponse
 LiveFire::collision_badguy(BadGuy& badguy, const CollisionHit& hit)
 {
-  if(state != STATE_WALKING) {
+  if (state != STATE_WALKING) {
     return BadGuy::collision_badguy(badguy, hit);
   }
   return WalkingBadguy::collision_badguy(badguy, hit);
 }
 
 void
-LiveFire::active_update(float elapsed_time) {
+LiveFire::active_update(float dt_sec) {
 
   // Remove when extinguish animation is done
-  if((sprite->get_action() == "extinguish-left" || sprite->get_action() == "extinguish-right" )
-    && sprite->animation_done()) remove_me();
+  if ((m_sprite->get_action() == "extinguish-left" || m_sprite->get_action() == "extinguish-right" )
+    && m_sprite->animation_done()) remove_me();
 
-  if(state == STATE_WALKING) {
-    WalkingBadguy::active_update(elapsed_time);
+  if (state == STATE_WALKING) {
+    WalkingBadguy::active_update(dt_sec);
     return;
   }
 
-  if(state == STATE_SLEEPING && get_group() == COLGROUP_MOVING) {
+  if (state == STATE_SLEEPING && m_col.get_group() == COLGROUP_MOVING) {
 
     auto player = get_nearest_player();
     if (player) {
       Rectf pb = player->get_bbox();
 
-      bool inReach_left = (pb.p2.x >= bbox.p2.x-((dir == LEFT) ? 256 : 0));
-      bool inReach_right = (pb.p1.x <= bbox.p1.x+((dir == RIGHT) ? 256 : 0));
-      bool inReach_top = (pb.p2.y >= bbox.p1.y);
-      bool inReach_bottom = (pb.p1.y <= bbox.p2.y);
+      bool inReach_left = (pb.get_right() >= m_col.m_bbox.get_right()-((m_dir == Direction::LEFT) ? 256 : 0));
+      bool inReach_right = (pb.get_left() <= m_col.m_bbox.get_left()+((m_dir == Direction::RIGHT) ? 256 : 0));
+      bool inReach_top = (pb.get_bottom() >= m_col.m_bbox.get_top());
+      bool inReach_bottom = (pb.get_top() <= m_col.m_bbox.get_bottom());
 
       if (inReach_left && inReach_right && inReach_top && inReach_bottom) {
         // wake up
-        sprite->set_action(dir == LEFT ? "waking-left" : "waking-right", 1);
+        m_sprite->set_action(m_dir == Direction::LEFT ? "waking-left" : "waking-right", 1);
         state = STATE_WAKING;
       }
     }
   }
-  else if(state == STATE_WAKING) {
-    if(sprite->animation_done()) {
+  else if (state == STATE_WAKING) {
+    if (m_sprite->animation_done()) {
       // start walking
       state = STATE_WALKING;
       WalkingBadguy::initialize();
     }
   }
 
-  BadGuy::active_update(elapsed_time);
+  BadGuy::active_update(dt_sec);
 }
 
 void
@@ -119,20 +119,20 @@ LiveFire::kill_fall()
 {
   SoundManager::current()->play(death_sound, get_pos());
   // throw a puff of smoke
-  Vector ppos = bbox.get_middle();
+  Vector ppos = m_col.m_bbox.get_middle();
   Vector pspeed = Vector(0, -150);
   Vector paccel = Vector(0,0);
-  Sector::current()->add_object(std::make_shared<SpriteParticle>("images/objects/particles/smoke.sprite",
-                                                                 "default", ppos, ANCHOR_MIDDLE,
-                                                                 pspeed, paccel,
-                                                                 LAYER_BACKGROUNDTILES+2));
+  Sector::get().add<SpriteParticle>("images/objects/particles/smoke.sprite",
+                                         "default", ppos, ANCHOR_MIDDLE,
+                                         pspeed, paccel,
+                                         LAYER_BACKGROUNDTILES+2);
   // extinguish the flame
-  sprite->set_action(dir == LEFT ? "extinguish-left" : "extinguish-right", 1);
-  physic.set_velocity_y(0);
-  physic.set_acceleration_y(0);
-  physic.enable_gravity(false);
-  lightsprite->set_blend(Blend(GL_SRC_ALPHA, GL_ONE));
-  lightsprite->set_color(Color(1.0f, 0.9f, 0.8f));
+  m_sprite->set_action(m_dir == Direction::LEFT ? "extinguish-left" : "extinguish-right", 1);
+  m_physic.set_velocity_y(0);
+  m_physic.set_acceleration_y(0);
+  m_physic.enable_gravity(false);
+  m_lightsprite->set_blend(Blend::ADD);
+  m_lightsprite->set_color(Color(1.0f, 0.9f, 0.8f));
   set_group(COLGROUP_DISABLED);
 
   // start dead-script
@@ -148,10 +148,21 @@ LiveFireAsleep::LiveFireAsleep(const ReaderMapping& reader) :
 }
 
 void
+LiveFireAsleep::draw(DrawingContext& context)
+{
+  if (Editor::is_active()) {
+    m_sprite->set_action(m_dir == Direction::LEFT ? "sleeping-left" : "sleeping-right");
+    BadGuy::draw(context);
+  } else {
+    LiveFire::draw(context);
+  }
+}
+
+void
 LiveFireAsleep::initialize()
 {
-  physic.set_velocity_x(0);
-  sprite->set_action(dir == LEFT ? "sleeping-left" : "sleeping-right");
+  m_physic.set_velocity_x(0);
+  m_sprite->set_action(m_dir == Direction::LEFT ? "sleeping-left" : "sleeping-right");
 }
 
 /* The following defines a dormant version that never wakes */
@@ -163,10 +174,21 @@ LiveFireDormant::LiveFireDormant(const ReaderMapping& reader) :
 }
 
 void
+LiveFireDormant::draw(DrawingContext& context)
+{
+  if (Editor::is_active()) {
+    m_sprite->set_action(m_dir == Direction::LEFT ? "sleeping-left" : "sleeping-right");
+    BadGuy::draw(context);
+  } else {
+    LiveFire::draw(context);
+  }
+}
+
+void
 LiveFireDormant::initialize()
 {
-  physic.set_velocity_x(0);
-  sprite->set_action(dir == LEFT ? "sleeping-left" : "sleeping-right");
+  m_physic.set_velocity_x(0);
+  m_sprite->set_action(m_dir == Direction::LEFT ? "sleeping-left" : "sleeping-right");
 }
 
 /* EOF */

@@ -18,12 +18,12 @@
 
 #include "editor/editor.hpp"
 #include "object/player.hpp"
-#include "supertux/globals.hpp"
+#include "supertux/debug.hpp"
 #include "supertux/resources.hpp"
-#include "supertux/object_factory.hpp"
-#include "util/gettext.hpp"
 #include "util/reader_mapping.hpp"
 #include "video/drawing_context.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 namespace {
 const float GRACE_DX = 8; // how far off may the player's bounding-box be x-wise
@@ -34,62 +34,70 @@ const float POSITION_FIX_AY = 50; // y-wise acceleration applied to player when 
 }
 
 Climbable::Climbable(const ReaderMapping& reader) :
-  climbed_by(0),
+  climbed_by(nullptr),
   activate_try_timer(),
   message(),
   new_size()
 {
-  reader.get("x", bbox.p1.x);
-  reader.get("y", bbox.p1.y);
+  reader.get("x", m_col.m_bbox.get_left());
+  reader.get("y", m_col.m_bbox.get_top());
   float w = 32, h = 32;
   reader.get("width", w);
   reader.get("height", h);
-  bbox.set_size(w, h);
+  m_col.m_bbox.set_size(w, h);
+  new_size.x = w;
+  new_size.y = h;
   reader.get("message", message);
 }
 
 Climbable::Climbable(const Rectf& area) :
-  climbed_by(0),
+  climbed_by(nullptr),
   activate_try_timer(),
   message(),
   new_size()
 {
-  bbox = area;
+  m_col.m_bbox = area;
 }
 
 Climbable::~Climbable()
 {
   if (climbed_by) {
     climbed_by->stop_climbing(*this);
-    climbed_by = 0;
+    climbed_by = nullptr;
   }
 }
 
 ObjectSettings
-Climbable::get_settings() {
-  new_size.x = bbox.get_width();
-  new_size.y = bbox.get_height();
-  ObjectSettings result(_("Climbable"));
-  result.options.push_back( ObjectOption(MN_TEXTFIELD, _("Name"), &name));
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Width"), &new_size.x, "width"));
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Height"), &new_size.y, "height"));
-  result.options.push_back( ObjectOption(MN_TEXTFIELD, _("Message"), &message, "message"));
+Climbable::get_settings()
+{
+  new_size.x = m_col.m_bbox.get_width();
+  new_size.y = m_col.m_bbox.get_height();
+
+  ObjectSettings result = TriggerBase::get_settings();
+
+  // result.add_float(_("Width"), &new_size.x, "width");
+  // result.add_float(_("Height"), &new_size.y, "height");
+
+  result.add_translatable_text(_("Message"), &message, "message");
+
+  result.reorder({"message", "region", "x", "y"});
+
   return result;
 }
 
 void
 Climbable::after_editor_set() {
-  bbox.set_size(new_size.x, new_size.y);
+  m_col.m_bbox.set_size(new_size.x, new_size.y);
 }
 
 void
-Climbable::update(float /*elapsed_time*/)
+Climbable::update(float /*dt_sec*/)
 {
   if (!climbed_by) return;
 
   if (!may_climb(*climbed_by)) {
     climbed_by->stop_climbing(*this);
-    climbed_by = 0;
+    climbed_by = nullptr;
   }
 }
 
@@ -99,12 +107,12 @@ Climbable::draw(DrawingContext& context)
   if (climbed_by && !message.empty()) {
     context.push_transform();
     context.set_translation(Vector(0, 0));
-    Vector pos = Vector(0, SCREEN_HEIGHT/2 - Resources::normal_font->get_height()/2);
-    context.draw_center_text(Resources::normal_font, _(message), pos, LAYER_HUD, Climbable::text_color);
+    Vector pos = Vector(0, static_cast<float>(SCREEN_HEIGHT) / 2.0f - Resources::normal_font->get_height() / 2.0f);
+    context.color().draw_center_text(Resources::normal_font, _(message), pos, LAYER_HUD, Climbable::text_color);
     context.pop_transform();
   }
-  if (Editor::is_active()) {
-    context.draw_filled_rect(bbox, Color(1.0f, 1.0f, 0.0f, 0.6f),
+  if (Editor::is_active() || g_debug.show_collision_rects) {
+    context.color().draw_filled_rect(m_col.m_bbox, Color(1.0f, 1.0f, 0.0f, 0.6f),
                              0.0f, LAYER_OBJECTS);
   }
 }
@@ -113,34 +121,34 @@ void
 Climbable::event(Player& player, EventType type)
 {
   if ((type == EVENT_ACTIVATE) || (activate_try_timer.started())) {
-    if(player.get_grabbed_object() == NULL){
-      if(may_climb(player)) {
+    if (player.get_grabbed_object() == nullptr){
+      if (may_climb(player)) {
         climbed_by = &player;
         player.start_climbing(*this);
         activate_try_timer.stop();
       } else {
         if (type == EVENT_ACTIVATE) activate_try_timer.start(ACTIVATE_TRY_FOR);
         // the "-13" to y velocity prevents Tux from walking in place on the ground for horizonal adjustments
-        if (player.get_bbox().p1.x < bbox.p1.x - GRACE_DX) player.add_velocity(Vector(POSITION_FIX_AX,-13));
-        if (player.get_bbox().p2.x > bbox.p2.x + GRACE_DX) player.add_velocity(Vector(-POSITION_FIX_AX,-13));
-        if (player.get_bbox().p1.y < bbox.p1.y - GRACE_DY) player.add_velocity(Vector(0,POSITION_FIX_AY));
-        if (player.get_bbox().p2.y > bbox.p2.y + GRACE_DY) player.add_velocity(Vector(0,-POSITION_FIX_AY));
+        if (player.get_bbox().get_left() < m_col.m_bbox.get_left() - GRACE_DX) player.add_velocity(Vector(POSITION_FIX_AX,-13));
+        if (player.get_bbox().get_right() > m_col.m_bbox.get_right() + GRACE_DX) player.add_velocity(Vector(-POSITION_FIX_AX,-13));
+        if (player.get_bbox().get_top() < m_col.m_bbox.get_top() - GRACE_DY) player.add_velocity(Vector(0,POSITION_FIX_AY));
+        if (player.get_bbox().get_bottom() > m_col.m_bbox.get_bottom() + GRACE_DY) player.add_velocity(Vector(0,-POSITION_FIX_AY));
       }
     }
   }
-  if(type == EVENT_LOSETOUCH) {
+  if (type == EVENT_LOSETOUCH) {
     player.stop_climbing(*this);
-    climbed_by = 0;
+    climbed_by = nullptr;
   }
 }
 
 bool
 Climbable::may_climb(Player& player) const
 {
-  if (player.get_bbox().p1.x < bbox.p1.x - GRACE_DX) return false;
-  if (player.get_bbox().p2.x > bbox.p2.x + GRACE_DX) return false;
-  if (player.get_bbox().p1.y < bbox.p1.y - GRACE_DY) return false;
-  if (player.get_bbox().p2.y > bbox.p2.y + GRACE_DY) return false;
+  if (player.get_bbox().get_left() < m_col.m_bbox.get_left() - GRACE_DX) return false;
+  if (player.get_bbox().get_right() > m_col.m_bbox.get_right() + GRACE_DX) return false;
+  if (player.get_bbox().get_top() < m_col.m_bbox.get_top() - GRACE_DY) return false;
+  if (player.get_bbox().get_bottom() > m_col.m_bbox.get_bottom() + GRACE_DY) return false;
   return true;
 }
 

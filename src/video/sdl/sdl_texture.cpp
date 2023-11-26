@@ -14,27 +14,30 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <config.h>
-
-#include "supertux/gameconfig.hpp"
-#include "supertux/globals.hpp"
-#include "video/color.hpp"
 #include "video/sdl/sdl_texture.hpp"
-#include "video/sdl/sdl_renderer.hpp"
-#include "util/log.hpp"
-#include "math/random_generator.hpp"
-
-#include <assert.h>
 
 #include <SDL.h>
+#include <sstream>
 
-SDLTexture::SDLTexture(SDL_Surface* image) :
+#include "video/sdl/sdl_screen_renderer.hpp"
+#include "video/video_system.hpp"
+
+SDLTexture::SDLTexture(SDL_Texture* texture, int width, int height, const Sampler& sampler) :
+  m_texture(texture),
+  m_width(width),
+  m_height(height),
+  m_sampler(sampler)
+{
+}
+
+SDLTexture::SDLTexture(const SDL_Surface& image, const Sampler& sampler) :
   m_texture(),
   m_width(),
-  m_height()
+  m_height(),
+  m_sampler(sampler)
 {
-  m_texture = SDL_CreateTextureFromSurface(static_cast<SDLRenderer&>(VideoSystem::current()->get_renderer()).get_sdl_renderer(),
-                                           image);
+  m_texture = SDL_CreateTextureFromSurface(static_cast<SDLScreenRenderer&>(VideoSystem::current()->get_renderer()).get_sdl_renderer(),
+                                           const_cast<SDL_Surface*>(&image));
   if (!m_texture)
   {
     std::ostringstream msg;
@@ -42,8 +45,8 @@ SDLTexture::SDLTexture(SDL_Surface* image) :
     throw std::runtime_error(msg.str());
   }
 
-  m_width = image->w;
-  m_height = image->h;
+  m_width = image.w;
+  m_height = image.h;
 }
 
 SDLTexture::~SDLTexture()

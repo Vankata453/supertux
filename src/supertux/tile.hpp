@@ -24,15 +24,18 @@
 
 #include "math/rectf.hpp"
 #include "video/color.hpp"
-#include "video/surface.hpp"
+#include "video/surface_ptr.hpp"
 
+class Canvas;
 class DrawingContext;
 
-class Tile
+class Tile final
 {
 public:
   static bool draw_editor_images;
-  /// bitset for tile attributes
+
+public:
+  /** bitset for tile attributes */
   enum {
     /** solid tile that is indestructible by Tux */
     SOLID     = 0x0001,
@@ -65,7 +68,7 @@ public:
     FIRE      = 0x0800
   };
 
-  /// worldmap flags
+  /** worldmap flags */
   enum {
     WORLDMAP_NORTH = 0x0001,
     WORLDMAP_SOUTH = 0x0002,
@@ -83,15 +86,6 @@ public:
     WORLDMAP_CNSEW = WORLDMAP_NORTH | WORLDMAP_SOUTH | WORLDMAP_EAST | WORLDMAP_WEST
   };
 
-  struct ImageSpec {
-    ImageSpec(const std::string& newfile, const Rectf& newrect)
-      : file(newfile), rect(newrect)
-    { }
-
-    std::string file;
-    Rectf rect;
-  };
-
   enum
   {
     UNI_DIR_NORTH = 0,
@@ -101,104 +95,85 @@ public:
     UNI_DIR_MASK  = 3
   };
 
-private:
-  std::vector<ImageSpec> imagespecs;
-  std::vector<SurfacePtr>  images;
-  std::vector<ImageSpec> editor_imagespecs;
-  std::vector<SurfacePtr>  editor_images;
-
-  /// tile attributes
-  uint32_t attributes;
-
-  /** General purpose data attached to a tile (content of a box, type of coin)*/
-  int data;
-
-  float fps;
-
-  std::string object_name;
-  std::string object_data;
-
 public:
   Tile();
-  Tile(const std::vector<ImageSpec>& images, const std::vector<ImageSpec>& editor_images,
-       uint32_t attributes, uint32_t data, float fps, std::string obj_name = "",
-       std::string obj_data = "");
-  ~Tile();
-
-  /** load Surfaces, if not already loaded */
-  void load_images();
-
-  SurfacePtr get_current_image() const;
+  Tile(const std::vector<SurfacePtr>& images,
+       const std::vector<SurfacePtr>& editor_images,
+       uint32_t attributes, uint32_t data, float fps,
+       const std::string& obj_name = "", const std::string& obj_data = "",
+       bool deprecated = false);
 
   /** Draw a tile on the screen */
-  void draw(DrawingContext& context, const Vector& pos, int z_pos, Color color = Color(1, 1, 1)) const;
+  void draw(Canvas& canvas, const Vector& pos, int z_pos, const Color& color = Color(1, 1, 1)) const;
+  void draw_debug(Canvas& canvas, const Vector& pos, int z_pos, const Color& color = Color(1.0f, 0.f, 1.0f, 0.5f)) const;
 
-  uint32_t getAttributes() const
-  { return attributes; }
+  SurfacePtr get_current_surface() const;
+  SurfacePtr get_current_editor_surface() const;
 
-  int getData() const
-  { return data; }
+  uint32_t get_attributes() const { return m_attributes; }
+  int get_data() const { return m_data; }
 
   /** Checks the SLOPE attribute. Returns "true" if set, "false" otherwise. */
-  bool is_slope() const
-  {
-    return attributes & SLOPE;
-  }
+  bool is_slope() const { return (m_attributes & SLOPE) != 0; }
 
-  /** Determine the solidity of a tile. This version behaves correctly for
-   * unisolid tiles by taking position and movement of the object in question
-   * into account. Because creating the arguments for this function can be
-   * expensive, you should handle trivial cases using the "is_solid()" and
-   * "is_unisolid()" methods first. */
+  /** Determine the solidity of a tile. This version behaves correctly
+      for unisolid tiles by taking position and movement of the object
+      in question into account. Because creating the arguments for
+      this function can be expensive, you should handle trivial cases
+      using the "is_solid()" and "is_unisolid()" methods first. */
   bool is_solid (const Rectf& tile_bbox, const Rectf& position, const Vector& movement) const;
 
-  /** This version only checks the SOLID flag to determine the solidity of a
-   * tile. This means it will always return "true" for unisolid tiles. To
-   * determine the *current* solidity of unisolid tiles, use the "is_solid"
-   * method that takes position and movement into account (see above). */
-  bool is_solid() const
-  {
-    return attributes & SOLID;
-  }
+  /** This version only checks the SOLID flag to determine the
+      solidity of a tile. This means it will always return "true" for
+      unisolid tiles. To determine the *current* solidity of unisolid
+      tiles, use the "is_solid" method that takes position and
+      movement into account (see above). */
+  bool is_solid() const { return (m_attributes & SOLID) != 0; }
 
-  /** Determines whether the tile's attributes are important to calculate the
-   * collisions. The tile may be unisolid and therefore the collision with that
-   * tile don't matter.*/
+  /** Determines whether the tile's attributes are important to
+      calculate the collisions. The tile may be unisolid and therefore
+      the collision with that tile don't matter.*/
   bool is_collisionful(const Rectf& tile_bbox, const Rectf& position, const Vector& movement) const;
 
   /** Checks the UNISOLID attribute. Returns "true" if set, "false" otherwise. */
-  bool is_unisolid() const
-  {
-    return attributes & UNISOLID;
-  }
+  bool is_unisolid() const { return (m_attributes & UNISOLID) != 0; }
 
-  std::string get_object_name() const {
-    return object_name;
-  }
+  bool is_deprecated() const { return m_deprecated; }
 
-  std::string get_object_data() const {
-    return object_data;
-  }
-
-  void print_debug(int id) const;
+  const std::string& get_object_name() const { return m_object_name; }
+  const std::string& get_object_data() const { return m_object_data; }
 
 private:
-  //Correct small oddities in attributes that naive people
-  //might miss (and rebuke them for it)
-  void correct_attributes();
-
   /** Returns zero if a unisolid tile is non-solid due to the movement
-   * direction, non-zero if the tile is solid due to direction. */
+      direction, non-zero if the tile is solid due to direction. */
   bool check_movement_unisolid (const Vector& movement) const;
 
-  /** Returns zero if a unisolid tile is non-solid due to the position of the
-   * tile and the object, non-zero if the tile is solid. */
+  /** Returns zero if a unisolid tile is non-solid due to the position
+      of the tile and the object, non-zero if the tile is solid. */
   bool check_position_unisolid (const Rectf& obj_bbox,
                                 const Rectf& tile_bbox) const;
 
 private:
-  Tile(const Tile&);
-  Tile& operator=(const Tile&);
+  std::vector<SurfacePtr> m_images;
+  std::vector<SurfacePtr> m_editor_images;
+
+  /** tile attributes */
+  uint32_t m_attributes;
+
+  /** General purpose data attached to a tile (content of a box, type of coin)*/
+  int m_data;
+
+  float m_fps;
+
+  std::string m_object_name;
+  std::string m_object_data;
+
+  /** Discourage use of this tile by not making it available in the editor */
+  bool m_deprecated;
+
+private:
+  Tile(const Tile&) = delete;
+  Tile& operator=(const Tile&) = delete;
 };
 
 #endif

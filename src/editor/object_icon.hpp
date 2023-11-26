@@ -17,29 +17,34 @@
 #ifndef HEADER_SUPERTUX_EDITOR_OBJECT_ICON_HPP
 #define HEADER_SUPERTUX_EDITOR_OBJECT_ICON_HPP
 
-#include "util/reader_fwd.hpp"
-#include "util/reader_mapping.hpp"
-#include "video/surface.hpp"
-#include "video/drawing_context.hpp"
+#include <string>
+
+#include "math/vector.hpp"
+#include "video/surface_ptr.hpp"
+
+class DrawingContext;
+class ReaderMapping;
 
 class ObjectIcon
 {
-  public:
-    ObjectIcon(const std::string& name, const std::string& icon);
-    ObjectIcon(const ReaderMapping& reader);
-    virtual ~ObjectIcon();
+public:
+  ObjectIcon(const std::string& name, const std::string& icon);
+  ObjectIcon(const ReaderMapping& reader);
+  virtual ~ObjectIcon();
 
-    std::string object_name;
-    SurfacePtr surface;
+  virtual void draw(DrawingContext& context, const Vector& pos);
 
-    virtual void draw(DrawingContext& context, Vector pos);
+  std::string get_object_class() const { return m_object_class; }
 
-  private:
-    Vector offset;
+private:
+  void calculate_offset();
 
-    void calculate_offset();
+private:
+  std::string m_object_class;
+  SurfacePtr m_surface;
+  Vector m_offset;
 };
 
-#endif // HEADER_SUPERTUX_EDITOR_OBJECT_ICON_HPP
+#endif
 
 /* EOF */

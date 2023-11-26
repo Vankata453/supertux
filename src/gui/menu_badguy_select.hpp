@@ -19,13 +19,12 @@
 
 #include "gui/menu.hpp"
 
-class BadguySelectMenu : public Menu
+class BadguySelectMenu final : public Menu
 {
 public:
   BadguySelectMenu(std::vector<std::string>* badguys_);
-  ~BadguySelectMenu();
 
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
 
   static std::vector<std::string> all_badguys;
 
@@ -39,8 +38,9 @@ private:
   void refresh_menu();
   void add_badguy();
 
-  BadguySelectMenu(const BadguySelectMenu&);
-  BadguySelectMenu& operator=(const BadguySelectMenu&);
+private:
+  BadguySelectMenu(const BadguySelectMenu&) = delete;
+  BadguySelectMenu& operator=(const BadguySelectMenu&) = delete;
 };
 
 #endif

@@ -24,17 +24,16 @@ enum WorldMapMenuIDs {
   MNID_QUITWORLDMAP
 };
 
-class WorldmapMenu : public Menu
+class WorldmapMenu final : public Menu
 {
-private:
 public:
   WorldmapMenu();
 
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
 
 private:
-  WorldmapMenu(const WorldmapMenu&);
-  WorldmapMenu& operator=(const WorldmapMenu&);
+  WorldmapMenu(const WorldmapMenu&) = delete;
+  WorldmapMenu& operator=(const WorldmapMenu&) = delete;
 };
 
 #endif

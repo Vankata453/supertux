@@ -19,24 +19,18 @@
 
 #include "object/moving_sprite.hpp"
 
-/**
- * PushButton - jump on it to run a script
- */
-class PushButton : public MovingSprite
+/** PushButton - jump on it to run a script */
+class PushButton final : public MovingSprite
 {
 public:
   PushButton(const ReaderMapping& reader);
 
-  HitResponse collision(GameObject& other, const CollisionHit& hit);
-  void update(float elapsed_time);
-  std::string get_class() const {
-    return "pushbutton";
-  }
-  std::string get_display_name() const {
-    return _("Button");
-  }
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual void update(float dt_sec) override;
+  virtual std::string get_class() const override { return "pushbutton"; }
+  virtual std::string get_display_name() const override { return _("Button"); }
 
-  virtual ObjectSettings get_settings();
+  virtual ObjectSettings get_settings() override;
 
 private:
   enum PushButtonState {
@@ -46,6 +40,10 @@ private:
 
   std::string script;
   PushButtonState state;
+
+private:
+  PushButton(const PushButton&) = delete;
+  PushButton& operator=(const PushButton&) = delete;
 };
 
 #endif

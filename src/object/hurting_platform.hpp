@@ -19,24 +19,19 @@
 
 #include "object/platform.hpp"
 
-/**
- * Platform that hurts Tux and Badguys when touched
- */
-class HurtingPlatform : public Platform
+/** Platform that hurts Tux and Badguys when touched */
+class HurtingPlatform final : public Platform
 {
 public:
   HurtingPlatform(const ReaderMapping& reader);
 
-  virtual HitResponse collision(GameObject& other, const CollisionHit& hit);
-  std::string get_class() const {
-    return "hurting_platform";
-  }
-  std::string get_display_name() const {
-    return _("Hurting platform");
-  }
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual std::string get_class() const override { return "hurting_platform"; }
+  virtual std::string get_display_name() const override { return _("Hurting platform"); }
 
 private:
-
+  HurtingPlatform(const HurtingPlatform&) = delete;
+  HurtingPlatform& operator=(const HurtingPlatform&) = delete;
 };
 
 #endif

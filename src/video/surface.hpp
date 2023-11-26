@@ -18,57 +18,52 @@
 #define HEADER_SUPERTUX_VIDEO_SURFACE_HPP
 
 #include <string>
-#include <memory>
+#include <boost/optional.hpp>
 
-#include "math/vector.hpp"
 #include "math/rect.hpp"
+#include "math/vector.hpp"
+#include "video/flip.hpp"
 #include "video/surface_ptr.hpp"
 #include "video/texture_ptr.hpp"
 
+class ReaderMapping;
 class SurfaceData;
 
 /** A rectangular image.  The class basically holds a reference to a
     texture with additional UV coordinates that specify a rectangular
     area on this texture */
-class Surface
+class Surface final
 {
 public:
-  static SurfacePtr create(const std::string& file);
-  static SurfacePtr create(const std::string& file, const Rect& rect);
+  static SurfacePtr from_texture(const TexturePtr& texture);
+  static SurfacePtr from_file(const std::string& filename, const boost::optional<Rect>& rect = boost::none);
+  static SurfacePtr from_reader(const ReaderMapping& mapping, const boost::optional<Rect>& rect = boost::none);
 
 private:
-  TexturePtr texture;
-  SurfaceData* surface_data;
-  Rect rect;
-  bool flipx;
-
-private:
-  Surface(const std::string& file);
-  Surface(const std::string& file, const Rect& rect);
-  Surface(const Surface&);
+  Surface(const TexturePtr& diffuse_texture, const TexturePtr& displacement_texture, Flip flip);
+  Surface(const TexturePtr& diffuse_texture, const TexturePtr& displacement_texture, const Rect& region, Flip flip);
 
 public:
   ~Surface();
 
-  SurfacePtr clone() const;
-
-  /** flip the surface horizontally */
-  void hflip();
-  bool get_flipx() const;
+  SurfacePtr region(const Rect& rect) const;
+  SurfacePtr clone(Flip flip = NO_FLIP) const;
 
   TexturePtr get_texture() const;
-  SurfaceData* get_surface_data() const;
-  int get_x() const;
-  int get_y() const;
+  TexturePtr get_displacement_texture() const;
+  Rect get_region() const { return m_region; }
   int get_width() const;
   int get_height() const;
-  Vector get_position() const;
-
-  /** returns a vector containing width and height */
-  Vector get_size() const;
+  Flip get_flip() const { return m_flip; }
 
 private:
-  Surface& operator=(const Surface&);
+  const TexturePtr m_diffuse_texture;
+  const TexturePtr m_displacement_texture;
+  const Rect m_region;
+  const Flip m_flip;
+
+private:
+  Surface& operator=(const Surface&) = delete;
 };
 
 #endif

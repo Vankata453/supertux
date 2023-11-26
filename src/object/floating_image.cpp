@@ -15,6 +15,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "object/floating_image.hpp"
+
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
 #include "supertux/globals.hpp"
@@ -35,17 +36,17 @@ FloatingImage::~FloatingImage()
 }
 
 void
-FloatingImage::update(float elapsed_time)
+FloatingImage::update(float dt_sec)
 {
-  if(fading > 0) {
-    fading -= elapsed_time;
-    if(fading <= 0) {
+  if (fading > 0) {
+    fading -= dt_sec;
+    if (fading <= 0) {
       fading = 0;
       visible = true;
     }
-  } else if(fading < 0) {
-    fading += elapsed_time;
-    if(fading >= 0) {
+  } else if (fading < 0) {
+    fading += dt_sec;
+    if (fading >= 0) {
       fading = 0;
       visible = false;
     }
@@ -67,14 +68,14 @@ FloatingImage::get_action()
 void
 FloatingImage::fade_in(float fadetime_)
 {
-  this->fadetime = fadetime_;
+  fadetime = fadetime_;
   fading = fadetime_;
 }
 
 void
 FloatingImage::fade_out(float fadetime_)
 {
-  this->fadetime = fadetime_;
+  fadetime = fadetime_;
   fading = -fadetime_;
 }
 
@@ -84,19 +85,23 @@ FloatingImage::draw(DrawingContext& context)
   context.push_transform();
   context.set_translation(Vector(0, 0));
 
-  if(fading > 0) {
+  if (fading > 0) {
     context.set_alpha((fadetime-fading) / fadetime);
-  } else if(fading < 0) {
+  } else if (fading < 0) {
     context.set_alpha(-fading / fadetime);
-  } else if(!visible) {
+  } else if (!visible) {
     context.pop_transform();
     return;
   }
 
-  Vector spos = pos + get_anchor_pos(Rectf(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT),
-                                     sprite->get_width(), sprite->get_height(), anchor);
+  Vector spos = pos + get_anchor_pos(Rectf(0, 0,
+                                           static_cast<float>(context.get_width()),
+                                           static_cast<float>(context.get_height())),
+                                     static_cast<float>(sprite->get_width()),
+                                     static_cast<float>(sprite->get_height()),
+                                     anchor);
 
-  sprite->draw(context, spos, layer);
+  sprite->draw(context.color(), spos, layer);
 
   context.pop_transform();
 }

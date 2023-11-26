@@ -20,23 +20,19 @@
 #include "util/log.hpp"
 
 namespace scripting {
-Camera::Camera(::Camera* camera_)
-  : camera(camera_)
-{ }
-
-Camera::~Camera()
-{ }
 
 void
 Camera::reload_config()
 {
-  camera->reload_config();
+  SCRIPT_GUARD_VOID;
+  object.reload_config();
 }
 
 void
 Camera::shake(float speed, float x, float y)
 {
-  camera->shake(speed, x, y);
+  SCRIPT_GUARD_VOID;
+  object.shake(speed, x, y);
 }
 
 void
@@ -47,10 +43,12 @@ Camera::set_pos(float , float )
 void
 Camera::set_mode(const std::string& mode)
 {
-  if(mode == "normal") {
-    camera->mode = ::Camera::NORMAL;
-  } else if(mode == "manual") {
-    camera->mode = ::Camera::MANUAL;
+  SCRIPT_GUARD_VOID;
+
+  if (mode == "normal") {
+    object.set_mode(::Camera::Mode::NORMAL);
+  } else if (mode == "manual") {
+    object.set_mode(::Camera::Mode::MANUAL);
   } else {
     log_fatal << "Camera mode '" << mode << "' unknown.";
   }
@@ -59,8 +57,10 @@ Camera::set_mode(const std::string& mode)
 void
 Camera::scroll_to(float x, float y, float scrolltime)
 {
-  camera->scroll_to(Vector(x, y), scrolltime);
+  SCRIPT_GUARD_VOID;
+  object.scroll_to(Vector(x, y), scrolltime);
 }
-}
+
+} // namespace scripting
 
 /* EOF */

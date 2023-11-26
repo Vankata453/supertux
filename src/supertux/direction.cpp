@@ -23,71 +23,41 @@
 
 std::ostream& operator<<(std::ostream& o, const Direction& dir)
 {
+  return o << dir_to_string(dir);
+}
+
+std::string
+dir_to_string(const Direction& dir)
+{
   switch (dir)
   {
-    case AUTO:
-      o << "auto";
-      break;
-    case LEFT:
-      o << "left";
-      break;
-    case RIGHT:
-      o << "right";
-      break;
-    case UP:
-      o << "up";
-      break;
-    case DOWN:
-      o << "down";
-      break;
-  }
-
-  return o;
-}
-
-ObjectOption
-dir_option(Direction *dir) {
-  ObjectOption result(MN_STRINGSELECT, _("Direction"), dir);
-  result.select.push_back(_("auto"));
-  result.select.push_back(_("left"));
-  result.select.push_back(_("right"));
-  result.select.push_back(_("up"));
-  result.select.push_back(_("down"));
-  return result;
-}
-
-std::string dir_to_string(const Direction& dir) {
-  switch(dir)
-  {
-    case LEFT:
+    case Direction::LEFT:
       return "left";
-    case RIGHT:
+    case Direction::RIGHT:
       return "right";
-    case UP:
+    case Direction::UP:
       return "up";
-    case DOWN:
+    case Direction::DOWN:
       return "down";
-    case AUTO:
+    case Direction::AUTO:
     default:
       return "auto";
   }
 }
 
-std::string dir_to_prefixed(const Direction& dir, const std::string& prefix) {
-  return prefix + "-" + dir_to_string(dir);
-}
-
-Direction string_to_dir(const std::string& dir_str) {
-  if(dir_str == "left")
-    return LEFT;
-  else if(dir_str == "right")
-    return RIGHT;
-  else if(dir_str == "up")
-    return UP;
-  else if(dir_str == "down")
-    return DOWN;
+Direction
+string_to_dir(const std::string& dir_str)
+{
+  if (dir_str == "left")
+    return Direction::LEFT;
+  else if (dir_str == "right")
+    return Direction::RIGHT;
+  else if (dir_str == "up")
+    return Direction::UP;
+  else if (dir_str == "down")
+    return Direction::DOWN;
   else
-    return AUTO;
+    return Direction::AUTO;
 }
 
 /* EOF */

@@ -19,23 +19,22 @@
 
 #include "badguy/walking_badguy.hpp"
 
-class Snowman : public WalkingBadguy
+class Snowman final : public WalkingBadguy
 {
 public:
   Snowman(const ReaderMapping& reader);
-  Snowman(const Vector& pos, Direction d);
-  std::string get_class() const {
-    return "snowman";
-  }
-  std::string get_display_name() const {
-    return _("Snowman");
-  }
+
+  virtual std::string get_class() const override { return "snowman"; }
+  virtual std::string get_display_name() const override { return _("Snowman"); }
 
 protected:
   void loose_head();
-  virtual HitResponse collision_bullet(Bullet& bullet, const CollisionHit& hit);
-  bool collision_squished(GameObject& object);
+  virtual HitResponse collision_bullet(Bullet& bullet, const CollisionHit& hit) override;
+  virtual bool collision_squished(GameObject& object) override;
 
+private:
+  Snowman(const Snowman&) = delete;
+  Snowman& operator=(const Snowman&) = delete;
 };
 
 #endif

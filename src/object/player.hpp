@@ -17,16 +17,16 @@
 #ifndef HEADER_SUPERTUX_OBJECT_PLAYER_HPP
 #define HEADER_SUPERTUX_OBJECT_PLAYER_HPP
 
-#include "scripting/exposed_object.hpp"
 #include "scripting/player.hpp"
 #include "sprite/sprite_ptr.hpp"
+#include "squirrel/exposed_object.hpp"
 #include "supertux/direction.hpp"
 #include "supertux/moving_object.hpp"
 #include "supertux/physic.hpp"
 #include "supertux/player_status.hpp"
-#include "supertux/script_interface.hpp"
 #include "supertux/sequence.hpp"
 #include "supertux/timer.hpp"
+#include "video/surface_ptr.hpp"
 
 class BadGuy;
 class Portable;
@@ -34,212 +34,159 @@ class Climbable;
 class Controller;
 class CodeController;
 
-/* Times: */
-static const float TUX_SAFE_TIME = 1.8f;
-static const float TUX_INVINCIBLE_TIME = 14.0f;
-static const float TUX_INVINCIBLE_TIME_WARNING = 2.0f;
-static const float GROWING_TIME = 0.35f;
-static const int GROWING_FRAMES = 7;
-static const float TUX_BACKFLIP_TIME = 2.1f; // minimum air time that backflip results in a loss of control
+extern const float TUX_INVINCIBLE_TIME_WARNING;
 
-class Player : public MovingObject,
-               public ExposedObject<Player, scripting::Player>
+class Player final : public MovingObject,
+                     public ExposedObject<Player, scripting::Player>
 {
 public:
   enum FallMode { ON_GROUND, JUMPING, TRAMPOLINE_JUMP, FALLING };
-  //Tux can only go this fast. If set to 0 no special limit is used, only the default limits.
-  void set_speedlimit(float newlimit);
-  float get_speedlimit() const;
-  virtual bool do_save() const {
-    return false;
-  }
 
 public:
-  Player(PlayerStatus* player_status, const std::string& name);
+  Player(PlayerStatus& player_status, const std::string& name);
   virtual ~Player();
 
-  void set_controller(Controller* controller);
-  /*
-   * Level solved. Don't kill Tux any more.
-   */
-  void set_winning();
-  bool is_winning() const
-  {
-    return winning;
-  }
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual void collision_tile(uint32_t tile_attributes) override;
+  virtual bool is_saveable() const override { return false; }
+  virtual bool is_singleton() const override { return true; }
 
-  Controller* get_controller() const
-  {
-    return controller;
-  }
+  void set_controller(const Controller* controller);
+  /** Level solved. Don't kill Tux any more. */
+  void set_winning();
+  bool is_winning() const { return m_winning; }
+
+  // Tux can only go this fast. If set to 0 no special limit is used, only the default limits.
+  void set_speedlimit(float newlimit);
+  float get_speedlimit() const;
+
+  const Controller& get_controller() const { return *m_controller; }
 
   void use_scripting_controller(bool use_or_release);
   void do_scripting_controller(const std::string& control, bool pressed);
 
-  virtual void update(float elapsed_time);
-  virtual void draw(DrawingContext& context);
-  virtual void collision_solid(const CollisionHit& hit);
-  virtual HitResponse collision(GameObject& other, const CollisionHit& hit);
-  virtual void collision_tile(uint32_t tile_attributes);
-
   void make_invincible();
-  bool is_invincible() const
-  {
-    return invincible_timer.started();
-  }
-  bool is_dying() const
-  {
-    return dying;
-  }
-  Direction peeking_direction_x() const
-  {
-    return peekingX;
-  }
 
-  Direction peeking_direction_y() const
-  {
-    return peekingY;
-  }
+  bool is_invincible() const { return m_invincible_timer.started(); }
+  bool is_dying() const { return m_dying; }
+
+  Direction peeking_direction_x() const { return m_peekingX; }
+  Direction peeking_direction_y() const { return m_peekingY; }
 
   void kill(bool completely);
-  void check_bounds();
   void move(const Vector& vector);
 
-  virtual bool add_bonus(const std::string& bonus);
-  virtual bool set_bonus(const std::string& bonus);
-  virtual void add_coins(int count);
-  virtual int get_coins() const;
+  bool add_bonus(const std::string& bonus);
+  bool set_bonus(const std::string& bonus);
+  void add_coins(int count);
+  int get_coins() const;
 
-  /**
-   * picks up a bonus, taking care not to pick up lesser bonus items than we already have
-   *
-   * @returns true if the bonus has been set (or was already good enough)
-   *          false if the bonus could not be set (for example no space for big tux)
-   */
+  /** picks up a bonus, taking care not to pick up lesser bonus items than we already have
+
+      @returns true if the bonus has been set (or was already good enough)
+               false if the bonus could not be set (for example no space for big tux) */
   bool add_bonus(BonusType type, bool animate = false);
-  /**
-   * like add_bonus, but can also downgrade the bonus items carried
-   */
+
+  /** like add_bonus, but can also downgrade the bonus items carried */
   bool set_bonus(BonusType type, bool animate = false);
 
-  PlayerStatus* get_status() const
-  {
-    return player_status;
-  }
-  // set kick animation
+  PlayerStatus& get_status() const { return m_player_status; }
+
+  /** set kick animation */
   void kick();
 
-  /**
-   * play cheer animation.
-   * This might need some space and behave in an unpredictable way. Best to use this at level end.
-   */
+  /** play cheer animation.
+      This might need some space and behave in an unpredictable way.
+      Best to use this at level end. */
   void do_cheer();
 
-  /**
-   * duck down if possible.
-   * this won't last long as long as input is enabled.
-   */
+  /** duck down if possible.
+      this won't last long as long as input is enabled. */
   void do_duck();
 
-  /**
-   * stand back up if possible.
-   */
+  /** stand back up if possible. */
   void do_standup();
 
-  /**
-   * do a backflip if possible.
-   */
+  /** do a backflip if possible. */
   void do_backflip();
 
-  /**
-   * jump in the air if possible
-   * sensible values for yspeed are negative - unless we want to jump into the ground of course
-   */
+  /** jump in the air if possible
+      sensible values for yspeed are negative - unless we want to jump
+      into the ground of course */
   void do_jump(float yspeed);
 
-  /**
-   * Adds velocity to the player (be careful when using this)
-   */
+  /** Adds velocity to the player (be careful when using this) */
   void add_velocity(const Vector& velocity);
 
-  /**
-   * Adds velocity to the player until given end speed is reached
-   */
+  /** Adds velocity to the player until given end speed is reached */
   void add_velocity(const Vector& velocity, const Vector& end_speed);
 
-  /**
-   * Returns the current velocity of the player
-   */
+  /** Returns the current velocity of the player */
   Vector get_velocity() const;
 
   void bounce(BadGuy& badguy);
 
-  bool is_dead() const
-  { return dead; }
+  bool is_dead() const { return m_dead; }
   bool is_big() const;
-  bool is_stone() const
-  { return stone; }
+  bool is_stone() const { return m_stone; }
 
   void set_visible(bool visible);
   bool get_visible() const;
 
   bool on_ground() const;
 
-  Portable* get_grabbed_object() const
-  {
-    return grabbed_object;
-  }
-  void stop_grabbing()
-  {
-    grabbed_object = NULL;
-  }
+  Portable* get_grabbed_object() const { return m_grabbed_object; }
+  void stop_grabbing() { m_grabbed_object = nullptr; }
 
-  /**
-   * Switches ghost mode on/off.
-   * Lets Tux float around and through solid objects.
-   */
+  /** Checks whether the player has grabbed a certain object
+      @param name Name of the object to check */
+  bool has_grabbed(const std::string& object_name) const;
+
+  /** Switches ghost mode on/off.
+      Lets Tux float around and through solid objects. */
   void set_ghost_mode(bool enable);
 
-  /**
-   * Switches edit mode on/off.
-   * In edit mode, Tux will enter ghost_mode instead of dying.
-   */
+  /** Switches edit mode on/off.
+      In edit mode, Tux will enter ghost_mode instead of dying. */
   void set_edit_mode(bool enable);
 
-  /**
-   * Returns whether ghost mode is currently enabled
-   */
-  bool get_ghost_mode() const { return ghost_mode; }
+  /** Returns whether ghost mode is currently enabled */
+  bool get_ghost_mode() const { return m_ghost_mode; }
 
-  /**
-   * Changes height of bounding box.
-   * Returns true if successful, false otherwise
-   */
+  /** Changes height of bounding box.
+      Returns true if successful, false otherwise */
   bool adjust_height(float new_height);
 
-  /**
-   * Orders the current GameSession to start a sequence
-   */
-  void trigger_sequence(const std::string& sequence_name);
-  void trigger_sequence(Sequence seq);
+  /** Orders the current GameSession to start a sequence
+      @param sequence_name Name of the sequence to start
+      @param data Custom additional sequence data */
+  void trigger_sequence(const std::string& sequence_name, const SequenceData* data = nullptr);
 
-  /**
-   * Requests that the player start climbing the given Climbable
-   */
+  /** Orders the current GameSession to start a sequence
+      @param sequence Sequence to start
+      @param data Custom additional sequence data */
+  void trigger_sequence(Sequence seq, const SequenceData* data = nullptr);
+
+  /** Requests that the player start climbing the given Climbable */
   void start_climbing(Climbable& climbable);
 
-  /**
-   * Requests that the player stop climbing the given Climbable
-   */
+  /** Requests that the player stop climbing the given Climbable */
   void stop_climbing(Climbable& climbable);
 
-  Physic& get_physic() { return physic; }
+  Physic& get_physic() { return m_physic; }
 
   void activate();
   void deactivate();
 
   void walk(float speed);
   void set_dir(bool right);
+  void stop_backflipping();
+
+  void position_grabbed_object();
+  void try_grab();
 
 private:
   void handle_input();
@@ -256,92 +203,100 @@ private:
 
   BonusType string_to_bonus(const std::string& bonus) const;
 
-  /**
-   * slows Tux down a little, based on where he's standing
-   */
+  /** slows Tux down a little, based on where he's standing */
   void apply_friction();
 
-private:
-  bool deactivated;
-
-  Controller* controller;
-  std::unique_ptr<CodeController> scripting_controller; /**< This controller is used when the Player is controlled via scripting */
-  PlayerStatus* player_status;
-  bool duck;
-  bool dead;
+  void check_bounds();
 
 private:
-  bool dying;
-  bool winning;
-  bool backflipping;
-  int  backflip_direction;
-  Direction peekingX;
-  Direction peekingY;
-  float ability_time;
-  bool stone;
-  bool swimming;
-  float speedlimit;
-  Controller* scripting_controller_old; /**< Saves the old controller while the scripting_controller is used */
-  bool jump_early_apex;
-  bool on_ice;
-  bool ice_this_frame;
-  SpritePtr lightsprite;
-  SpritePtr powersprite;
+  bool m_deactivated;
+
+  const Controller* m_controller;
+  std::unique_ptr<CodeController> m_scripting_controller; /**< This controller is used when the Player is controlled via scripting */
+  PlayerStatus& m_player_status;
+  bool m_duck;
+  bool m_dead;
+  bool m_dying;
+  bool m_winning;
+  bool m_backflipping;
+  int  m_backflip_direction;
+  Direction m_peekingX;
+  Direction m_peekingY;
+  float m_ability_time;
+  bool m_stone;
+  bool m_swimming;
+  float m_speedlimit;
+  const Controller* m_scripting_controller_old; /**< Saves the old controller while the scripting_controller is used */
+  bool m_jump_early_apex;
+  bool m_on_ice;
+  bool m_ice_this_frame;
+  SpritePtr m_lightsprite;
+  SpritePtr m_powersprite;
 
 public:
-  Direction dir;
-  Direction old_dir;
-
-  float last_ground_y;
-  FallMode fall_mode;
-
-  bool on_ground_flag;
-  bool jumping;
-  bool can_jump;
-  Timer jump_button_timer; /**< started when player presses the jump button; runs until Tux jumps or JUMP_GRACE_TIME runs out */
-  bool wants_buttjump;
-  bool does_buttjump;
-
-  Timer invincible_timer;
-  Timer skidding_timer;
-  Timer safe_timer;
-  Timer kick_timer;
-  Timer shooting_timer;   // used to show the arm when Tux is shooting
-  Timer ability_timer;  // maximum lengh of time that special abilities can last
-  Timer cooldown_timer; // minimum time period between successive uses of a special ability
-  Timer dying_timer;
-  bool growing;
-  Timer backflip_timer;
-
-  Physic physic;
-
-  bool visible;
-
-  Portable* grabbed_object;
-
-  SpritePtr sprite; /**< The main sprite representing Tux */
-
-  SurfacePtr airarrow; /**< arrow indicating Tux' position when he's above the camera */
-
-  Vector floor_normal;
-  void position_grabbed_object();
-  void try_grab();
-
-  bool ghost_mode; /**< indicates if Tux should float around and through solid objects */
-  bool edit_mode; /**< indicates if Tux should switch to ghost mode rather than dying */
-
-  Timer unduck_hurt_timer; /**< if Tux wants to stand up again after ducking and cannot, this timer is started */
-
-  Timer idle_timer;
-  unsigned int idle_stage;
-
-  Climbable* climbing; /**< Climbable object we are currently climbing, null if none */
+  Direction m_dir;
 
 private:
-  Player(const Player&);
-  Player& operator=(const Player&);
+  Direction m_old_dir;
+
+public:
+  float m_last_ground_y;
+  FallMode m_fall_mode;
+
+private:
+  bool m_on_ground_flag;
+  bool m_jumping;
+  bool m_can_jump;
+  Timer m_jump_button_timer; /**< started when player presses the jump button; runs until Tux jumps or JUMP_GRACE_TIME runs out */
+  bool m_wants_buttjump;
+
+public:
+  bool m_does_buttjump;
+  Timer m_invincible_timer;
+
+private:
+  Timer m_skidding_timer;
+  Timer m_safe_timer;
+  Timer m_kick_timer;
+  Timer m_shooting_timer;   // used to show the arm when Tux is shooting
+  Timer m_ability_timer;  // maximum lengh of time that special abilities can last
+  Timer m_cooldown_timer; // minimum time period between successive uses of a special ability
+
+public:
+  Timer m_dying_timer;
+
+private:
+  Timer m_second_growup_sound_timer;
+  bool m_growing;
+  Timer m_backflip_timer;
+
+  Physic m_physic;
+
+  bool m_visible;
+
+  Portable* m_grabbed_object;
+
+  SpritePtr m_sprite; /**< The main sprite representing Tux */
+
+  SurfacePtr m_airarrow; /**< arrow indicating Tux' position when he's above the camera */
+
+  Vector m_floor_normal;
+
+  bool m_ghost_mode; /**< indicates if Tux should float around and through solid objects */
+  bool m_edit_mode; /**< indicates if Tux should switch to ghost mode rather than dying */
+
+  Timer m_unduck_hurt_timer; /**< if Tux wants to stand up again after ducking and cannot, this timer is started */
+
+  Timer m_idle_timer;
+  unsigned int m_idle_stage;
+
+  Climbable* m_climbing; /**< Climbable object we are currently climbing, null if none */
+
+private:
+  Player(const Player&) = delete;
+  Player& operator=(const Player&) = delete;
 };
 
-#endif /*SUPERTUX_PLAYER_H*/
+#endif
 
 /* EOF */

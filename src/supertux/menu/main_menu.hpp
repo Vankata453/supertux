@@ -19,29 +19,27 @@
 
 #include "gui/menu.hpp"
 
-class AddonMenu;
-class WorldSetMenu;
-
 enum MainMenuIDs {
   MNID_STARTGAME,
   MNID_ADDONS,
   MNID_OPTIONMENU,
   MNID_LEVELEDITOR,
   MNID_CREDITS,
+  MNID_DONATE,
   MNID_QUITMAINMENU
 };
 
-class MainMenu : public Menu
+class MainMenu final : public Menu
 {
 public:
   MainMenu();
 
   void on_window_resize() override;
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
 
 private:
-  MainMenu(const MainMenu&);
-  MainMenu& operator=(const MainMenu&);
+  MainMenu(const MainMenu&) = delete;
+  MainMenu& operator=(const MainMenu&) = delete;
 };
 
 #endif

@@ -21,23 +21,22 @@
 #include "supertux/direction.hpp"
 #include "supertux/physic.hpp"
 
-class GrowUp : public MovingSprite
+class GrowUp final : public MovingSprite
 {
 public:
-  GrowUp(Direction direction = RIGHT);
-  virtual bool do_save() const {
+  GrowUp(Direction direction = Direction::RIGHT);
+  virtual bool is_saveable() const override {
     return false;
   }
 
-  virtual void update(float elapsed_time);
-  virtual void draw(DrawingContext& context);
-  virtual void collision_solid(const CollisionHit& hit);
-  virtual HitResponse collision(GameObject& other, const CollisionHit& hit);
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
   void do_jump();
 
 private:
   Physic physic;
-  Color light;
   SpritePtr shadesprite;
   SpritePtr lightsprite;
 };

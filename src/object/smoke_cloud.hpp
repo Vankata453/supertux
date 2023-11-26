@@ -22,15 +22,14 @@
 #include "supertux/game_object.hpp"
 #include "supertux/timer.hpp"
 
-class SmokeCloud : public GameObject
+class SmokeCloud final : public GameObject
 {
 public:
   SmokeCloud(const Vector& pos);
-  ~SmokeCloud();
 
-  virtual void update(float elapsed_time);
-  virtual void draw(DrawingContext& context);
-  virtual bool do_save() const {
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual bool is_saveable() const override {
     return false;
   }
 
@@ -40,8 +39,8 @@ private:
   Vector position;
 
 private:
-  SmokeCloud(const SmokeCloud&);
-  SmokeCloud& operator=(const SmokeCloud&);
+  SmokeCloud(const SmokeCloud&) = delete;
+  SmokeCloud& operator=(const SmokeCloud&) = delete;
 };
 
 #endif

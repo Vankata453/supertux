@@ -24,7 +24,7 @@
 #include "supertux/timer.hpp"
 #include "video/color.hpp"
 
-class Particles : public GameObject
+class Particles final : public GameObject
 {
 public:
   Particles(const Vector& epicenter, int min_angle, int max_angle,
@@ -35,13 +35,12 @@ public:
             const float min_initial_velocity, const float max_initial_velocity,
             const Vector& acceleration, int number, Color color,
             int size, float life_time, int drawing_layer);
-  ~Particles();
-  virtual bool do_save() const {
+  virtual bool is_saveable() const override {
     return false;
   }
 
-  virtual void update(float elapsed_time);
-  virtual void draw(DrawingContext& context);
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
 
 private:
   struct Particle {

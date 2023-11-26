@@ -1,5 +1,6 @@
 //  SuperTux
 //  Copyright (C) 2014 Ingo Ruhnke <grumbel@gmail.com>
+//  Copyright (C) 2017 M. Teufel <mteufel@supertux.org>
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -17,31 +18,37 @@
 #ifndef HEADER_SUPERTUX_OBJECT_TORCH_HPP
 #define HEADER_SUPERTUX_OBJECT_TORCH_HPP
 
-#include <memory>
-
+#include "squirrel/exposed_object.hpp"
+#include "scripting/torch.hpp"
 #include "sprite/sprite_ptr.hpp"
 #include "supertux/moving_object.hpp"
 
 class ReaderMapping;
 
-class Torch : public MovingObject
+class Torch final :
+  public MovingObject,
+  public ExposedObject<Torch, scripting::Torch>
 {
 public:
   Torch(const ReaderMapping& reader);
 
-  void draw(DrawingContext& context) override;
-  void update(float) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual void update(float) override;
 
-  HitResponse collision(GameObject& other, const CollisionHit& ) override;
-  std::string get_class() const override {
-    return "torch";
-  }
-  std::string get_display_name() const override {
-    return _("Torch");
-  }
+  virtual HitResponse collision(GameObject& other, const CollisionHit& ) override;
 
-  ObjectSettings get_settings() override;
-  void after_editor_set() override;
+  virtual std::string get_class() const override { return "torch"; }
+  virtual std::string get_display_name() const override { return _("Torch"); }
+
+  virtual ObjectSettings get_settings() override;
+  virtual void after_editor_set() override;
+
+  /** @name Scriptable Methods
+      @{ */
+  bool get_burning() const; /**< returns true if torch is lighted */
+  void set_burning(bool burning_); /**< true: light torch, false: extinguish
+                                     torch */
+  /** @} */
 
 private:
   SpritePtr m_torch;

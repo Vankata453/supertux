@@ -17,58 +17,40 @@
 #ifndef HEADER_SUPERTUX_VIDEO_TEXTURE_HPP
 #define HEADER_SUPERTUX_VIDEO_TEXTURE_HPP
 
-#include <config.h>
-
-#include <assert.h>
 #include <string>
+#include <tuple>
+#include <boost/optional.hpp>
 
-#include "supertux/globals.hpp"
-#include "video/texture_manager.hpp"
+#include "video/flip.hpp"
 
-/// bitset for drawing effects
-enum {
-  /** Don't apply anything */
-  NO_EFFECT = 0,
-  /** Draw the Surface upside down */
-  VERTICAL_FLIP = (1<<1),
-  /** Draw the Surface from left to down */
-  HORIZONTAL_FLIP = (1<<2),
-  NUM_EFFECTS
-};
-
-typedef unsigned int DrawingEffect;
-
-/**
- * This class is a wrapper around a texture handle. It stores the texture width
- * and height and provides convenience functions for uploading SDL_Surfaces
- * into the texture
- */
+/** This class is a wrapper around a texture handle. It stores the
+    texture width and height and provides convenience functions for
+    uploading SDL_Surfaces into the texture. */
 class Texture
 {
-private:
   friend class TextureManager;
-  /* The name under which this texture is cached by the texture manager,
-   * or the empty string if not. */
-  std::string cache_filename;
 
 public:
-  Texture() : cache_filename() {}
-  virtual ~Texture()
-  {
-    if (TextureManager::current() && !cache_filename.empty())
-      /* The cache entry is now useless: its weak pointer to us has been
-       * cleared.  Remove the entry altogether to save memory. */
-      TextureManager::current()->reap_cache_entry(cache_filename);
-  }
+  using Key = std::tuple<std::string, int, int, int, int>;
 
-  virtual unsigned int get_texture_width() const = 0;
-  virtual unsigned int get_texture_height() const = 0;
-  virtual unsigned int get_image_width() const = 0;
-  virtual unsigned int get_image_height() const = 0;
+protected:
+  Texture();
+
+public:
+  virtual ~Texture();
+
+  virtual int get_texture_width() const = 0;
+  virtual int get_texture_height() const = 0;
+
+  virtual int get_image_width() const = 0;
+  virtual int get_image_height() const = 0;
 
 private:
-  Texture(const Texture&);
-  Texture& operator=(const Texture&);
+  boost::optional<Key> m_cache_key;
+
+private:
+  Texture(const Texture&) = delete;
+  Texture& operator=(const Texture&) = delete;
 };
 
 #endif

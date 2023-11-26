@@ -19,12 +19,7 @@
 #include "audio/sound_manager.hpp"
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
-#include "supertux/object_factory.hpp"
 
-/*
- * Kamikaze Snowball will fly in one direction until he hits something.
- * On impact he is destroyed, trying to kill what he hit or hit him.
- */
 namespace{
   static const float KAMIKAZE_SPEED = 200;
   static const float LEAFSHOT_SPEED = 400;
@@ -35,28 +30,21 @@ KamikazeSnowball::KamikazeSnowball(const ReaderMapping& reader) :
   BadGuy(reader, "images/creatures/snowball/kamikaze-snowball.sprite")
 {
   SoundManager::current()->preload(SPLAT_SOUND);
-  set_action (dir == LEFT ? "left" : "right", /* loops = */ -1);
-}
-
-KamikazeSnowball::KamikazeSnowball(const Vector& pos, Direction d)
-  : BadGuy(pos, d, "images/creatures/snowball/kamikaze-snowball.sprite")
-{
-  SoundManager::current()->preload(SPLAT_SOUND);
-  set_action (dir == LEFT ? "left" : "right", /* loops = */ -1);
+  set_action (m_dir == Direction::LEFT ? "left" : "right", /* loops = */ -1);
 }
 
 void
 KamikazeSnowball::initialize()
 {
-  physic.set_velocity_x(dir == LEFT ? -KAMIKAZE_SPEED : KAMIKAZE_SPEED);
-  physic.enable_gravity(false);
-  sprite->set_action(dir == LEFT ? "left" : "right");
+  m_physic.set_velocity_x(m_dir == Direction::LEFT ? -KAMIKAZE_SPEED : KAMIKAZE_SPEED);
+  m_physic.enable_gravity(false);
+  m_sprite->set_action(m_dir == Direction::LEFT ? "left" : "right");
 }
 
 bool
 KamikazeSnowball::collision_squished(GameObject& object)
 {
-  sprite->set_action(dir == LEFT ? "squished-left" : "squished-right");
+  m_sprite->set_action(m_dir == Direction::LEFT ? "squished-left" : "squished-right");
   kill_squished(object);
   return true;
 }
@@ -64,10 +52,10 @@ KamikazeSnowball::collision_squished(GameObject& object)
 void
 KamikazeSnowball::collision_solid(const CollisionHit& hit)
 {
-  if(hit.top || hit.bottom) {
-    physic.set_velocity_y(0);
+  if (hit.top || hit.bottom) {
+    m_physic.set_velocity_y(0);
   }
-  if(hit.left || hit.right) {
+  if (hit.left || hit.right) {
     kill_collision();
   }
 }
@@ -75,11 +63,11 @@ KamikazeSnowball::collision_solid(const CollisionHit& hit)
 void
 KamikazeSnowball::kill_collision()
 {
-  sprite->set_action(dir == LEFT ? "collision-left" : "collision-right");
+  m_sprite->set_action(m_dir == Direction::LEFT ? "collision-left" : "collision-right");
   SoundManager::current()->play(SPLAT_SOUND, get_pos());
-  physic.set_velocity_x(0);
-  physic.set_velocity_y(0);
-  physic.enable_gravity(true);
+  m_physic.set_velocity_x(0);
+  m_physic.set_velocity_y(0);
+  m_physic.enable_gravity(true);
   set_state(STATE_FALLING);
 
   run_dead_script();
@@ -90,37 +78,40 @@ KamikazeSnowball::collision_player(Player& player, const CollisionHit& hit)
 {
   //Hack to tell if we should die
   HitResponse response = BadGuy::collision_player(player, hit);
-  if(response == FORCE_MOVE) {
+  if (response == FORCE_MOVE) {
     kill_collision();
   }
 
   return ABORT_MOVE;
 }
 
-void
-KamikazeSnowball::after_editor_set()
-{
-  BadGuy::after_editor_set();
-  sprite->set_action(dir == LEFT ? "left" : "right");
-}
-
 LeafShot::LeafShot(const ReaderMapping& reader) :
   KamikazeSnowball(reader)
 {
-  sprite = SpriteManager::current()->create("images/creatures/leafshot/leafshot.sprite");
+  m_sprite = SpriteManager::current()->create("images/creatures/leafshot/leafshot.sprite");
 }
 
 void
 LeafShot::initialize()
 {
-  physic.set_velocity_x(dir == LEFT ? -LEAFSHOT_SPEED : LEAFSHOT_SPEED);
-  physic.enable_gravity(false);
-  sprite->set_action(dir == LEFT ? "left" : "right");
+  m_physic.set_velocity_x(m_dir == Direction::LEFT ? -LEAFSHOT_SPEED : LEAFSHOT_SPEED);
+  m_physic.enable_gravity(false);
+  m_sprite->set_action(m_dir == Direction::LEFT ? "left" : "right");
 }
 
 bool
 LeafShot::is_freezable() const
 {
+  return true;
+}
+
+bool
+LeafShot::collision_squished(GameObject& object)
+{
+  m_sprite->set_action(m_dir == Direction::LEFT ? "squished-left" : "squished-right");
+  // Spawn death particles
+  spawn_explosion_sprites(3, "images/objects/particles/leafshot.sprite");
+  kill_squished(object);
   return true;
 }
 

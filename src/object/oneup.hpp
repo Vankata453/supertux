@@ -21,16 +21,16 @@
 #include "supertux/direction.hpp"
 #include "supertux/physic.hpp"
 
-class OneUp : public MovingSprite
+class OneUp final : public MovingSprite
 {
 public:
-  OneUp(const Vector& pos, Direction direction = RIGHT);
-  virtual bool do_save() const {
+  OneUp(const Vector& pos, Direction direction = Direction::RIGHT);
+  virtual bool is_saveable() const override {
     return false;
   }
 
-  virtual void update(float elapsed_time);
-  virtual HitResponse collision(GameObject& other, const CollisionHit& hit);
+  virtual void update(float dt_sec) override;
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
 
 private:
   Physic physic;

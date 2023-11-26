@@ -15,111 +15,77 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "supertux/game_object.hpp"
+
+#include <algorithm>
+
 #include "supertux/object_remove_listener.hpp"
+#include "util/reader_mapping.hpp"
+#include "util/writer.hpp"
+#include "video/color.hpp"
 
 GameObject::GameObject() :
-  wants_to_die(false),
-  remove_listeners(NULL),
-  name()
+  m_name(),
+  m_uid(),
+  m_scheduled_for_removal(false),
+  m_components(),
+  m_remove_listeners()
 {
 }
 
-GameObject::GameObject(const GameObject& rhs) :
-  wants_to_die(rhs.wants_to_die),
-  remove_listeners(NULL),
-  name(rhs.name)
+GameObject::GameObject(const std::string& name) :
+  m_name(name),
+  m_uid(),
+  m_scheduled_for_removal(false),
+  m_components(),
+  m_remove_listeners()
 {
+}
+
+GameObject::GameObject(const ReaderMapping& reader) :
+  GameObject()
+{
+  reader.get("name", m_name, "");
 }
 
 GameObject::~GameObject()
 {
-  // call remove listeners (and remove them from the list)
-  auto entry = remove_listeners;
-  while(entry != NULL) {
-    auto next = entry->next;
-    entry->listener->object_removed(this);
-    delete entry;
-    entry = next;
+  for (const auto& entry : m_remove_listeners) {
+    entry->object_removed(this);
   }
+  m_remove_listeners.clear();
 }
 
 void
 GameObject::add_remove_listener(ObjectRemoveListener* listener)
 {
-  auto entry = new RemoveListenerListEntry();
-  entry->next = remove_listeners;
-  entry->listener = listener;
-  remove_listeners = entry;
+  m_remove_listeners.push_back(listener);
 }
 
 void
 GameObject::del_remove_listener(ObjectRemoveListener* listener)
 {
-  auto entry = remove_listeners;
-  if (entry->listener == listener) {
-    remove_listeners = entry->next;
-    delete entry;
-    return;
-  }
-  auto next = entry->next;
-  while(next != NULL) {
-    if (next->listener == listener) {
-      entry->next = next->next;
-      delete next;
-      break;
-    }
-    entry = next;
-    next = next->next;
-  }
+  m_remove_listeners.erase(std::remove(m_remove_listeners.begin(),
+                                       m_remove_listeners.end(),
+                                       listener),
+                           m_remove_listeners.end());
 }
 
 void
-GameObject::save(Writer& writer) {
-  if(name != "") {
-    writer.write("name", name, false);
-  }
+GameObject::save(Writer& writer)
+{
   auto settings = get_settings();
-  for(auto& option : settings.options)
+  for (const auto& option_ptr : settings.get_options())
   {
-    if(option.is_savable()) {
-      switch(option.type) {
-        case MN_SCRIPT:
-        case MN_TEXTFIELD:
-        case MN_FILE:
-        {
-          auto value = *(reinterpret_cast<std::string*>(option.option));
-          if(!option.allow_empty && value.empty())
-            continue;
-          writer.write(option.key, value);
-        }
-          break;
-        case MN_NUMFIELD:
-          writer.write(option.key, *(reinterpret_cast<float*>(option.option)));
-          break;
-        case MN_INTFIELD:
-        case MN_STRINGSELECT:
-          writer.write(option.key, *(reinterpret_cast<int*>(option.option)));
-          break;
-        case MN_TOGGLE:
-          writer.write(option.key, *(reinterpret_cast<bool*>(option.option)));
-          break;
-        case MN_BADGUYSELECT:
-          writer.write(option.key, *(reinterpret_cast<std::vector<std::string>*>(option.option)));
-          break;
-        case MN_COLOR:
-          writer.write(option.key, reinterpret_cast<Color*>(option.option)->toVector());
-          break;
-        default:
-          break;
-      }
-    }
+    const auto& option = *option_ptr;
+    option.save(writer);
   }
 }
 
 ObjectSettings
-GameObject::get_settings() {
-  ObjectSettings result(this->get_display_name());
-  result.options.push_back( ObjectOption(MN_TEXTFIELD, _("Name"), &name));
+GameObject::get_settings()
+{
+  ObjectSettings result(get_display_name());
+  result.add_text(_("Name"), &m_name, "name", std::string());
   return result;
 }
 

@@ -16,39 +16,38 @@
 
 #include "util/writer.hpp"
 
+#include <sexp/value.hpp>
+#include <sexp/io.hpp>
+
 #include "physfs/ofile_stream.hpp"
 #include "util/log.hpp"
 
 Writer::Writer(const std::string& filename) :
-  out(),
-  out_owned(),
-  indent_depth(),
+  m_filename(filename),
+  out(new OFileStream(filename)),
+  out_owned(true),
+  indent_depth(0),
   lists()
 {
-  out = new OFileStream(filename);
-  out_owned = true;
-  indent_depth = 0;
-  out->precision(10);
+  out->precision(7);
 }
 
-Writer::Writer(std::ostream* newout) :
-  out(),
-  out_owned(),
-  indent_depth(),
+Writer::Writer(std::ostream& newout) :
+  m_filename("<stream>"),
+  out(&newout),
+  out_owned(false),
+  indent_depth(0),
   lists()
 {
-  out = newout;
-  out_owned = false;
-  indent_depth = 0;
-  out->precision(10);
+  out->precision(7);
 }
 
 Writer::~Writer()
 {
-  if(lists.size() > 0) {
-    log_warning << "Not all sections closed in lispwriter" << std::endl;
+  if (lists.size() > 0) {
+    log_warning << m_filename << ": Not all sections closed in Writer" << std::endl;
   }
-  if(out_owned)
+  if (out_owned)
     delete out;
 }
 
@@ -63,7 +62,7 @@ Writer::start_list(const std::string& listname, bool string)
 {
   indent();
   *out << '(';
-  if(string)
+  if (string)
     write_escaped_string(listname);
   else
     *out << listname;
@@ -76,12 +75,12 @@ Writer::start_list(const std::string& listname, bool string)
 void
 Writer::end_list(const std::string& listname)
 {
-  if(lists.size() == 0) {
-    log_warning << "Trying to close list '" << listname << "', which is not open" << std::endl;
+  if (lists.size() == 0) {
+    log_warning << m_filename << ": Trying to close list '" << listname << "', which is not open" << std::endl;
     return;
   }
-  if(lists.back() != listname) {
-    log_warning << "trying to close list '" << listname << "' while list '" << lists.back() << "' is open" << std::endl;
+  if (lists.back() != listname) {
+    log_warning << m_filename << ": trying to close list '" << listname << "' while list '" << lists.back() << "' is open" << std::endl;
     return;
   }
   lists.pop_back();
@@ -120,7 +119,7 @@ Writer::write(const std::string& name, const std::string& value,
 {
   indent();
   *out << '(' << name;
-  if(translatable) {
+  if (translatable) {
     *out << " (_ ";
     write_escaped_string(value);
     *out << "))\n";
@@ -144,19 +143,40 @@ Writer::write(const std::string& name,
 {
   indent();
   *out << '(' << name;
-  for(const auto& i : value)
+  for (const auto& i : value)
     *out << " " << i;
   *out << ")\n";
 }
 
 void
 Writer::write(const std::string& name,
-              const std::vector<unsigned int>& value)
+              const std::vector<unsigned int>& value,
+              int width)
 {
   indent();
   *out << '(' << name;
-  for(const auto& i : value)
-    *out << " " << i;
+  if (!width)
+  {
+    for (const auto& i : value)
+      *out << " " << i;
+  }
+  else
+  {
+    *out << "\n";
+    indent();
+    int count = 0;
+    for (const auto& i : value) {
+      *out << i;
+      count += 1;
+      if (count >= width) {
+        *out << "\n";
+        indent();
+        count = 0;
+      } else {
+        *out << " ";
+      }
+    }
+  }
   *out << ")\n";
 }
 
@@ -166,7 +186,7 @@ Writer::write(const std::string& name,
 {
   indent();
   *out << '(' << name;
-  for(const auto& i : value)
+  for (const auto& i : value)
     *out << " " << i;
   *out << ")\n";
 }
@@ -177,7 +197,7 @@ Writer::write(const std::string& name,
 {
   indent();
   *out << '(' << name;
-  for(const auto& i : value) {
+  for (const auto& i : value) {
     *out << " ";
     write_escaped_string(i);
   }
@@ -185,13 +205,50 @@ Writer::write(const std::string& name,
 }
 
 void
+Writer::write_sexp(const sexp::Value& value, bool fudge)
+{
+  if (value.is_array()) {
+    if (fudge) {
+      indent_depth -= 1;
+      indent();
+      indent_depth += 1;
+    } else {
+      indent();
+    }
+    *out << "(";
+    auto& arr = value.as_array();
+    for(size_t i = 0; i < arr.size(); ++i) {
+      write_sexp(arr[i], false);
+      if (i != arr.size() - 1) {
+        *out << " ";
+      }
+    }
+    *out << ")\n";
+  } else {
+    *out << value;
+  }
+}
+
+void
+Writer::write(const std::string& name, const sexp::Value& value)
+{
+  indent();
+  *out << '(' << name << "\n";
+  indent_depth += 4;
+  write_sexp(value, true);
+  indent_depth -= 4;
+  indent();
+  *out << ")\n";
+}
+
+void
 Writer::write_escaped_string(const std::string& str)
 {
   *out << '"';
-  for(const char* c = str.c_str(); *c != 0; ++c) {
-    if(*c == '\"')
+  for (const char* c = str.c_str(); *c != 0; ++c) {
+    if (*c == '\"')
       *out << "\\\"";
-    else if(*c == '\\')
+    else if (*c == '\\')
       *out << "\\\\";
     else
       *out << *c;
@@ -202,7 +259,7 @@ Writer::write_escaped_string(const std::string& str)
 void
 Writer::indent()
 {
-  for(int i = 0; i<indent_depth; ++i)
+  for (int i = 0; i<indent_depth; ++i)
     *out << ' ';
 }
 

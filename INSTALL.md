@@ -1,4 +1,4 @@
-Install instructions for SuperTux - <http://supertuxproject.org/>
+Install instructions for SuperTux - <https://supertux.org/>
 ====================================================================
 Last update: September 2, 2016
 
@@ -6,7 +6,7 @@ Binaries
 --------
 
 We try to provide precompiled binaries of SuperTux for a number of
-platforms. You should check <http://supertux.lethargik.org/wiki/Download>
+platforms. You should check <https://supertux.org/download.html>
 for the packages and instructions on how to install them. If there are
 no prebuilt binaries for your platform, then you might still be able
 to compile the source code yourself. In this case read the next
@@ -33,7 +33,7 @@ distributions.
   - a shell and common POSIX command line tools
   - **Note:** To get these tools, you can install `build-essential` on Debian-based distros,
     `base-devel` on Arch-based distros and the Xcode Command Line tools on OS X.
-* [CMake](http://www.cmake.org/) 2.8 or later: most package managers ship this as `cmake`
+* [CMake](http://www.cmake.org/) 3.1 or later: most package managers ship this as `cmake`
 * OpenGL headers and libraries: OpenGL libraries and headers are
   specific to your graphics card. Make sure that you have hardware
   accelerated OpenGL drivers installed. Software renderers like Mesa
@@ -47,6 +47,9 @@ distributions.
 * [Boost](http://www.boost.org) smart_ptr and format headers, along with date_time and filesystem libraries
 * [cURL](http://curl.haxx.se/libcurl/): for Add-on downloads
 * [libogg and libvorbis](https://www.xiph.org/)
+* [FreeType](https://www.freetype.org/)
+* [libraqm](https://github.com/HOST-Oman/libraqm): optional, but needed
+  to display Arabic
 
 **Note I:** for any of the above listed libraries (OpenGL, SDL2, SDL2_image,
 OpenAL, GLEW/glbinding, Boost, cURL, libogg and libvorbis), you should
@@ -135,12 +138,12 @@ recent version of Visual Studio installed. Visual Studio 2015 Community Edition
 is known to work fine.
 
 Because it's difficult to build and download all the dependencies per hand on windows,
-SuperTux provides a [dependency package](https://download.supertuxproject.org/builddep/)
+SuperTux provides a [dependency package](https://download.supertux.org/builddep/)
 that should contain all headers and libraries needed to build SuperTux on Windows.
 
 1. Unpack the SuperTux source pack or get the source with git (`git clone --recursive https://github.com/SuperTux/supertux.git`).
 
-2. Extract the [dependency package](https://download.supertuxproject.org/builddep/)
+2. Extract the [dependency package](https://download.supertux.org/builddep/)
 into the source directory, so the `dependencies` folder is besides the `src` folder.
 
 3. Create a new, empty `build` folder.
@@ -155,11 +158,3 @@ For more CMake options, look at end of the Linux/UNIX build section.
 6. Build the project.
 
 7. Now you can run SuperTux using the run_supertux.bat file
-
-
-Support
--------
-
-You can contact us at [supertux-devel@lists.lethargik.org](mailto:supertux-devel@lists.lethargik.org)
-and in the [#supertux](irc://chat.freenode.net/supertux) channel on
-the chat.freenode.net IRC server. Usually someone will be around to give you a hand.

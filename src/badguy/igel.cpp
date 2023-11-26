@@ -15,10 +15,9 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "badguy/igel.hpp"
+
 #include "object/bullet.hpp"
 #include "supertux/sector.hpp"
-
-#include "supertux/object_factory.hpp"
 
 namespace {
 
@@ -30,14 +29,6 @@ const float RANGE_OF_VISION = 256; /**< range in px at which we can see bullets 
 
 Igel::Igel(const ReaderMapping& reader) :
   WalkingBadguy(reader, "images/creatures/igel/igel.sprite", "walking-left", "walking-right"),
-  turn_recover_timer()
-{
-  walk_speed = IGEL_SPEED;
-  max_drop_height = 16;
-}
-
-Igel::Igel(const Vector& pos, Direction d) :
-  WalkingBadguy(pos, d, "images/creatures/igel/igel.sprite", "walking-left", "walking-right"),
   turn_recover_timer()
 {
   walk_speed = IGEL_SPEED;
@@ -62,45 +53,42 @@ Igel::can_see(const MovingObject& o) const
 {
   Rectf ob = o.get_bbox();
 
-  bool inReach_left = ((ob.p2.x < bbox.p1.x) && (ob.p2.x >= bbox.p1.x-((dir == LEFT) ? RANGE_OF_VISION : 0)));
-  bool inReach_right = ((ob.p1.x > bbox.p2.x) && (ob.p1.x <= bbox.p2.x+((dir == RIGHT) ? RANGE_OF_VISION : 0)));
-  bool inReach_top = (ob.p2.y >= bbox.p1.y);
-  bool inReach_bottom = (ob.p1.y <= bbox.p2.y);
+  bool inReach_left = ((ob.get_right() < m_col.m_bbox.get_left()) && (ob.get_right() >= m_col.m_bbox.get_left()-((m_dir == Direction::LEFT) ? RANGE_OF_VISION : 0)));
+  bool inReach_right = ((ob.get_left() > m_col.m_bbox.get_right()) && (ob.get_left() <= m_col.m_bbox.get_right()+((m_dir == Direction::RIGHT) ? RANGE_OF_VISION : 0)));
+  bool inReach_top = (ob.get_bottom() >= m_col.m_bbox.get_top());
+  bool inReach_bottom = (ob.get_top() <= m_col.m_bbox.get_bottom());
 
   return ((inReach_left || inReach_right) && inReach_top && inReach_bottom);
 }
 
 void
-Igel::active_update(float elapsed_time)
+Igel::active_update(float dt_sec)
 {
   bool wants_to_flee = false;
 
   // check if we see a fire bullet
-  auto sector = Sector::current();
-  for (const auto& object : sector->gameobjects) {
-    auto bullet = reinterpret_cast<Bullet*>(object.get());
-    if (!bullet) continue;
-    if (bullet->get_type() != FIRE_BONUS) continue;
-    if (can_see(*bullet)) wants_to_flee = true;
+  for (const auto& bullet : Sector::get().get_objects_by_type<Bullet>()) {
+    if (bullet.get_type() != FIRE_BONUS) continue;
+    if (can_see(bullet)) wants_to_flee = true;
   }
 
   // if we flee, handle this ourselves
   if (wants_to_flee && (!turn_recover_timer.started())) {
     turn_around();
-    BadGuy::active_update(elapsed_time);
+    BadGuy::active_update(dt_sec);
     return;
   }
 
   // else adhere to default behaviour
-  WalkingBadguy::active_update(elapsed_time);
+  WalkingBadguy::active_update(dt_sec);
 }
 
 HitResponse
 Igel::collision_bullet(Bullet& bullet, const CollisionHit& hit)
 {
   // default reaction if hit on front side or for freeze and unfreeze
-  if (((dir == LEFT) && hit.left) || ((dir == RIGHT) && hit.right) ||
-    (bullet.get_type() == ICE_BONUS) || ((bullet.get_type() == FIRE_BONUS) && (frozen))) {
+  if (((m_dir == Direction::LEFT) && hit.left) || ((m_dir == Direction::RIGHT) && hit.right) ||
+    (bullet.get_type() == ICE_BONUS) || ((bullet.get_type() == FIRE_BONUS) && (m_frozen))) {
     return BadGuy::collision_bullet(bullet, hit);
   }
 

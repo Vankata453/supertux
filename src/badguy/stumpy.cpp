@@ -16,14 +16,15 @@
 
 #include "badguy/stumpy.hpp"
 
+#include <math.h>
+
 #include "audio/sound_manager.hpp"
-#include "math/random_generator.hpp"
+#include "math/random.hpp"
+#include "math/util.hpp"
 #include "object/player.hpp"
 #include "object/sprite_particle.hpp"
-#include "supertux/object_factory.hpp"
+#include "sprite/sprite.hpp"
 #include "supertux/sector.hpp"
-
-#include <math.h>
 
 static const float STUMPY_SPEED = 120;
 static const float INVINCIBLE_TIME = 1;
@@ -55,9 +56,9 @@ Stumpy::initialize()
 {
   switch (mystate) {
     case STATE_INVINCIBLE:
-      sprite->set_action(dir == LEFT ? "dizzy-left" : "dizzy-right");
-      bbox.set_size(sprite->get_current_hitbox_width(), sprite->get_current_hitbox_height());
-      physic.set_velocity_x(0);
+      m_sprite->set_action(m_dir == Direction::LEFT ? "dizzy-left" : "dizzy-right");
+      m_col.m_bbox.set_size(m_sprite->get_current_hitbox_width(), m_sprite->get_current_hitbox_height());
+      m_physic.set_velocity_x(0);
       break;
     case STATE_NORMAL:
       WalkingBadguy::initialize();
@@ -66,7 +67,7 @@ Stumpy::initialize()
 }
 
 void
-Stumpy::active_update(float elapsed_time)
+Stumpy::active_update(float dt_sec)
 {
   switch (mystate) {
     case STATE_INVINCIBLE:
@@ -74,10 +75,10 @@ Stumpy::active_update(float elapsed_time)
         mystate = STATE_NORMAL;
         WalkingBadguy::initialize();
       }
-      BadGuy::active_update(elapsed_time);
+      BadGuy::active_update(dt_sec);
       break;
     case STATE_NORMAL:
-      WalkingBadguy::active_update(elapsed_time);
+      WalkingBadguy::active_update(dt_sec);
       break;
   }
 }
@@ -96,24 +97,24 @@ Stumpy::collision_squished(GameObject& object)
 
   // if we can die, we do
   if (mystate == STATE_NORMAL) {
-    sprite->set_action(dir == LEFT ? "squished-left" : "squished-right");
-    set_size(sprite->get_current_hitbox_width(), sprite->get_current_hitbox_height());
+    m_sprite->set_action(m_dir == Direction::LEFT ? "squished-left" : "squished-right");
+    m_col.set_size(m_sprite->get_current_hitbox_width(), m_sprite->get_current_hitbox_height());
     kill_squished(object);
     // spawn some particles
     // TODO: provide convenience function in MovingSprite or MovingObject?
     for (int i = 0; i < 25; i++) {
-      Vector ppos = bbox.get_middle();
-      float angle = graphicsRandom.randf(-M_PI_2, M_PI_2);
+      Vector ppos = m_col.m_bbox.get_middle();
+      float angle = graphicsRandom.randf(-math::PI_2, math::PI_2);
       float velocity = graphicsRandom.randf(45, 90);
-      float vx = sin(angle)*velocity;
-      float vy = -cos(angle)*velocity;
+      float vx = sinf(angle)*velocity;
+      float vy = -cosf(angle)*velocity;
       Vector pspeed = Vector(vx, vy);
-      Vector paccel = Vector(0, Sector::current()->get_gravity()*10);
-      Sector::current()->add_object(std::make_shared<SpriteParticle>("images/objects/particles/bark.sprite",
-                                                                     "default",
-                                                                     ppos, ANCHOR_MIDDLE,
-                                                                     pspeed, paccel,
-                                                                     LAYER_OBJECTS-1));
+      Vector paccel = Vector(0, Sector::get().get_gravity()*10);
+      Sector::get().add<SpriteParticle>("images/objects/particles/bark.sprite",
+                                             "default",
+                                             ppos, ANCHOR_MIDDLE,
+                                             pspeed, paccel,
+                                             LAYER_OBJECTS-1);
     }
 
     return true;
@@ -131,11 +132,11 @@ Stumpy::collision_solid(const CollisionHit& hit)
 
   switch (mystate) {
     case STATE_INVINCIBLE:
-      if(hit.top || hit.bottom) {
-        physic.set_velocity_y(0);
+      if (hit.top || hit.bottom) {
+        m_physic.set_velocity_y(0);
       }
-      if(hit.left || hit.right) {
-        physic.set_velocity_x(0);
+      if (hit.left || hit.right) {
+        m_physic.set_velocity_x(0);
       }
       break;
     case STATE_NORMAL:
@@ -149,17 +150,16 @@ Stumpy::collision_badguy(BadGuy& badguy, const CollisionHit& hit)
 {
   switch (mystate) {
     case STATE_INVINCIBLE:
-      if(hit.top || hit.bottom) {
-        physic.set_velocity_y(0);
+      if (hit.top || hit.bottom) {
+        m_physic.set_velocity_y(0);
       }
-      if(hit.left || hit.right) {
-        physic.set_velocity_x(0);
+      if (hit.left || hit.right) {
+        m_physic.set_velocity_x(0);
       }
       return CONTINUE;
-      break;
+
     case STATE_NORMAL:
       return WalkingBadguy::collision_badguy(badguy, hit);
-      break;
   }
   return CONTINUE;
 }

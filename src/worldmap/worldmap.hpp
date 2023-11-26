@@ -18,158 +18,92 @@
 #ifndef HEADER_SUPERTUX_WORLDMAP_WORLDMAP_HPP
 #define HEADER_SUPERTUX_WORLDMAP_WORLDMAP_HPP
 
-#include <string>
 #include <vector>
 
-#include "control/controller.hpp"
 #include "math/vector.hpp"
-#include "supertux/console.hpp"
-#include "supertux/game_object.hpp"
-#include "supertux/game_object_ptr.hpp"
-#include "supertux/level.hpp"
-#include "supertux/screen.hpp"
+#include "supertux/game_object_manager.hpp"
+#include "squirrel/squirrel_environment.hpp"
 #include "supertux/statistics.hpp"
-#include "supertux/tile_manager.hpp"
 #include "supertux/timer.hpp"
-#include "util/reader_fwd.hpp"
+#include "util/currenton.hpp"
 #include "worldmap/direction.hpp"
 #include "worldmap/spawn_point.hpp"
-#include "worldmap/special_tile.hpp"
-#include "worldmap/sprite_change.hpp"
-#include "worldmap/teleporter.hpp"
 
-class GameObject;
+class Controller;
+class Level;
 class PlayerStatus;
-class Sprite;
-class TileMap;
 class Savegame;
+class Sprite;
+class SquirrelEnvironment;
+class TileMap;
+class TileSet;
 
 namespace worldmap {
 
-class Tux;
+class Camera;
 class LevelTile;
 class SpecialTile;
 class SpriteChange;
+class Teleporter;
+class Tux;
 
-// For one way tiles
-enum {
-  BOTH_WAYS,
-  NORTH_SOUTH_WAY,
-  SOUTH_NORTH_WAY,
-  EAST_WEST_WAY,
-  WEST_EAST_WAY
-};
-
-/**
- * Screen that runs a WorldMap, which lets the player choose a Level.
- */
-class WorldMap : public Screen
+class WorldMap final : public GameObjectManager,
+                       public Currenton<WorldMap>
 {
 public:
+  friend class WorldMapParser;
+  friend class WorldMapState;
+
   static Color level_title_color;
   static Color message_color;
   static Color teleporter_message_color;
-
-private:
-  typedef std::vector<SpecialTile*> SpecialTiles;
-  typedef std::vector<SpriteChange*> SpriteChanges;
-  typedef std::vector<LevelTile*> LevelTiles;
-  typedef std::vector<GameObjectPtr> GameObjects;
-  typedef std::vector<HSQOBJECT> ScriptList;
-
-  std::shared_ptr<Tux> tux;
-
-  Savegame& m_savegame;
-
-  TileSet* tileset;
-
-  static WorldMap* current_;
-
-  Vector camera_offset;
-
-  std::string name;
-  std::string music;
-  std::string init_script;
-
-  GameObjects game_objects;
-  std::list<TileMap*> solid_tilemaps;
-
-public:
-  /** Variables to deal with the passive map messages */
-  Timer passive_message_timer;
-  std::string passive_message;
-
-private:
-  std::string map_filename;
-  std::string levels_path;
-
-  SpecialTiles special_tiles;
-  LevelTiles levels;
-  SpriteChanges sprite_changes;
-  std::vector<std::unique_ptr<SpawnPoint> > spawn_points;
-  std::vector<Teleporter*> teleporters;
-
-  Statistics total_stats;
-
-  HSQOBJECT worldmap_table;
-  ScriptList scripts;
-
-  Color ambient_light;
-  std::string force_spawnpoint; /**< if set, spawnpoint will be forced to this value */
-
-  bool in_level;
-
-  /* variables to track panning to a spawn point */
-  Vector pan_pos;
-  bool panning;
 
 public:
   WorldMap(const std::string& filename, Savegame& savegame, const std::string& force_spawnpoint = "");
   ~WorldMap();
 
-  void add_object(GameObjectPtr object);
+  void finish_construction();
 
-  void try_expose(const GameObjectPtr& object);
-  void try_unexpose(const GameObjectPtr& object);
+  void setup();
+  void leave();
 
-  static WorldMap* current()
-  { return current_; }
+  void draw(DrawingContext& context);
+  void update(float dt_sec);
 
-  virtual void setup();
-  virtual void leave();
+  void process_input(const Controller& controller);
 
-  /** Update worldmap state */
-  virtual void update(float delta);
-  /** Draw worldmap */
-  virtual void draw(DrawingContext& context);
+  Vector get_next_tile(const Vector& pos, const Direction& direction) const;
 
-  Vector get_next_tile(Vector pos, const Direction& direction) const;
-
-  /**
-   * gets a bitfield of Tile::WORLDMAP_NORTH | Tile::WORLDMAP_WEST | ... values,
-   * which indicates the directions Tux can move to when at the given position.
-   */
+  /** gets a bitfield of Tile::WORLDMAP_NORTH | Tile::WORLDMAP_WEST |
+      ... values, which indicates the directions Tux can move to when
+      at the given position. */
   int available_directions_at(const Vector& pos) const;
 
-  /**
-   * returns a bitfield representing the union of all Tile::WORLDMAP_XXX values
-   * of all solid tiles at the given position
-   */
+  /** returns a bitfield representing the union of all
+      Tile::WORLDMAP_XXX values of all solid tiles at the given
+      position */
   int tile_data_at(const Vector& pos) const;
 
   size_t level_count() const;
   size_t solved_level_count() const;
 
-  /**
-   * gets called from the GameSession when a level has been successfully
-   * finished
-   */
+  /** gets called from the GameSession when a level has been successfully
+      finished */
   void finished_level(Level* level);
 
-  /** returns current Tux incarnation */
-  Tux* get_tux() const { return tux.get(); }
-
   Savegame& get_savegame() const { return m_savegame; }
+
+  /** Get a spawnpoint by its name @param name The name of the
+      spawnpoint @return spawnpoint corresponding to that name */
+  SpawnPoint* get_spawnpoint_by_name(const std::string& spawnpoint_name) const
+  {
+    for (const auto& sp : m_spawn_points) {
+      if (sp->m_name == spawnpoint_name) {
+        return sp.get();
+      }
+    }
+    return nullptr;
+  }
 
   LevelTile* at_level() const;
   SpecialTile* at_special_tile() const;
@@ -180,65 +114,94 @@ public:
       if possible, write the new position to \a new_pos */
   bool path_ok(const Direction& direction, const Vector& pos, Vector* new_pos) const;
 
-  /**
-   * Save worldmap state to squirrel state table
-   */
+  /** Save worldmap state to squirrel state table */
   void save_state();
 
-  /**
-   * Load worldmap state from squirrel state table
-   */
+  /** Load worldmap state from squirrel state table */
   void load_state();
 
-  const std::string& get_title() const
-  { return name; }
+  const std::string& get_title() const { return m_name; }
 
-  /**
-   * runs a script in the context of the worldmap (and keeps a reference to
-   * the script (so the script gets destroyed when the worldmap is destroyed)
-   */
-  HSQUIRRELVM run_script(std::istream& in, const std::string& sourcename);
-
-  /**
-   * switch to another worldmap.
-   * filename is relative to data root path
-   */
+  /** switch to another worldmap.
+      filename is relative to data root path */
   void change(const std::string& filename, const std::string& force_spawnpoint="");
 
-  /**
-   * moves Tux to the given spawnpoint
-   */
-  void move_to_spawnpoint(const std::string& spawnpoint, bool pan =false);
+  /** Moves Tux to the given spawnpoint
+      @param spawnpoint Name of the spawnpoint to move to
+      @param pan Pan the camera during to new spawnpoint
+      @param main_as_default Move Tux to main spawnpoint if specified spawnpoint can't be found */
+  void move_to_spawnpoint(const std::string& spawnpoint, bool pan = false, bool main_as_default = true);
 
-  /**
-   * returns the width (in tiles) of a worldmap
-   */
-  float get_width() const;
-
-  /**
-   * returns the height (in tiles) of a worldmap
-   */
-  float get_height() const;
-
-  /**
-   * Mark all levels as solved or unsolved
-   */
+  /** Mark all levels as solved or unsolved */
   void set_levels_solved(bool solved, bool perfect);
 
+  /** Sets the name of the tilemap that should fade when worldmap is set up. */
+  void set_initial_fade_tilemap(const std::string& tilemap_name, int direction)
+  {
+    m_initial_fade_tilemap = tilemap_name;
+    m_fade_direction = direction;
+  }
+
+  /** Sets the initial spawnpoint on worldmap setup */
+  void set_initial_spawnpoint(const std::string& spawnpoint_name)
+  {
+    m_force_spawnpoint = spawnpoint_name;
+
+    // If spawnpoint we specified can not be found,
+    // don't bother moving to the main spawnpoint.
+    m_main_is_default = false;
+  }
+
+  void run_script(const std::string& script, const std::string& sourcename);
+
+  void set_passive_message(const std::string& message, float time);
+
+  Camera& get_camera() const { return *m_camera; }
+
+protected:
+  virtual bool before_object_add(GameObject& object) override;
+  virtual void before_object_remove(GameObject& object) override;
+
 private:
-  void load_level_information(LevelTile& level);
   void draw_status(DrawingContext& context);
-  void calculate_total_stats();
 
   void load(const std::string& filename);
   void on_escape_press();
 
-  Vector get_camera_pos_for_tux() const;
-  void clamp_camera_position(Vector& c) const;
+private:
+  std::unique_ptr<SquirrelEnvironment> m_squirrel_environment;
+  std::unique_ptr<Camera> m_camera;
+
+  bool m_enter_level;
+
+  Tux* m_tux;
+
+  Savegame& m_savegame;
+
+  TileSet* m_tileset;
+
+  std::string m_name;
+  std::string m_init_script;
+
+  /** Variables to deal with the passive map messages */
+  Timer m_passive_message_timer;
+  std::string m_passive_message;
+
+  std::string m_map_filename;
+  std::string m_levels_path;
+
+  std::vector<std::unique_ptr<SpawnPoint> > m_spawn_points;
+
+  std::string m_force_spawnpoint; /**< if set, spawnpoint will be forced to this value */
+  bool m_main_is_default;
+  std::string m_initial_fade_tilemap;
+  int m_fade_direction;
+
+  bool m_in_level;
 
 private:
-  WorldMap(const WorldMap&);
-  WorldMap& operator=(const WorldMap&);
+  WorldMap(const WorldMap&) = delete;
+  WorldMap& operator=(const WorldMap&) = delete;
 };
 
 } // namespace worldmap

@@ -17,34 +17,27 @@
 
 #include "supertux/tile_manager.hpp"
 
-#include <limits>
-
+#include "supertux/tile.hpp"
 #include "supertux/tile_set.hpp"
-#include "util/reader_collection.hpp"
-#include "util/reader_mapping.hpp"
 
 TileManager::TileManager() :
-  tilesets()
-{
-}
-
-TileManager::~TileManager()
+  m_tilesets()
 {
 }
 
 TileSet*
 TileManager::get_tileset(const std::string &filename)
 {
-  TileSets::const_iterator i = tilesets.find(filename);
-  if(i != tilesets.end())
+  auto it = m_tilesets.find(filename);
+  if (it != m_tilesets.end())
   {
-    return i->second.get();
+    return it->second.get();
   }
   else
   {
-    std::unique_ptr<TileSet> tileset(new TileSet(filename));
+    auto tileset = TileSet::from_file(filename);
     TileSet* result = tileset.get();
-    tilesets.insert(std::make_pair(filename, std::move(tileset)));
+    m_tilesets[filename] = std::move(tileset);
     return result;
   }
 }

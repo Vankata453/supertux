@@ -42,60 +42,48 @@
 #include "math/vector.hpp"
 #include "supertux/moving_object.hpp"
 #include "scripting/ambient_sound.hpp"
-#include "scripting/exposed_object.hpp"
+#include "squirrel/exposed_object.hpp"
 
 class GameObject;
 class Player;
 class ReaderMapping;
 class SoundSource;
 
-class AmbientSound : public MovingObject,
+class AmbientSound final : public MovingObject,
                      public ExposedObject<AmbientSound, scripting::AmbientSound>
 {
 public:
-  AmbientSound(const ReaderMapping& lisp);
+  AmbientSound(const ReaderMapping& mapping);
   AmbientSound(const Vector& pos, float factor, float bias, float vol, const std::string& file);
   ~AmbientSound();
 
-  HitResponse collision(GameObject& other, const CollisionHit& hit_);
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit_) override;
 
-  const Vector get_pos() const
-  {
-    return bbox.p1;
-  }
-  std::string get_class() const {
-    return "ambient_sound";
-  }
-  /**
-   * @name Scriptable Methods
-   * @{
-   */
+  virtual std::string get_class() const override { return "ambient-sound"; }
+  virtual std::string get_display_name() const override { return _("Ambient sound"); }
+  virtual bool has_variable_size() const override { return true; }
+
+  /** @name Scriptable Methods
+      @{ */
 #ifndef SCRIPTING_API
-  void set_pos(const Vector& pos);
+  virtual void set_pos(const Vector& pos) override;
 #endif
   void set_pos(float x, float y);
   float get_pos_x() const;
   float get_pos_y() const;
-  /**
-   * @}
-   */
+  /** @} */
 
-  void draw(DrawingContext& context);
+  virtual void draw(DrawingContext& context) override;
 
-  std::string get_display_name() const {
-    return _("Ambient sound");
-  }
-  virtual ObjectSettings get_settings();
-  virtual void after_editor_set();
+  virtual ObjectSettings get_settings() override;
+  virtual void after_editor_set() override;
 
 protected:
-  virtual void hit(Player& player);
-  virtual void update(float time);
+  virtual void update(float dt_sec) override;
   virtual void start_playing();
   virtual void stop_playing();
 
 private:
-
   std::string sample;
   std::unique_ptr<SoundSource> sound_source;
   int latency;
@@ -108,13 +96,9 @@ private:
   float targetvolume;  /// how loud we want to be
   float currentvolume; /// how loud we are
 
-  float * volume_ptr; /// this will be used by the volume adjustment effect.
-
-  Vector new_size;
-
 private:
-  AmbientSound(const AmbientSound&);
-  AmbientSound& operator=(const AmbientSound&);
+  AmbientSound(const AmbientSound&) = delete;
+  AmbientSound& operator=(const AmbientSound&) = delete;
 };
 
 #endif

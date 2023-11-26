@@ -18,22 +18,30 @@
 #ifndef HEADER_SUPERTUX_OBJECT_SPRITE_PARTICLE_HPP
 #define HEADER_SUPERTUX_OBJECT_SPRITE_PARTICLE_HPP
 
-#include "object/anchor_point.hpp"
-#include "sprite/sprite.hpp"
-#include "sprite/sprite_manager.hpp"
+#include "math/anchor_point.hpp"
+#include "sprite/sprite_ptr.hpp"
+#include "supertux/game_object.hpp"
+#include "video/drawing_context.hpp"
 
 class Player;
 
-class SpriteParticle : public GameObject
+class SpriteParticle final : public GameObject
 {
 public:
-  SpriteParticle(const std::string& sprite_name, const std::string& action, Vector position, AnchorPoint anchor, Vector velocity, Vector acceleration, int drawing_layer = LAYER_OBJECTS-1);
+  SpriteParticle(SpritePtr sprite, const std::string& action,
+                 const Vector& position, AnchorPoint anchor,
+                 const Vector& velocity, const Vector& acceleration,
+                 int drawing_layer = LAYER_OBJECTS-1);
+  SpriteParticle(const std::string& sprite_name, const std::string& action,
+                 const Vector& position, AnchorPoint anchor,
+                 const Vector& velocity, const Vector& acceleration,
+                 int drawing_layer = LAYER_OBJECTS-1);
   ~SpriteParticle();
+
 protected:
-  virtual void hit(Player& player);
-  virtual void update(float elapsed_time);
-  virtual void draw(DrawingContext& context);
-  virtual bool do_save() const {
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual bool is_saveable() const override {
     return false;
   }
 
@@ -43,13 +51,12 @@ private:
   Vector velocity;
   Vector acceleration;
   int drawing_layer;
-  Color light;
   SpritePtr lightsprite;
   bool glow;
 
 private:
-  SpriteParticle(const SpriteParticle&);
-  SpriteParticle& operator=(const SpriteParticle&);
+  SpriteParticle(const SpriteParticle&) = delete;
+  SpriteParticle& operator=(const SpriteParticle&) = delete;
 };
 
 #endif

@@ -18,24 +18,22 @@
 #define HEADER_SUPERTUX_OBJECT_PATH_WALKER_HPP
 
 #include <string.h>
+#include <memory>
 
 #include "object/path.hpp"
+#include "util/uid.hpp"
 
 class ObjectOption;
 
-/**
- * A walker that travels along a path
- */
-class PathWalker
+/** A walker that travels along a path */
+class PathWalker final
 {
 public:
-  PathWalker(const Path* path, bool running = true);
-  virtual ~PathWalker();
+  PathWalker(UID path_uid, bool running = true);
+  ~PathWalker();
 
-  /**
-   * advances the path walker on the path and returns its new position
-   */
-  virtual Vector advance(float elapsed_time);
+  /** advances the path walker on the path and returns its new position */
+  void update(float dt_sec);
 
   /** current position of path walker */
   Vector get_pos() const;
@@ -50,43 +48,36 @@ public:
   void stop_moving();
 
   /** returns true if PathWalker is currently moving */
-  bool is_moving() const {
-    return running;
-  }
-
-  static ObjectOption get_running_option(bool* _running);
-
-  const Path* path;
-
-  /**
-   * set to false to immediately stop advancing
-   */
-  bool running;
+  bool is_running() const { return m_running; }
 
 private:
   void advance_node();
   void goback_node();
+  Path* get_path() const;
 
-  size_t current_node_nr;
-  size_t next_node_nr;
+public:
+  UID m_path_uid;
 
-  /**
-   * stop advancing automatically when this node is reached
-   */
-  int stop_at_node_nr;
-
-  /**
-   * the position between the current node and the next node as fraction
-   * between 0 and 1
-   */
-  float node_time;
-  float node_mult;
-
-  float walking_speed;
+  /** set to false to immediately stop advancing */
+  bool m_running;
 
 private:
-  PathWalker(const PathWalker&);
-  PathWalker& operator=(const PathWalker&);
+  size_t m_current_node_nr;
+  size_t m_next_node_nr;
+
+  /** stop advancing automatically when this node is reached */
+  int m_stop_at_node_nr;
+
+  /** the position between the current node and the next node as
+      fraction between 0 and 1 */
+  float m_node_time;
+  float m_node_mult;
+
+  float m_walking_speed;
+
+private:
+  PathWalker(const PathWalker&) = delete;
+  PathWalker& operator=(const PathWalker&) = delete;
 };
 
 #endif

@@ -15,65 +15,64 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADER_SUPERTUX_SUPERTUX_MAINLOOP_HPP
-#define HEADER_SUPERTUX_SUPERTUX_MAINLOOP_HPP
+#ifndef HEADER_SUPERTUX_SUPERTUX_SCREEN_MANAGER_HPP
+#define HEADER_SUPERTUX_SUPERTUX_SCREEN_MANAGER_HPP
 
 #include <memory>
-#include <cstddef>
 
-#include "scripting/thread_queue.hpp"
+#include "squirrel/squirrel_thread_queue.hpp"
 #include "supertux/screen.hpp"
 #include "util/currenton.hpp"
 
+class Compositor;
 class DrawingContext;
+class InputManager;
 class MenuManager;
 class MenuStorage;
-class Screen;
 class ScreenFade;
+class VideoSystem;
 
 /**
  * Manages, updates and draws all Screens, Controllers, Menus and the Console.
  */
-class ScreenManager : public Currenton<ScreenManager>
+class ScreenManager final : public Currenton<ScreenManager>
 {
 public:
-  ScreenManager();
+  ScreenManager(VideoSystem& video_system, InputManager& input_manager);
   ~ScreenManager();
 
-  void run(DrawingContext &context);
+  void run();
   void quit(std::unique_ptr<ScreenFade> fade = {});
   void set_speed(float speed);
+  void set_target_framerate(float framerate);
+  float get_target_framerate() const;
   float get_speed() const;
   bool has_pending_fadeout() const;
-
-  /**
-   * requests that a screenshot be taken after the next frame has been rendered
-   */
-  void take_screenshot();
 
   // push new screen on screen_stack
   void push_screen(std::unique_ptr<Screen> screen, std::unique_ptr<ScreenFade> fade = {});
   void pop_screen(std::unique_ptr<ScreenFade> fade = {});
   void set_screen_fade(std::unique_ptr<ScreenFade> fade);
 
-  /// threads that wait for a screenswitch
-  scripting::ThreadQueue m_waiting_threads;
-
 private:
   void draw_fps(DrawingContext& context, float fps);
   void draw_player_pos(DrawingContext& context);
   void draw_run_timers(DrawingContext& context, float timer, float offset_x = 0.f);
   void draw_run_timer(DrawingContext& context, float timer, float offset_x, bool rta);
-  void draw(DrawingContext& context);
-  void update_gamelogic(float elapsed_time);
+  void draw(Compositor& compositor);
+  void update_gamelogic(float dt_sec);
   void process_events();
   void handle_screen_switch();
 
 private:
+  VideoSystem& m_video_system;
+  InputManager& m_input_manager;
   std::unique_ptr<MenuStorage> m_menu_storage;
   std::unique_ptr<MenuManager> m_menu_manager;
 
   float m_speed;
+  float m_target_framerate;
+
   struct Action
   {
     enum Type { PUSH_ACTION, POP_ACTION, QUIT_ACTION };
@@ -85,31 +84,6 @@ private:
       type(type_),
       screen(std::move(screen_))
     {}
-#ifdef WIN32
-    Action(Action &a) :
-      type(a.type),
-      screen(std::move(a.screen))
-    {}
-#endif
-    Action(Action &&a) :
-      type(a.type),
-      screen(std::move(a.screen))
-    {}
-
-#ifdef WIN32
-    Action& operator=(Action &a)
-    {
-      type = a.type;
-      screen = std::move(a.screen);
-      return *this;
-    }
-#endif
-    Action& operator=(Action &&a)
-    {
-      type = a.type;
-      screen = std::move(a.screen);
-      return *this;
-    }
   };
 
   std::vector<Action> m_actions;
@@ -118,7 +92,6 @@ private:
   float m_fps;
   std::unique_ptr<ScreenFade> m_screen_fade;
   std::vector<std::unique_ptr<Screen> > m_screen_stack;
-  bool m_screenshot_requested; /**< true if a screenshot should be taken after the next frame has been rendered */
 };
 
 #endif

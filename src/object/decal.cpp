@@ -16,34 +16,33 @@
 
 #include "object/decal.hpp"
 
-#include "supertux/object_factory.hpp"
 #include "util/reader.hpp"
 #include "util/reader_mapping.hpp"
 
 Decal::Decal(const ReaderMapping& reader) :
-  MovingSprite(reader, "images/decal/explanations/billboard-fireflower.png", LAYER_OBJECTS, COLGROUP_DISABLED),
-  default_action(),
+  MovingSprite(reader, "images/decal/explanations/billboard-bigtux.png", LAYER_OBJECTS, COLGROUP_DISABLED),
+  default_action("default"),
   solid()
 {
-  layer = reader_get_layer (reader, /* default = */ LAYER_OBJECTS);
+  m_layer = reader_get_layer (reader, /* default = */ LAYER_OBJECTS);
 
-  if (!reader.get("solid", solid)) solid = false;
-  if(solid)
+  reader.get("solid", solid, false);
+  if (solid)
     set_group(COLGROUP_STATIC);
-  if(reader.get("action", default_action))
+  if (reader.get("action", default_action))
     set_action(default_action, -1);
 }
 
 ObjectSettings
-Decal::get_settings() {
-  ObjectSettings result = MovingObject::get_settings();
-  ObjectOption spr(MN_FILE, _("Sprite"), &sprite_name, "sprite");
-  spr.select.push_back(".png");
-  spr.select.push_back(".sprite");
-  result.options.push_back(spr);
-  result.options.push_back( ObjectOption(MN_TEXTFIELD, _("Action"), &default_action, "action"));
-  result.options.push_back( ObjectOption(MN_TOGGLE, _("Solid"), &solid, "solid"));
-  result.options.push_back( ObjectOption(MN_INTFIELD, _("Z-pos"), &layer, "z-pos"));
+Decal::get_settings()
+{
+  ObjectSettings result = MovingSprite::get_settings();
+
+  result.add_int(_("Z-pos"), &m_layer, "z-pos", LAYER_OBJECTS);
+  result.add_bool(_("Solid"), &solid, "solid", false);
+  result.add_text(_("Action"), &default_action, "action", std::string("default"));
+
+  result.reorder({"z-pos", "sprite", "x", "y"});
 
   return result;
 }

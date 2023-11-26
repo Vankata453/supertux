@@ -17,33 +17,27 @@
 #ifndef HEADER_SUPERTUX_OBJECT_SPOTLIGHT_HPP
 #define HEADER_SUPERTUX_OBJECT_SPOTLIGHT_HPP
 
-#include <memory>
-
 #include "sprite/sprite_ptr.hpp"
 #include "supertux/moving_object.hpp"
 #include "video/color.hpp"
 
 class ReaderMapping;
 
-class Spotlight : public MovingObject
+class Spotlight final : public MovingObject
 {
 public:
   Spotlight(const ReaderMapping& reader);
   virtual ~Spotlight();
 
-  void update(float elapsed_time);
-  void draw(DrawingContext& context);
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
 
-  HitResponse collision(GameObject& other, const CollisionHit& hit_);
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit_) override;
 
-  std::string get_class() const {
-    return "spotlight";
-  }
-  std::string get_display_name() const {
-    return _("Spotlight");
-  }
+  virtual std::string get_class() const override { return "spotlight"; }
+  virtual std::string get_display_name() const override { return _("Spotlight"); }
 
-  virtual ObjectSettings get_settings();
+  virtual ObjectSettings get_settings() override;
 
 private:
   float   angle;
@@ -54,6 +48,16 @@ private:
   SpritePtr lightcone;
 
   Color   color;
+
+  /** Speed that the spotlight is rotating with */
+  float speed;
+
+  /** If true, the spotlight will rotate counter-clockwise */
+  bool counter_clockwise;
+
+private:
+  Spotlight(const Spotlight&) = delete;
+  Spotlight& operator=(const Spotlight&) = delete;
 };
 
 #endif

@@ -14,36 +14,37 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef LAYER_ICON_HPP
-#define LAYER_ICON_HPP
+#ifndef HEADER_SUPERTUX_EDITOR_LAYER_ICON_HPP
+#define HEADER_SUPERTUX_EDITOR_LAYER_ICON_HPP
 
 #include "editor/object_icon.hpp"
 
 class GameObject;
+class Vector;
 
 class LayerIcon : public ObjectIcon
 {
-  public:
-    LayerIcon(GameObject *layer_);
-    virtual ~LayerIcon();
+public:
+  LayerIcon(GameObject* layer);
+  virtual ~LayerIcon() {}
 
-    GameObject *layer;
+  virtual void draw(DrawingContext& context, const Vector& pos) override;
 
-    virtual void draw(DrawingContext& context, Vector pos);
+  int get_zpos() const;
+  bool is_valid() const;
 
-    int get_zpos() const;
-    bool is_valid() const;
+  GameObject* get_layer() const { return m_layer; }
+  bool is_tilemap() const;
 
-    bool is_tilemap;
+private:
+  GameObject* m_layer;
+  SurfacePtr m_selection;
 
-  private:
-
-    SurfacePtr selection;
-
-    LayerIcon(const LayerIcon&);
-    LayerIcon& operator=(const LayerIcon&);
+private:
+  LayerIcon(const LayerIcon&) = delete;
+  LayerIcon& operator=(const LayerIcon&) = delete;
 };
 
-#endif // LAYER_ICON_HPP
+#endif
 
 /* EOF */

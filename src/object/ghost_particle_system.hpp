@@ -17,14 +17,12 @@
 #ifndef HEADER_SUPERTUX_OBJECT_GHOST_PARTICLE_SYSTEM_HPP
 #define HEADER_SUPERTUX_OBJECT_GHOST_PARTICLE_SYSTEM_HPP
 
-#include <memory>
-
 #include "object/particlesystem.hpp"
 #include "video/surface_ptr.hpp"
 
 class ReaderMapping;
 
-class GhostParticleSystem : public ParticleSystem
+class GhostParticleSystem final : public ParticleSystem
 {
 public:
   GhostParticleSystem();
@@ -32,18 +30,12 @@ public:
   virtual ~GhostParticleSystem();
 
   void init();
-  virtual void update(float elapsed_time);
+  virtual void update(float dt_sec) override;
 
-  std::string type() const
-  { return "GhostParticleSystem"; }
-  std::string get_class() const {
-    return "particles-ghosts";
-  }
-  std::string get_display_name() const {
-    return _("Ghost particles");
-  }
+  virtual std::string get_class() const override { return "particles-ghosts"; }
+  virtual std::string get_display_name() const override { return _("Ghost particles"); }
 
-  virtual const std::string get_icon_path() const {
+  virtual const std::string get_icon_path() const override {
     return "images/engine/editor/ghostparticles.png";
   }
 
@@ -61,8 +53,8 @@ private:
   SurfacePtr ghosts[2];
 
 private:
-  GhostParticleSystem(const GhostParticleSystem&);
-  GhostParticleSystem& operator=(const GhostParticleSystem&);
+  GhostParticleSystem(const GhostParticleSystem&) = delete;
+  GhostParticleSystem& operator=(const GhostParticleSystem&) = delete;
 };
 
 #endif

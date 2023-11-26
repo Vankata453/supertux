@@ -14,6 +14,8 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "supertux/flip_level_transformer.hpp"
+
 #include "badguy/badguy.hpp"
 #include "object/block.hpp"
 #include "object/camera.hpp"
@@ -21,70 +23,64 @@
 #include "object/platform.hpp"
 #include "object/player.hpp"
 #include "object/tilemap.hpp"
-#include "supertux/flip_level_transformer.hpp"
 #include "supertux/sector.hpp"
-#include "supertux/spawn_point.hpp"
 
 void
-FlipLevelTransformer::transform_sector(Sector* sector)
+FlipLevelTransformer::transform_sector(Sector& sector)
 {
-  float height = sector->get_height();
+  float height = sector.get_height();
 
-  for(auto& object : sector->gameobjects) {
+  for (auto& object : sector.get_objects()) {
     auto tilemap = dynamic_cast<TileMap*>(object.get());
-    if(tilemap) {
+    if (tilemap) {
       transform_tilemap(height, *tilemap);
     }
     auto player = dynamic_cast<Player*>(object.get());
-    if(player) {
+    if (player) {
       Vector pos = player->get_pos();
       pos.y = height - pos.y - player->get_bbox().get_height();
       player->move(pos);
       continue;
     }
     auto badguy = dynamic_cast<BadGuy*>(object.get());
-    if(badguy) {
+    if (badguy) {
       transform_badguy(height, *badguy);
     }
     auto flower = dynamic_cast<Flower*>(object.get());
-    if(flower) {
+    if (flower) {
       transform_flower(*flower);
     }
     auto platform = dynamic_cast<Platform*>(object.get());
-    if(platform) {
+    if (platform) {
       transform_platform(height, *platform);
     }
     auto block = dynamic_cast<Block*>(object.get());
-    if(block) {
+    if (block) {
       transform_block(height, *block);
     }
     auto mobject = dynamic_cast<MovingObject*>(object.get());
-    if(mobject) {
+    if (mobject) {
       transform_moving_object(height, *mobject);
     }
   }
-  for(auto& spawnpoint : sector->spawnpoints) {
-    transform_spawnpoint(height, *spawnpoint);
-  }
 
-  if(sector->camera != 0 && sector->player != 0)
-    sector->camera->reset(sector->player->get_pos());
+  sector.get_camera().reset(sector.get_player().get_pos());
 }
 
-DrawingEffect
-FlipLevelTransformer::transform_drawing_effect(DrawingEffect effect)
+Flip
+FlipLevelTransformer::transform_flip(Flip flip)
 {
-  if (effect & VERTICAL_FLIP) {
-    return effect & ~VERTICAL_FLIP;
+  if (flip & VERTICAL_FLIP) {
+    return flip & ~VERTICAL_FLIP;
   } else {
-    return effect | VERTICAL_FLIP;
+    return flip | VERTICAL_FLIP;
   }
 }
 
 void
 FlipLevelTransformer::transform_path(float height, float obj_height, Path& path)
 {
-  for (auto& node : path.nodes) {
+  for (auto& node : path.m_nodes) {
     Vector& pos = node.position;
     pos.y = height - pos.y - obj_height;
   }
@@ -93,8 +89,8 @@ FlipLevelTransformer::transform_path(float height, float obj_height, Path& path)
 void
 FlipLevelTransformer::transform_tilemap(float height, TileMap& tilemap)
 {
-  for(size_t x = 0; x < tilemap.get_width(); ++x) {
-    for(size_t y = 0; y < tilemap.get_height()/2; ++y) {
+  for (int x = 0; x < tilemap.get_width(); ++x) {
+    for (int y = 0; y < tilemap.get_height()/2; ++y) {
       // swap tiles
       int y2 = tilemap.get_height()-1-y;
       uint32_t t1 = tilemap.get_tile_id(x, y);
@@ -103,11 +99,11 @@ FlipLevelTransformer::transform_tilemap(float height, TileMap& tilemap)
       tilemap.change(x, y2, t1);
     }
   }
-  tilemap.set_drawing_effect(transform_drawing_effect(tilemap.get_drawing_effect()));
+  tilemap.set_flip(transform_flip(tilemap.get_flip()));
   Vector offset = tilemap.get_offset();
   offset.y = height - offset.y - tilemap.get_bbox().get_height();
   tilemap.set_offset(offset);
-  auto path = tilemap.get_path().get();
+  auto path = tilemap.get_path();
   if (path)
     transform_path(height, tilemap.get_bbox().get_height(), *path);
 }
@@ -121,14 +117,6 @@ FlipLevelTransformer::transform_badguy(float height, BadGuy& badguy)
 }
 
 void
-FlipLevelTransformer::transform_spawnpoint(float height, SpawnPoint& spawn)
-{
-  Vector pos = spawn.pos;
-  pos.y = height - pos.y;
-  spawn.pos = pos;
-}
-
-void
 FlipLevelTransformer::transform_moving_object(float height, MovingObject& object)
 {
   Vector pos = object.get_pos();
@@ -139,13 +127,13 @@ FlipLevelTransformer::transform_moving_object(float height, MovingObject& object
 void
 FlipLevelTransformer::transform_flower(Flower& flower)
 {
-  flower.drawing_effect = transform_drawing_effect(flower.drawing_effect);
+  flower.flip = transform_flip(flower.flip);
 }
 
 void
 FlipLevelTransformer::transform_platform(float height, Platform& platform)
 {
-  transform_path(height, platform.get_bbox().get_height(), platform.get_path());
+  transform_path(height, platform.get_bbox().get_height(), *(platform.get_path()));
 }
 
 void

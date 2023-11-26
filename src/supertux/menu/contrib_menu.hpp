@@ -18,23 +18,21 @@
 #define HEADER_SUPERTUX_SUPERTUX_MENU_CONTRIB_MENU_HPP
 
 #include "gui/menu.hpp"
+#include "supertux/world.hpp"
 
-class World;
-
-class ContribMenu : public Menu
+class ContribMenu final : public Menu
 {
 private:
   std::vector<std::unique_ptr<World> > m_contrib_worlds;
 
 public:
   ContribMenu();
-  ~ContribMenu();
 
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
 
 private:
-  ContribMenu(const ContribMenu&);
-  ContribMenu& operator=(const ContribMenu&);
+  ContribMenu(const ContribMenu&) = delete;
+  ContribMenu& operator=(const ContribMenu&) = delete;
 };
 
 #endif

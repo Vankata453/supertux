@@ -17,8 +17,7 @@
 #ifndef HEADER_SUPERTUX_OBJECT_BLOCK_HPP
 #define HEADER_SUPERTUX_OBJECT_BLOCK_HPP
 
-#include <memory>
-
+#include "sprite/sprite.hpp"
 #include "sprite/sprite_ptr.hpp"
 #include "supertux/moving_object.hpp"
 
@@ -29,12 +28,13 @@ class Block : public MovingObject
 {
 public:
   Block(SpritePtr sprite);
-  Block(const ReaderMapping& lisp, const std::string& sprite_file);
-  ~Block();
+  Block(const ReaderMapping& mapping, const std::string& sprite_file);
 
   virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
-  virtual void update(float elapsed_time) override;
+  virtual void update(float dt_sec) override;
   virtual void draw(DrawingContext& context) override;
+
+  virtual std::string get_default_sprite_name() const { return default_sprite_name; }
 
   virtual ObjectSettings get_settings() override;
   virtual void after_editor_set() override;
@@ -49,6 +49,7 @@ protected:
 
   SpritePtr sprite;
   std::string sprite_name;
+  std::string default_sprite_name;
   bool bouncing;
   bool breaking;
   float bounce_dir;
@@ -56,8 +57,8 @@ protected:
   float original_y;
 
 private:
-  Block(const Block&);
-  Block& operator=(const Block&);
+  Block(const Block&) = delete;
+  Block& operator=(const Block&) = delete;
 };
 
 #endif

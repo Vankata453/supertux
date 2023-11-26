@@ -22,22 +22,16 @@
 #include "object/moving_sprite.hpp"
 #include "supertux/physic.hpp"
 
-/**
- * A block that disintegrates when stood on
- */
-class UnstableTile : public MovingSprite
+/** A block that disintegrates when stood on */
+class UnstableTile final : public MovingSprite
 {
 public:
-  UnstableTile(const ReaderMapping& lisp);
+  UnstableTile(const ReaderMapping& mapping);
 
-  HitResponse collision(GameObject& other, const CollisionHit& hit);
-  void update(float elapsed_time);
-  std::string get_class() const {
-    return "unstable_tile";
-  }
-  std::string get_display_name() const {
-    return _("Unstable tile");
-  }
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual void update(float dt_sec) override;
+  virtual std::string get_class() const override { return "unstable_tile"; }
+  virtual std::string get_display_name() const override { return _("Unstable tile"); }
 
 private:
   enum State {
@@ -48,17 +42,21 @@ private:
     STATE_FALL      /**< falling down */
   };
 
-  void startCrumbling();
-
 private:
+  void startCrumbling();
   void shake();
   void dissolve();
   void fall_down();
   void slow_fall();
 
+private:
   Physic physic;
   State state;
   float slowfall_timer;
+
+private:
+  UnstableTile(const UnstableTile&) = delete;
+  UnstableTile& operator=(const UnstableTile&) = delete;
 };
 
 #endif

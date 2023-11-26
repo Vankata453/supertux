@@ -17,7 +17,6 @@
 #include "badguy/captainsnowball.hpp"
 
 #include "sprite/sprite.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
 
 namespace{
@@ -30,16 +29,7 @@ CaptainSnowball::CaptainSnowball(const ReaderMapping& reader)
 {
   walk_speed = BOARDING_SPEED;
   max_drop_height = -1;
-  physic.set_velocity_y(-400);
-}
-
-CaptainSnowball::CaptainSnowball(const Vector& pos, Direction d)
-  : WalkingBadguy(pos, d, "images/creatures/snowball/cpt-snowball.sprite", "left", "right")
-{
-  // Created during game eg. by dispencer. Board the enemy!
-  walk_speed = BOARDING_SPEED;
-  max_drop_height = -1;
-  physic.set_velocity_y(-400);
+  m_physic.set_velocity_y(-400);
 }
 
 bool
@@ -50,32 +40,32 @@ CaptainSnowball::might_climb(int width, int height) const
 
   float x1;
   float x2;
-  float y1a = bbox.p1.y + 1;
-  float y2a = bbox.p2.y - 1;
-  float y1b = bbox.p1.y + 1 - height;
-  float y2b = bbox.p2.y - 1 - height;
-  if (dir == LEFT) {
-    x1 = bbox.p1.x - width;
-    x2 = bbox.p1.x - 1;
+  float y1a = m_col.m_bbox.get_top() + 1;
+  float y2a = m_col.m_bbox.get_bottom() - 1;
+  float y1b = m_col.m_bbox.get_top() + 1 - static_cast<float>(height);
+  float y2b = m_col.m_bbox.get_bottom() - 1 - static_cast<float>(height);
+  if (m_dir == Direction::LEFT) {
+    x1 = m_col.m_bbox.get_left() - static_cast<float>(width);
+    x2 = m_col.m_bbox.get_left() - 1;
   } else {
-    x1 = bbox.p2.x + 1;
-    x2 = bbox.p2.x + width;
+    x1 = m_col.m_bbox.get_right() + 1;
+    x2 = m_col.m_bbox.get_right() + static_cast<float>(width);
   }
-  return ((!Sector::current()->is_free_of_statics(Rectf(x1, y1a, x2, y2a))) &&
-          (Sector::current()->is_free_of_statics(Rectf(x1, y1b, x2, y2b))));
+  return ((!Sector::get().is_free_of_statics(Rectf(x1, y1a, x2, y2a))) &&
+          (Sector::get().is_free_of_statics(Rectf(x1, y1b, x2, y2b))));
 }
 
 void
-CaptainSnowball::active_update(float elapsed_time)
+CaptainSnowball::active_update(float dt_sec)
 {
   if (on_ground() && might_climb(8, 64)) {
-    physic.set_velocity_y(-400);
+    m_physic.set_velocity_y(-400);
   } else if (on_ground() && might_fall(16)) {
-    physic.set_velocity_y(-400);
+    m_physic.set_velocity_y(-400);
     walk_speed = BOARDING_SPEED;
-    physic.set_velocity_x(dir == LEFT ? -walk_speed : walk_speed);
+    m_physic.set_velocity_x(m_dir == Direction::LEFT ? -walk_speed : walk_speed);
   }
-  WalkingBadguy::active_update(elapsed_time);
+  WalkingBadguy::active_update(dt_sec);
 }
 
 void
@@ -83,7 +73,7 @@ CaptainSnowball::collision_solid(const CollisionHit& hit)
 {
   if (is_active() && (walk_speed == BOARDING_SPEED)) {
     walk_speed = CAPTAIN_WALK_SPEED;
-    physic.set_velocity_x(dir == LEFT ? -walk_speed : walk_speed);
+    m_physic.set_velocity_x(m_dir == Direction::LEFT ? -walk_speed : walk_speed);
   }
   WalkingBadguy::collision_solid(hit);
 }
@@ -91,7 +81,7 @@ CaptainSnowball::collision_solid(const CollisionHit& hit)
 bool
 CaptainSnowball::collision_squished(GameObject& object)
 {
-  sprite->set_action(dir == LEFT ? "squished-left" : "squished-right");
+  m_sprite->set_action(m_dir == Direction::LEFT ? "squished-left" : "squished-right");
   kill_squished(object);
   return true;
 }

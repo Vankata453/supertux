@@ -18,73 +18,72 @@
 #define HEADER_SUPERTUX_SUPERTUX_LEVEL_HPP
 
 #include "supertux/statistics.hpp"
-#include "util/currenton.hpp"
 
 class ReaderMapping;
 class Sector;
+class Writer;
 
-/**
- * Represents a collection of Sectors running in a single GameSession.
- *
- * Each Sector in turn contains GameObjects, e.g. Badguys and Players.
- */
-class Level
+/** Represents a collection of Sectors running in a single GameSession.
+
+    Each Sector in turn contains GameObjects, e.g. Badguys and Players. */
+class Level final
 {
-public:
-  std::string name;
-  std::string author;
-  std::string contact;
-  std::string license;
-  std::string filename;
-  std::string on_menukey_script;
-  std::vector<std::unique_ptr<Sector> > sectors;
-  Statistics  stats;
-  float       target_time;
-  std::string tileset;
-
   friend class LevelParser;
 
 public:
-  Level();
-  ~Level();
+  static Level* current() { return s_current; }
 
-  // loads a levelfile
-  //void load(const std::string& filename);
+private:
+  static Level* s_current;
+
+public:
+  Level(bool m_is_worldmap);
+  ~Level();
 
   // saves to a levelfile
   void save(const std::string& filename, bool retry = false);
+  void save(std::ostream& stream);
 
   void add_sector(std::unique_ptr<Sector> sector);
-  const std::string& get_name() const { return name; }
-  const std::string& get_author() const { return author; }
+  const std::string& get_name() const { return m_name; }
+  const std::string& get_author() const { return m_author; }
 
   Sector* get_sector(const std::string& name) const;
 
   size_t get_sector_count() const;
   Sector* get_sector(size_t num) const;
 
-  std::string get_tileset() const { return tileset; }
+  std::string get_tileset() const { return m_tileset; }
 
   int get_total_coins() const;
   int get_total_badguys() const;
   int get_total_secrets() const;
 
-  static Level* current() {
-    return _current;
-  }
-
   void reactivate();
 
-private:
-  static Level* _current;
+  bool is_worldmap() const { return m_is_worldmap; }
 
+private:
+  void save(Writer& writer);
   void load_old_format(const ReaderMapping& reader);
 
+public:
+  bool m_is_worldmap;
+  std::string m_name;
+  std::string m_author;
+  std::string m_contact;
+  std::string m_license;
+  std::string m_filename;
+  std::vector<std::unique_ptr<Sector> > m_sectors;
+  Statistics m_stats;
+  float m_target_time;
+  std::string m_tileset;
+
 private:
-  Level(const Level&);
-  Level& operator=(const Level&);
+  Level(const Level&) = delete;
+  Level& operator=(const Level&) = delete;
 };
 
-#endif /*SUPERTUX_LEVEL_H*/
+#endif
 
 /* EOF */

@@ -21,7 +21,7 @@
 
 class SoundFile;
 
-class StreamSoundSource : public OpenALSoundSource
+class StreamSoundSource final : public OpenALSoundSource
 {
 public:
   StreamSoundSource();
@@ -36,11 +36,11 @@ public:
   {
     return fade_state;
   }
-  void update();
+  virtual void update() override;
 
-  void set_looping(bool looping_)
+  virtual void set_looping(bool looping_) override
   {
-    this->looping = looping_;
+    looping = looping_;
   }
   bool get_looping() const
   {
@@ -63,8 +63,8 @@ private:
   bool looping;
 
 private:
-  StreamSoundSource(const StreamSoundSource&);
-  StreamSoundSource& operator=(const StreamSoundSource&);
+  StreamSoundSource(const StreamSoundSource&) = delete;
+  StreamSoundSource& operator=(const StreamSoundSource&) = delete;
 };
 
 #endif

@@ -17,37 +17,32 @@
 #include "object/level_time.hpp"
 #include "scripting/level_time.hpp"
 
-#define NOIMPL      log_fatal << __PRETTY_FUNCTION__ << " not implemented."
-
 namespace scripting {
-
-LevelTime::LevelTime(::LevelTime* level_time_)
-  : level_time(level_time_)
-{ }
-
-LevelTime::~LevelTime()
-{ }
 
 void LevelTime::start()
 {
-  level_time->start();
+  SCRIPT_GUARD_VOID;
+  object.start();
 }
 
 void LevelTime::stop()
 {
-  level_time->stop();
+  SCRIPT_GUARD_VOID;
+  object.stop();
 }
 
 float LevelTime::get_time() const
 {
-  return level_time->get_time();
+  SCRIPT_GUARD_DEFAULT;
+  return object.get_time();
 }
 
 void LevelTime::set_time(float time_left)
 {
-  level_time->set_time(time_left);
+  SCRIPT_GUARD_VOID;
+  object.set_time(time_left);
 }
 
-}
+} // namespace scripting
 
 /* EOF */

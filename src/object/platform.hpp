@@ -18,35 +18,38 @@
 #define HEADER_SUPERTUX_OBJECT_PLATFORM_HPP
 
 #include "object/moving_sprite.hpp"
-#include "object/path_walker.hpp"
-#include "scripting/exposed_object.hpp"
+#include "object/path_object.hpp"
+#include "squirrel/exposed_object.hpp"
 #include "scripting/platform.hpp"
 
-/**
- * This class is the base class for platforms that tux can stand on
- */
+/** This class is the base class for platforms that tux can stand
+    on */
 class Platform : public MovingSprite,
-                 public ExposedObject<Platform, scripting::Platform>
+                 public ExposedObject<Platform, scripting::Platform>,
+                 public PathObject
 {
 public:
   Platform(const ReaderMapping& reader);
   Platform(const ReaderMapping& reader, const std::string& default_sprite);
-  Platform(const Platform& platform);
-  virtual void save(Writer& writer);
-  virtual ObjectSettings get_settings();
 
-  virtual HitResponse collision(GameObject& other, const CollisionHit& hit);
-  virtual void update(float elapsed_time);
+  virtual void finish_construction() override;
 
-  const Vector& get_speed() const
-  {
-    return speed;
-  }
+  virtual ObjectSettings get_settings() override;
 
-  /**
-   * @name Scriptable Methods
-   * @{
-   */
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual void update(float dt_sec) override;
+
+  virtual void move_to(const Vector& pos) override;
+
+  virtual std::string get_class() const override { return "platform"; }
+  virtual std::string get_display_name() const override { return _("Platform"); }
+
+  virtual void editor_update() override;
+
+  const Vector& get_speed() const { return m_speed; }
+
+  /** @name Scriptable Methods
+      @{ */
 
   /** Move platform until at given node, then stop */
   void goto_node(int node_no);
@@ -57,32 +60,26 @@ public:
   /** Stop platform at next node */
   void stop_moving();
 
-  /**
-   * @}
-   */
-
-  virtual void move_to(const Vector& pos);
-
-  Path& get_path() const {
-    return *path.get();
-  }
-  std::string get_class() const {
-    return "platform";
-  }
-  std::string get_display_name() const {
-    return _("Platform");
-  }
+  /** @} */
 
 private:
-  std::unique_ptr<Path> path;
-  std::unique_ptr<PathWalker> walker;
+  Vector m_speed;
 
-  Vector speed;
+  /** true if Platform will automatically pick a destination based on
+      collisions and current Player position */
+  bool m_automatic;
 
-  bool automatic; /**< true if Platform will automatically pick a destination based on collisions and current Player position */
-  bool player_contact; /**< true if a Player touched the Platform during the last round of collision detections */
-  bool last_player_contact; /**< true if a Player touched the Platform during the round before the last round of collision detections */
+  /** true if a Player touched the Platform during the last round of
+      collision detections */
+  bool m_player_contact;
 
+  /** true if a Player touched the Platform during the round before
+      the last round of collision detections */
+  bool m_last_player_contact;
+
+private:
+  Platform(const Platform&) = delete;
+  Platform& operator=(const Platform&) = delete;
 };
 
 #endif

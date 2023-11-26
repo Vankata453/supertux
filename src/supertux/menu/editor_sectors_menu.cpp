@@ -16,20 +16,15 @@
 
 #include "supertux/menu/editor_sectors_menu.hpp"
 
-#include <sstream>
-
-#include "audio/sound_manager.hpp"
 #include "editor/editor.hpp"
 #include "gui/dialog.hpp"
 #include "gui/menu_item.hpp"
 #include "supertux/menu/menu_storage.hpp"
-#include "supertux/game_manager.hpp"
-#include "supertux/globals.hpp"
 #include "supertux/level.hpp"
 #include "supertux/sector.hpp"
 #include "supertux/sector_parser.hpp"
-#include "util/file_system.hpp"
 #include "util/gettext.hpp"
+#include "util/log.hpp"
 
 EditorSectorsMenu::EditorSectorsMenu()
 {
@@ -37,7 +32,7 @@ EditorSectorsMenu::EditorSectorsMenu()
   add_hl();
 
   int id = 0;
-  for(const auto& sector : Editor::current()->get_level()->sectors) {
+  for (const auto& sector : Editor::current()->get_level()->m_sectors) {
     add_entry(id, sector->get_name());
     id++;
   }
@@ -51,7 +46,11 @@ EditorSectorsMenu::EditorSectorsMenu()
 
 EditorSectorsMenu::~EditorSectorsMenu()
 {
-  Editor::current()->reactivate_request = true;
+  auto editor = Editor::current();
+  if (editor == nullptr) {
+    return;
+  }
+  editor->m_reactivate_request = true;
 }
 
 void
@@ -73,19 +72,19 @@ EditorSectorsMenu::create_sector()
     sector_name = "sector" + std::to_string(num);
     num++;
   } while ( level->get_sector(sector_name) );
-  *(new_sector->get_name_ptr()) = sector_name;
+  new_sector->set_name(sector_name);
 
-  level->add_sector(move(new_sector));
-  Editor::current()->load_sector(level->get_sector_count() - 1);
+  level->add_sector(std::move(new_sector));
+  Editor::current()->load_sector(sector_name);
   MenuManager::instance().clear_menu_stack();
-  Editor::current()->reactivate_request = true;
+  Editor::current()->m_reactivate_request = true;
 }
 
 void
 EditorSectorsMenu::delete_sector()
 {
   Level* level = Editor::current()->get_level();
-  std::unique_ptr<Dialog> dialog(new Dialog);
+  auto dialog = std::make_unique<Dialog>();
 
   // Do not delete sector when there would be no left.
   if (level->get_sector_count() < 2) {
@@ -98,38 +97,39 @@ EditorSectorsMenu::delete_sector()
     dialog->set_text(_("Do you really want to delete this sector?"));
     dialog->clear_buttons();
     dialog->add_cancel_button(_("Cancel"));
-    dialog->add_button(_("Delete sector"), [level] {
+    dialog->add_button(_("Delete sector"), [] {
         MenuManager::instance().clear_menu_stack();
-        for(auto i = level->sectors.begin(); i != level->sectors.end(); ++i) {
-          if ( i->get() == Editor::current()->currentsector ) {
-            level->sectors.erase(i);
-            break;
-          }
-        }
-        Editor::current()->load_sector(0);
-        Editor::current()->reactivate_request = true;
+        Editor::current()->delete_current_sector();
       });
   }
   MenuManager::instance().set_dialog(std::move(dialog));
 }
 
 void
-EditorSectorsMenu::menu_action(MenuItem* item)
+EditorSectorsMenu::menu_action(MenuItem& item)
 {
-  if (item->id >= 0)
+  if (item.get_id() >= 0)
   {
-    Editor::current()->load_sector(item->id);
+    Level* level = Editor::current()->get_level();
+    Sector* sector = level->get_sector(item.get_id());
+    Editor::current()->load_sector(sector->get_name());
     MenuManager::instance().clear_menu_stack();
-  } else {
-    switch (item->id) {
+  }
+  else
+  {
+    switch (item.get_id())
+    {
       case -1:
         break;
+
       case -2:
         create_sector();
         break;
+
       case -3:
         delete_sector();
         break;
+
       case -4:
         MenuManager::instance().clear_menu_stack();
         break;

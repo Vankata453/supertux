@@ -22,7 +22,7 @@
 class Addon;
 class AddonManager;
 
-class AddonMenu : public Menu
+class AddonMenu final : public Menu
 {
 private:
   enum {
@@ -36,16 +36,15 @@ private:
   AddonManager& m_addon_manager;
   std::vector<std::string> m_installed_addons;
   std::vector<std::string> m_repository_addons;
-  bool* m_addons_enabled;
-  bool m_language_pack_mode;
+  std::unique_ptr<bool[]> m_addons_enabled;
   bool m_auto_install_langpack;
 
 public:
-  AddonMenu(bool language_pack_mode = false, bool auto_install_langpack = false);
+  AddonMenu(bool auto_install_langpack = false);
   ~AddonMenu();
 
   void refresh() override;
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
   void check_online();
   void install_addon(const Addon& addon);
   void toggle_addon(const Addon& addon);
@@ -55,8 +54,8 @@ private:
   bool addon_visible(const Addon& addon) const;
 
 private:
-  AddonMenu(const AddonMenu&);
-  AddonMenu& operator=(const AddonMenu&);
+  AddonMenu(const AddonMenu&) = delete;
+  AddonMenu& operator=(const AddonMenu&) = delete;
 };
 
 #endif

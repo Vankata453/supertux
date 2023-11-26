@@ -16,9 +16,10 @@
 
 #include "scripting/sector.hpp"
 
-#include <physfs.h>
-
+#include "object/ambient_light.hpp"
+#include "object/music_object.hpp"
 #include "supertux/sector.hpp"
+#include "video/color.hpp"
 
 namespace scripting {
 
@@ -27,32 +28,39 @@ Sector::Sector(::Sector* parent) :
 {
 }
 
-Sector::~Sector()
+void
+Sector::fade_to_ambient_light(float red, float green, float blue, float fadetime)
 {
+  auto& ambient_light = m_parent->get_singleton_by_type<AmbientLight>();
+  ambient_light.fade_to_ambient_light(red, green, blue, fadetime);
 }
 
 void
 Sector::set_ambient_light(float red, float green, float blue)
 {
-  m_parent->set_ambient_light(red, green, blue);
+  auto& ambient_light = m_parent->get_singleton_by_type<AmbientLight>();
+  ambient_light.set_ambient_light(Color(red, green, blue));
 }
 
 float
 Sector::get_ambient_red() const
 {
-  return m_parent->get_ambient_red();
+  auto& ambient_light = m_parent->get_singleton_by_type<AmbientLight>();
+  return ambient_light.get_ambient_light().red;
 }
 
 float
 Sector::get_ambient_green() const
 {
-  return m_parent->get_ambient_green();
+  auto& ambient_light = m_parent->get_singleton_by_type<AmbientLight>();
+  return ambient_light.get_ambient_light().green;
 }
 
 float
 Sector::get_ambient_blue() const
 {
-  return m_parent->get_ambient_blue();
+  auto& ambient_light = m_parent->get_singleton_by_type<AmbientLight>();
+  return ambient_light.get_ambient_light().blue;
 }
 
 void
@@ -62,9 +70,10 @@ Sector::set_gravity(float gravity)
 }
 
 void
-Sector::set_music(const std::string& music)
+Sector::set_music(const std::string& filename)
 {
-  m_parent->music = music;
+  auto& music = m_parent->get_singleton_by_type<MusicObject>();
+  music.set_music(filename);
 }
 
 } // namespace scripting

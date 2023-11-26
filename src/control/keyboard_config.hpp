@@ -21,11 +21,11 @@
 #include <map>
 
 #include "control/controller.hpp"
-#include "util/writer.hpp"
 
 class ReaderMapping;
+class Writer;
 
-class KeyboardConfig
+class KeyboardConfig final
 {
 public:
   KeyboardConfig();
@@ -33,7 +33,7 @@ public:
   SDL_Keycode reversemap_key(Controller::Control c) const;
   void bind_key(SDL_Keycode key, Controller::Control c);
 
-  void read(const ReaderMapping& keymap_lisp);
+  void read(const ReaderMapping& keymap_mapping);
   void write(Writer& writer);
 
   typedef std::map<SDL_Keycode, Controller::Control> KeyMap;

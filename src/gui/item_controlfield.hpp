@@ -17,32 +17,32 @@
 #ifndef HEADER_SUPERTUX_GUI_ITEM_CONTROLFIELD_HPP
 #define HEADER_SUPERTUX_GUI_ITEM_CONTROLFIELD_HPP
 
-#include <list>
-#include <memory>
-#include <SDL.h>
-
 #include "gui/menu_item.hpp"
 
-class ItemControlField : public MenuItem
+class ItemControlField final : public MenuItem
 {
-  public:
-    ItemControlField(const std::string& text_, const std::string& input_, int id = -1);
+public:
+  ItemControlField(const std::string& text_, const std::string& input_, int id = -1);
 
-    /** Draws the menu item. */
-    virtual void draw(DrawingContext&, Vector pos, int menu_width, bool active);
+  /** Draws the menu item. */
+  virtual void draw(DrawingContext&, const Vector& pos, int menu_width, bool active) override;
 
-    /** Returns the minimum width of the menu item. */
-    virtual int get_width() const;
+  /** Returns the minimum width of the menu item. */
+  virtual int get_width() const override;
 
-    std::string input;
+  std::string input;
 
-    void change_input(const std::string& input_) {
-      input = input_;
-    }
+  void change_input(const std::string& input_) {
+    input = input_;
+  }
 
-  private:
-    ItemControlField(const ItemControlField&);
-    ItemControlField& operator=(const ItemControlField&);
+  virtual bool changes_width() const override {
+    return true;
+  }
+
+private:
+  ItemControlField(const ItemControlField&) = delete;
+  ItemControlField& operator=(const ItemControlField&) = delete;
 };
 
 #endif

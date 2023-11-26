@@ -16,55 +16,51 @@
 
 #include "gui/item_colorchannel.hpp"
 
-#include "gui/menu_action.hpp"
-#include "math/vector.hpp"
-#include "supertux/colorscheme.hpp"
-#include "supertux/globals.hpp"
+#include <sstream>
+
+#include "math/util.hpp"
 #include "supertux/resources.hpp"
-#include "video/color.hpp"
 #include "video/drawing_context.hpp"
-#include "video/font.hpp"
-#include "video/renderer.hpp"
-#include "video/video_system.hpp"
 
-ItemColorChannel::ItemColorChannel(float* input_, Color channel_, int id_) :
-  MenuItem(std::to_string(*input_), id_),
-  number(input_),
-  flickw(0),
-  has_comma(true),
-  channel(channel_)
+namespace {
+
+std::string float_to_string(float v)
 {
-  flickw = Resources::normal_font->get_text_width("_");
+  // not using std::to_string() as it padds the end with '0's
+  std::ostringstream os;
+  os << v;
+  return os.str();
+}
 
-  // removing all redundant zeros at the end
-  for (auto i = text.end() - 1; i != text.begin(); --i) {
-    char c = *i;
-    if (c == '.') {
-      text.resize(text.length() - 1);
-      has_comma = false;
-    }
-    if (c != '0') {
-      break;
-    }
-    text.resize(text.length() - 1);
-  }
+} // namespace
+
+ItemColorChannel::ItemColorChannel(float* input, Color channel, int id) :
+  MenuItem(float_to_string(*input), id),
+  m_number(input),
+  m_flickw(static_cast<int>(Resources::normal_font->get_text_width("_"))),
+  m_channel(channel)
+{
 }
 
 void
-ItemColorChannel::draw(DrawingContext& context, Vector pos, int menu_width, bool active) {
+ItemColorChannel::draw(DrawingContext& context, const Vector& pos, int menu_width, bool active)
+{
   MenuItem::draw(context, pos, menu_width, active);
-  float lw = float(menu_width - 32) * (*number);
-  context.draw_filled_rect(Rectf(pos + Vector(16, 6), pos + Vector(16 + lw, 16)),
-                           channel, 0.0f, LAYER_GUI-1);
+  const float lw = float(menu_width - 32) * (*m_number);
+  context.color().draw_filled_rect(Rectf(pos + Vector(16, -4),
+                                         pos + Vector(16 + lw, 4)),
+                                   m_channel, 0.0f, LAYER_GUI-1);
 }
 
 int
-ItemColorChannel::get_width() const {
-  return Resources::normal_font->get_text_width(text) + 16 + flickw;
+ItemColorChannel::get_width() const
+{
+  return static_cast<int>(Resources::normal_font->get_text_width(get_text()) + 16 + static_cast<float>(m_flickw));
 }
 
 void
-ItemColorChannel::event(const SDL_Event& ev) {
+ItemColorChannel::event(const SDL_Event& ev)
+{
   if (ev.type == SDL_TEXTINPUT) {
     std::string txt = ev.text.text;
     for (auto& c : txt) {
@@ -74,56 +70,94 @@ ItemColorChannel::event(const SDL_Event& ev) {
 }
 
 void
-ItemColorChannel::add_char(char c) {
-  if (!has_comma && (c == '.' || c == ',')) {
-    if (!text.length()) {
-      text = "0.";
-    } else {
-      text.push_back('.');
-    }
-    has_comma = true;
-  }
+ItemColorChannel::add_char(char c)
+{
+  std::string text = get_text();
 
-  if (c < '0' || c > '9') {
+  if (c == '.' || c == ',')
+  {
+    const bool has_comma = (text.find('.') != std::string::npos);
+    if (!has_comma)
+    {
+      if (text.empty()) {
+        text = "0.";
+      } else {
+        text.push_back('.');
+      }
+    }
+  }
+  else if (isdigit(c))
+  {
+    text.push_back(c);
+  }
+  else
+  {
     return;
   }
 
-  text.push_back(c);
-  *number = std::stof(text);
-
-  if (*number < 0 || *number > 1) {
-    remove_char();
+  float number = std::stof(text);
+  if (0.0f <= number && number <= 1.0f) {
+    *m_number = number;
+    set_text(text);
   }
 }
 
 void
-ItemColorChannel::remove_char() {
-  unsigned char last_char;
-  do {
-    last_char = *(--text.end());
-    text.resize(text.length() - 1);
-    if (text.length() == 0) {
+ItemColorChannel::remove_char()
+{
+  std::string text = get_text();
+
+  if (text.empty())
+  {
+    *m_number = 0.0f;
+  }
+  else
+  {
+    text.pop_back();
+
+    if (!text.empty()) {
+      *m_number = std::stof(text);
+    } else {
+      *m_number = 0.0f;
+    }
+  }
+
+  set_text(text);
+}
+
+void
+ItemColorChannel::process_action(const MenuAction& action)
+{
+  switch (action)
+  {
+    case MenuAction::REMOVE:
+      remove_char();
       break;
-    }
-    if (last_char == '.') {
-      has_comma = false;
-    }
-  } while ( (last_char & 128) && !(last_char & 64) );
-  if (text.length() && text != "-") {
-    *number = std::stof(text);
-  } else {
-    *number = 0;
-  }
-}
 
-void
-ItemColorChannel::process_action(MenuAction action) {
-  if (action == MENU_ACTION_REMOVE && text.length()) {
-    remove_char();
+    case MenuAction::LEFT:
+      *m_number = truncf(*m_number * 10.0f) / 10.0f;
+      *m_number -= 0.1f;
+      *m_number = math::clamp(*m_number, 0.0f, 1.0f);
+      set_text(float_to_string(*m_number));
+      break;
+
+
+    case MenuAction::RIGHT:
+      *m_number = truncf(*m_number * 10.0f) / 10.0f;
+      *m_number += 0.1f;
+      *m_number = math::clamp(*m_number, 0.0f, 1.0f);
+      set_text(float_to_string(*m_number));
+      break;
+
+    default:
+      break;
   }
 }
 
 Color
-ItemColorChannel::get_color() const {
-  return channel;
+ItemColorChannel::get_color() const
+{
+  return m_channel;
 }
+
+/* EOF */

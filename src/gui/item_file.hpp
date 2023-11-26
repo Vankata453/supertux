@@ -17,29 +17,27 @@
 #ifndef HEADER_SUPERTUX_GUI_ITEM_FILE_HPP
 #define HEADER_SUPERTUX_GUI_ITEM_FILE_HPP
 
-#include <list>
-#include <memory>
-#include <SDL.h>
-
 #include "gui/menu_item.hpp"
 
-#include "gui/menu.hpp"
-
-class ItemFile : public MenuItem
+class ItemFile final : public MenuItem
 {
-  public:
-    ItemFile(const std::string& text_, std::string* filename_,
-             const std::vector<std::string>& extensions_, int _id = -1);
+public:
+  ItemFile(const std::string& text, std::string* filename,
+           const std::vector<std::string>& extensions,
+           const std::string& basedir,
+           int id = -1);
 
-    /** Processes the menu action. */
-    virtual void process_action(MenuAction action);
+  /** Processes the menu action. */
+  virtual void process_action(const MenuAction& action) override;
 
-  private:
-    std::string* filename;
-    std::vector<std::string> extensions;
+private:
+  std::string* m_filename;
+  std::vector<std::string> m_extensions;
+  std::string m_basedir;
 
-    ItemFile(const ItemFile&);
-    ItemFile& operator=(const ItemFile&);
+private:
+  ItemFile(const ItemFile&) = delete;
+  ItemFile& operator=(const ItemFile&) = delete;
 };
 
 #endif

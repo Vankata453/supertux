@@ -20,28 +20,60 @@
 #include <memory>
 #include <SDL.h>
 
-#include "video/video_system.hpp"
+#include "math/size.hpp"
+#include "video/sdlbase_video_system.hpp"
+#include "video/viewport.hpp"
 
+class GLContext;
+class GLLightmap;
+class GLProgram;
+class GLScreenRenderer;
+class GLTexture;
+class GLTextureRenderer;
+class GLVertexArrays;
+class Rect;
 class TextureManager;
+struct SDL_Surface;
 
-class GLVideoSystem : public VideoSystem
+class GLVideoSystem final : public SDLBaseVideoSystem
 {
-private:
-  std::unique_ptr<TextureManager> m_texture_manager;
-  std::unique_ptr<Renderer> m_renderer;
-  std::unique_ptr<Lightmap> m_lightmap;
-
 public:
-  GLVideoSystem();
+  GLVideoSystem(bool use_opengl33core);
+  ~GLVideoSystem();
 
-  Renderer& get_renderer() const override;
-  Lightmap& get_lightmap() const override;
-  TexturePtr new_texture(SDL_Surface* image) override;
-  SurfaceData* new_surface_data(const Surface& surface) override;
-  void free_surface_data(SurfaceData* surface_data) override;
+  virtual std::string get_name() const override;
 
-  void apply_config() override;
-  void resize(int w, int h) override;
+  virtual Renderer* get_back_renderer() const override;
+  virtual Renderer& get_renderer() const override;
+  virtual Renderer& get_lightmap() const override;
+
+  virtual TexturePtr new_texture(const SDL_Surface& image, const Sampler& sampler) override;
+
+  virtual const Viewport& get_viewport() const override { return m_viewport; }
+  virtual void apply_config() override;
+  virtual void flip() override;
+
+  virtual void set_vsync(int mode) override;
+  virtual int get_vsync() const override;
+
+  virtual SDLSurfacePtr make_screenshot() override;
+
+  GLContext& get_context() const { return *m_context; }
+
+private:
+  void create_gl_window();
+  void create_gl_context();
+
+private:
+  bool m_use_opengl33core;
+  std::unique_ptr<TextureManager> m_texture_manager;
+  std::unique_ptr<GLScreenRenderer> m_renderer;
+  std::unique_ptr<GLTextureRenderer> m_lightmap;
+  std::unique_ptr<GLTextureRenderer> m_back_renderer;
+  std::unique_ptr<GLContext> m_context;
+
+  SDL_GLContext m_glcontext;
+  Viewport m_viewport;
 
 private:
   GLVideoSystem(const GLVideoSystem&) = delete;

@@ -19,16 +19,14 @@
 
 #include <memory>
 #include <istream>
-#include <physfs.h>
 
-class IFileStream : public std::istream
+class IFileStream final : public std::istream
 {
 protected:
   std::unique_ptr<std::streambuf> sb;
 
 public:
   IFileStream(const std::string& filename);
-  ~IFileStream();
 
 private:
   IFileStream(const IFileStream&) = delete;

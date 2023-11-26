@@ -18,128 +18,130 @@
 
 #include "editor/editor.hpp"
 #include "object/camera.hpp"
-#include "scripting/squirrel_util.hpp"
-#include "supertux/object_factory.hpp"
+#include "supertux/level.hpp"
 #include "supertux/sector.hpp"
 #include "util/reader.hpp"
 #include "util/reader_mapping.hpp"
-
-#include <stdexcept>
+#include "util/writer.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 Gradient::Gradient() :
   ExposedObject<Gradient, scripting::Gradient>(this),
-  layer(LAYER_BACKGROUND0),
-  gradient_top(),
-  gradient_bottom(),
-  gradient_direction(),
-  gradient_region(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+  m_layer(LAYER_BACKGROUND0),
+  m_gradient_top(),
+  m_gradient_bottom(),
+  m_gradient_direction(),
+  m_blend(),
+  m_target(DrawingTarget::COLORMAP)
 {
 }
 
 Gradient::Gradient(const ReaderMapping& reader) :
+  GameObject(reader),
   ExposedObject<Gradient, scripting::Gradient>(this),
-  layer(LAYER_BACKGROUND0),
-  gradient_top(),
-  gradient_bottom(),
-  gradient_direction(),
-  gradient_region(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+  m_layer(LAYER_BACKGROUND0),
+  m_gradient_top(),
+  m_gradient_bottom(),
+  m_gradient_direction(),
+  m_blend(),
+  m_target(DrawingTarget::COLORMAP)
 {
-  layer = reader_get_layer (reader, /* default = */ LAYER_BACKGROUND0);
+  m_layer = reader_get_layer (reader, /* default = */ LAYER_BACKGROUND0);
   std::vector<float> bkgd_top_color, bkgd_bottom_color;
   std::string direction;
-  if (!reader.get("name", name)) name = "";
-  if(reader.get("direction", direction))
+  if (reader.get("direction", direction))
   {
-    if(direction == "horizontal")
+    if (direction == "horizontal")
     {
-      gradient_direction = HORIZONTAL;
+      m_gradient_direction = HORIZONTAL;
     }
-    else if(direction == "horizontal_sector")
+    else if (direction == "horizontal_sector")
     {
-        gradient_direction = HORIZONTAL_SECTOR;
+      m_gradient_direction = HORIZONTAL_SECTOR;
     }
-    else if(direction == "vertical_sector")
+    else if (direction == "vertical_sector")
     {
-        gradient_direction = VERTICAL_SECTOR;
+      m_gradient_direction = VERTICAL_SECTOR;
     }
     else
     {
-        gradient_direction = VERTICAL;
+      m_gradient_direction = VERTICAL;
     }
   }
   else
   {
-    gradient_direction = VERTICAL;
+    m_gradient_direction = VERTICAL;
   }
-  if(gradient_direction == HORIZONTAL || gradient_direction == HORIZONTAL_SECTOR)
+  if (m_gradient_direction == HORIZONTAL || m_gradient_direction == HORIZONTAL_SECTOR)
   {
-    if(!reader.get("left_color", bkgd_top_color) ||
+    if (!reader.get("left_color", bkgd_top_color) ||
        !reader.get("right_color", bkgd_bottom_color))
     {
-      log_warning << "Horizontal gradients should use left_color and right_color, respectively. Trying to parse top and bottom color instead" << std::endl;
+      log_warning <<
+        "Horizontal gradients should use left_color and right_color, respectively. "
+        "Trying to parse top and bottom color instead" << std::endl;
     }
     else
     {
-      gradient_top = Color(bkgd_top_color);
-      gradient_bottom = Color(bkgd_bottom_color);
+      m_gradient_top = Color(bkgd_top_color);
+      m_gradient_bottom = Color(bkgd_bottom_color);
       return;
     }
   }
 
   if (reader.get("top_color", bkgd_top_color)) {
-    gradient_top = Color(bkgd_top_color);
+    m_gradient_top = Color(bkgd_top_color);
   } else {
-    gradient_top = Color(0.3, 0.4, 0.75);
+    m_gradient_top = Color(0.3f, 0.4f, 0.75f);
   }
 
   if (reader.get("bottom_color", bkgd_bottom_color)) {
-    gradient_bottom = Color(bkgd_bottom_color);
+    m_gradient_bottom = Color(bkgd_bottom_color);
   } else {
-    gradient_bottom = Color(1, 1, 1);
+    m_gradient_bottom = Color(1, 1, 1);
   }
 
-}
-
-void
-Gradient::save(Writer& writer) {
-  GameObject::save(writer);
-  writer.write("layer", layer);
-  switch (gradient_direction) {
-    case HORIZONTAL:        writer.write("direction", "horizontal"       , false); break;
-    case VERTICAL_SECTOR:   writer.write("direction", "vertical_sector"  , false); break;
-    case HORIZONTAL_SECTOR: writer.write("direction", "horizontal_sector", false); break;
-    case VERTICAL: break;
-  }
-  if(gradient_direction == HORIZONTAL || gradient_direction == HORIZONTAL_SECTOR) {
-    writer.write("left_color" , gradient_top.toVector());
-    writer.write("right_color", gradient_bottom.toVector());
-  } else {
-    writer.write("top_color"   , gradient_top.toVector());
-    writer.write("bottom_color", gradient_bottom.toVector());
-  }
+  reader.get_custom("blend", m_blend, Blend_from_string);
+  reader.get_custom("target", m_target, DrawingTarget_from_string);
 }
 
 ObjectSettings
-Gradient::get_settings() {
+Gradient::get_settings()
+{
   ObjectSettings result = GameObject::get_settings();
 
-  if (gradient_direction == HORIZONTAL || gradient_direction == HORIZONTAL_SECTOR) {
-    result.options.push_back( ObjectOption(MN_COLOR, _("Left Colour"), &gradient_top));
-    result.options.push_back( ObjectOption(MN_COLOR, _("Right Colour"), &gradient_bottom));
+  if (m_gradient_direction == HORIZONTAL || m_gradient_direction == HORIZONTAL_SECTOR) {
+    result.add_rgba(_("Left Colour"), &m_gradient_top, "left_color");
+    result.add_rgba(_("Right Colour"), &m_gradient_bottom, "right_color");
   } else {
-    result.options.push_back( ObjectOption(MN_COLOR, _("Top Colour"), &gradient_top));
-    result.options.push_back( ObjectOption(MN_COLOR, _("Bottom Colour"), &gradient_bottom));
+    result.add_rgba(_("Top Colour"), &m_gradient_top, "top_color");
+    result.add_rgba(_("Bottom Colour"), &m_gradient_bottom, "bottom_color");
   }
 
-  result.options.push_back( ObjectOption(MN_INTFIELD, _("Z-pos"), &layer));
-  ObjectOption doo(MN_STRINGSELECT, _("Direction"), &gradient_direction);
-  doo.select.push_back(_("vertical"));
-  doo.select.push_back(_("horizontal"));
-  doo.select.push_back(_("vertical sector"));
-  doo.select.push_back(_("horizontal sector"));
-  result.options.push_back(doo);
+  result.add_int(_("Z-pos"), &m_layer, "z-pos", LAYER_BACKGROUND0);
 
-  result.options.push_back( ObjectOption(MN_REMOVE, "", NULL));
+  result.add_enum(_("Direction"), reinterpret_cast<int*>(&m_gradient_direction),
+                  {_("Vertical"), _("Horizontal"), _("Vertical (whole sector)"), _("Horizontal (whole sector)")},
+                  {"vertical", "horizontal", "vertical_sector", "horizontal_sector"},
+                  static_cast<int>(VERTICAL));
+
+  result.add_enum(_("Draw target"), reinterpret_cast<int*>(&m_target),
+                  {_("Normal"), _("Lightmap")},
+                  {"normal", "lightmap"},
+                  static_cast<int>(DrawingTarget::COLORMAP),
+                  "target");
+
+  result.add_enum(_("Blend mode"), reinterpret_cast<int*>(&m_blend),
+                  {_("Blend"), _("Additive"), _("Modulate"), _("None")},
+                  {"blend", "add", "mod", "none"},
+                  static_cast<int>(Blend::BLEND),
+                  "blend");
+
+  result.reorder({"blend", "top_color", "bottom_color", "target", "z-pos"});
+
+  result.add_remove();
+
   return result;
 }
 
@@ -155,17 +157,21 @@ Gradient::update(float)
 void
 Gradient::set_gradient(Color top, Color bottom)
 {
-  gradient_top = top;
-  gradient_bottom = bottom;
+  m_gradient_top = top;
+  m_gradient_bottom = bottom;
 
-  if (gradient_top.red > 1.0 || gradient_top.green > 1.0 ||
-      gradient_top.blue > 1.0 || gradient_top.alpha > 1.0)
+  if (m_gradient_top.red > 1.0f ||
+      m_gradient_top.green > 1.0f ||
+      m_gradient_top.blue > 1.0f ||
+      m_gradient_top.alpha > 1.0f)
   {
     log_warning << "top gradient color has values above 1.0" << std::endl;
   }
 
-  if (gradient_bottom.red > 1.0 || gradient_bottom.green > 1.0 ||
-       gradient_bottom.blue > 1.0 || gradient_bottom.alpha > 1.0)
+  if (m_gradient_bottom.red > 1.0f ||
+      m_gradient_bottom.green > 1.0f ||
+      m_gradient_bottom.blue > 1.0f ||
+      m_gradient_bottom.alpha > 1.0f)
   {
     log_warning << "bottom gradient color has values above 1.0" << std::endl;
   }
@@ -174,30 +180,42 @@ Gradient::set_gradient(Color top, Color bottom)
 void
 Gradient::set_direction(const GradientDirection& direction)
 {
-  gradient_direction = direction;
+  m_gradient_direction = direction;
 }
 
 void
 Gradient::draw(DrawingContext& context)
 {
-  if(gradient_direction != HORIZONTAL && gradient_direction != VERTICAL)
+  if (Editor::is_active() && !EditorOverlayWidget::render_background)
+    return;
+
+  Rectf gradient_region;
+  if (m_gradient_direction != HORIZONTAL && m_gradient_direction != VERTICAL)
   {
-      auto current_sector = Sector::current();
-      auto camera_translation = current_sector->camera->get_translation();
-      auto sector_width = current_sector->get_width();
-      auto sector_height = current_sector->get_height();
+      auto camera_translation = Sector::get().get_camera().get_translation();
+      auto sector_width = Sector::get().get_width();
+      auto sector_height = Sector::get().get_height();
       gradient_region = Rectf(-camera_translation.x, -camera_translation.y, sector_width, sector_height);
+  }
+  else
+  {
+    gradient_region = Rectf(0, 0,
+                            static_cast<float>(context.get_width()),
+                            static_cast<float>(context.get_height()));
   }
 
   context.push_transform();
   context.set_translation(Vector(0, 0));
-  context.draw_gradient(gradient_top, gradient_bottom, layer, gradient_direction, gradient_region);
+  context.get_canvas(m_target).draw_gradient(m_gradient_top, m_gradient_bottom, m_layer, m_gradient_direction,
+                                             gradient_region, m_blend);
   context.pop_transform();
 }
 
 bool
-Gradient::do_save() const {
-  return !Editor::is_active() || !Editor::current()->get_worldmap_mode();
+Gradient::is_saveable() const
+{
+  return !(Level::current() &&
+           Level::current()->is_worldmap());
 }
 
 /* EOF */

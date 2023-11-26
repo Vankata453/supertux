@@ -17,52 +17,40 @@
 #ifndef HEADER_SUPERTUX_OBJECT_WIND_HPP
 #define HEADER_SUPERTUX_OBJECT_WIND_HPP
 
-#include "scripting/exposed_object.hpp"
+#include "squirrel/exposed_object.hpp"
 #include "scripting/wind.hpp"
 #include "supertux/moving_object.hpp"
 
 class ReaderMapping;
 
-/**
- * Defines an area that will gently push Players in one direction
- */
-class Wind : public MovingObject,
-             public ExposedObject<Wind, scripting::Wind>
+/** Defines an area that will gently push Players in one direction */
+class Wind final :
+  public MovingObject,
+  public ExposedObject<Wind, scripting::Wind>
 {
 public:
   Wind(const ReaderMapping& reader);
 
-  void update(float elapsed_time);
-  void draw(DrawingContext& context);
-  HitResponse collision(GameObject& other, const CollisionHit& hit);
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
 
-  /**
-   * @name Scriptable Methods
-   * @{
-   */
+  virtual bool has_variable_size() const override { return true; }
+  virtual std::string get_class() const override { return "wind"; }
+  virtual std::string get_display_name() const override { return _("Wind");}
 
-  /**
-   * start blowing
-   */
+  virtual ObjectSettings get_settings() override;
+
+  /** @name Scriptable Methods
+      @{ */
+
+  /** start blowing */
   void start();
 
-  /**
-   * stop blowing
-   */
+  /** stop blowing */
   void stop();
 
-  /**
-   * @}
-   */
-
-  std::string get_class() const {
-    return "wind";
-  }
-  std::string get_display_name() const {
-    return _("Wind");
-  }
-
-  virtual ObjectSettings get_settings();
+  /** @} */
 
 private:
   bool blowing; /**< true if wind is currently switched on */
@@ -70,7 +58,11 @@ private:
   float acceleration;
   Vector new_size;
 
-  float elapsed_time; /**< stores last elapsed_time gotten at update() */
+  float dt_sec; /**< stores last dt_sec gotten at update() */
+
+private:
+  Wind(const Wind&) = delete;
+  Wind& operator=(const Wind&) = delete;
 };
 
 #endif

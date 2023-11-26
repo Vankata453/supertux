@@ -19,21 +19,21 @@
 
 #include "badguy/walking_badguy.hpp"
 
-class SnowBall : public WalkingBadguy
+class SnowBall final : public WalkingBadguy
 {
 public:
   SnowBall(const ReaderMapping& reader);
   SnowBall(const Vector& pos, Direction d, std::string script);
-  std::string get_class() const {
-    return "snowball";
-  }
-  std::string get_display_name() const {
-    return _("Snowball");
-  }
+
+  virtual std::string get_class() const override { return "snowball"; }
+  virtual std::string get_display_name() const override { return _("Snowball"); }
 
 protected:
-  bool collision_squished(GameObject& object);
+  virtual bool collision_squished(GameObject& object) override;
 
+private:
+  SnowBall(const SnowBall&) = delete;
+  SnowBall& operator=(const SnowBall&) = delete;
 };
 
 #endif

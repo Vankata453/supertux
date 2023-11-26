@@ -17,75 +17,54 @@
 #ifndef HEADER_SUPERTUX_OBJECT_THUNDERSTORM_HPP
 #define HEADER_SUPERTUX_OBJECT_THUNDERSTORM_HPP
 
-#include "util/reader_fwd.hpp"
-#include "scripting/exposed_object.hpp"
+#include "squirrel/exposed_object.hpp"
 #include "scripting/thunderstorm.hpp"
 #include "supertux/game_object.hpp"
 #include "supertux/timer.hpp"
-#include "video/drawing_context.hpp"
 
-/**
- * Thunderstorm scriptable GameObject; plays thunder, lightning and electrifies water at regular interval
- */
-class Thunderstorm : public GameObject,
+class DrawingContext;
+class ReaderMapping;
+
+/** Thunderstorm scriptable GameObject; plays thunder, lightning and
+    electrifies water at regular interval */
+class Thunderstorm final : public GameObject,
                      public ExposedObject<Thunderstorm, scripting::Thunderstorm>
 {
 public:
   Thunderstorm(const ReaderMapping& reader);
 
-  void update(float elapsed_time);
-  void draw(DrawingContext& context);
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
 
-  /**
-   * @name Scriptable Methods
-   * @{
-   */
+  virtual std::string get_class() const override { return "thunderstorm"; }
+  virtual std::string get_display_name() const override { return _("Thunderstorm"); }
 
-  /**
-   * Start playing thunder and lightning at configured interval
-   */
+  virtual ObjectSettings get_settings() override;
+
+  virtual const std::string get_icon_path() const override { return "images/engine/editor/thunderstorm.png"; }
+
+  /** @name Scriptable Methods
+      @{ */
+
+  /** Start playing thunder and lightning at configured interval */
   void start();
 
-  /**
-   * Stop playing thunder and lightning at configured interval
-   */
+  /** Stop playing thunder and lightning at configured interval */
   void stop();
 
-  /**
-   * Play thunder
-   */
+  /** Play thunder */
   void thunder();
 
-  /**
-   * Play lightning, i.e. call flash() and electrify()
-   */
+  /** Play lightning, i.e. call flash() and electrify() */
   void lightning();
 
-  /**
-   * Display a nice flash
-   */
+  /** Display a nice flash */
   void flash();
 
-  /**
-   * Electrify water throughout the whole sector for a short time
-   */
+  /** Electrify water throughout the whole sector for a short time */
   void electrify();
 
-  /**
-   * @}
-   */
-  std::string get_class() const {
-    return "thunderstorm";
-  }
-  std::string get_display_name() const {
-    return _("Thunderstorm");
-  }
-
-  virtual ObjectSettings get_settings();
-
-  virtual const std::string get_icon_path() const {
-    return "images/engine/editor/thunderstorm.png";
-  }
+  /** @} */
 
 private:
   bool running; /**< whether we currently automatically trigger lightnings */
@@ -95,6 +74,10 @@ private:
   Timer time_to_thunder; /**< counts down until next thunder */
   Timer time_to_lightning; /**< counts down until next lightning */
   Timer flash_display_timer; /**< counts down while flash is displayed */
+
+private:
+  Thunderstorm(const Thunderstorm&) = delete;
+  Thunderstorm& operator=(const Thunderstorm&) = delete;
 };
 
 #endif

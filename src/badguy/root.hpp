@@ -19,20 +19,18 @@
 
 #include "badguy/badguy.hpp"
 
-class Timer;
-
-class Root : public BadGuy
+class Root final : public BadGuy
 {
 public:
   Root(const Vector& pos);
   ~Root();
 
-  void deactivate();
-  void active_update(float elapsed_time);
-  void draw(DrawingContext& context);
-  bool is_flammable() const { return false; }
-  bool is_freezable() const { return false; }
-  void kill_fall() { }
+  virtual void deactivate() override;
+  virtual void active_update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual bool is_flammable() const override { return false; }
+  virtual bool is_freezable() const override { return false; }
+  virtual void kill_fall() override { }
 
 protected:
   enum MyState {

@@ -29,9 +29,10 @@ TEST(ReaderTest, get)
     "   (mystring \"Hello World\")\n"
     "   (mystringtrans (_ \"Hello World\"))\n"
     "   (mymapping (a 1) (b 2))\n"
+    "   (mycustom \"1234\")\n"
     ")\n");
 
-  auto doc = ReaderDocument::parse(in);
+  auto doc = ReaderDocument::from_stream(in);
   auto root = doc.get_root();
   ASSERT_EQ("supertux-test", root.get_name());
   auto mapping = root.get_mapping();
@@ -67,16 +68,32 @@ TEST(ReaderTest, get)
   }
 
   {
-    ReaderMapping child_mapping;
+    boost::optional<ReaderMapping> child_mapping;
     mapping.get("mymapping", child_mapping);
 
     int a;
-    child_mapping.get("a", a);
+    child_mapping->get("a", a);
     ASSERT_EQ(1, a);
 
     int b;
-    child_mapping.get("b", b);
+    child_mapping->get("b", b);
     ASSERT_EQ(2, b);
+  }
+
+  {
+    auto from_string = [](const std::string& text){ return std::stoi(text); };
+
+    int value = 0;
+    mapping.get_custom("mycustom", value, from_string);
+    ASSERT_EQ(1234, value);
+
+    int value2 = 0;
+    mapping.get_custom("does-not-exist", value2, from_string);
+    ASSERT_EQ(0, value2);
+
+    int value3 = 0;
+    mapping.get_custom("does-not-exist", value3, from_string, 4321);
+    ASSERT_EQ(4321, value3);
   }
 
   {
@@ -102,7 +119,7 @@ TEST(ReaderTest, syntax_error)
     "   (mymapping err (a 1) (b 2))\n"
     ")\n");
 
-  auto doc = ReaderDocument::parse(in);
+  auto doc = ReaderDocument::from_stream(in);
   auto root = doc.get_root();
   ASSERT_EQ("supertux-test", root.get_name());
   auto mapping = root.get_mapping();
@@ -110,14 +127,14 @@ TEST(ReaderTest, syntax_error)
   bool mybool;
   int myint;
   float myfloat;
-  ReaderMapping mymapping;
+  boost::optional<ReaderMapping> mymapping;
   ASSERT_THROW({mapping.get("mybool", mybool);}, std::runtime_error);
   ASSERT_THROW({mapping.get("myint", myint);}, std::runtime_error);
   ASSERT_THROW({mapping.get("myfloat", myfloat);}, std::runtime_error);
 
   mapping.get("mymapping", mymapping);
-  ASSERT_THROW({mymapping.get("a", myint);}, std::runtime_error);
-  ASSERT_THROW({mymapping.get("b", myint);}, std::runtime_error);
+  ASSERT_THROW({mymapping->get("a", myint);}, std::runtime_error);
+  ASSERT_THROW({mymapping->get("b", myint);}, std::runtime_error);
 }
 
 /* EOF */

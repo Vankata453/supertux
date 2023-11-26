@@ -19,31 +19,22 @@
 
 #include "badguy/badguy.hpp"
 
-/**
- * Badguy "Toad" - A jumping toad
- */
-class Toad : public BadGuy
+/** Badguy "Toad" - A jumping toad */
+class Toad final : public BadGuy
 {
 public:
   Toad(const ReaderMapping& reader);
-  Toad(const Vector& pos, Direction d);
 
-  void initialize();
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit);
-  bool collision_squished(GameObject& object);
-  void active_update(float elapsed_time);
+  virtual void initialize() override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit) override;
+  virtual bool collision_squished(GameObject& object) override;
+  virtual void active_update(float dt_sec) override;
 
-  void unfreeze();
-  bool is_freezable() const;
-  std::string get_class() const {
-    return "toad";
-  }
-  std::string get_display_name() const {
-    return _("Toad");
-  }
-
-  void after_editor_set();
+  virtual void unfreeze() override;
+  virtual bool is_freezable() const override;
+  virtual std::string get_class() const override { return "toad"; }
+  virtual std::string get_display_name() const override { return _("Toad"); }
 
 protected:
   enum ToadState {
@@ -58,6 +49,10 @@ private:
 private:
   Timer recover_timer;
   ToadState state;
+
+private:
+  Toad(const Toad&) = delete;
+  Toad& operator=(const Toad&) = delete;
 };
 
 #endif

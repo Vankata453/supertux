@@ -23,22 +23,21 @@
 class Player;
 class ReaderMapping;
 
-class SequenceTrigger : public TriggerBase
+class SequenceTrigger final : public TriggerBase
 {
 public:
   SequenceTrigger(const ReaderMapping& reader);
   SequenceTrigger(const Vector& pos, const std::string& sequence_name);
-  ~SequenceTrigger();
-  virtual void save(Writer& writer);
-  std::string get_class() const {
-    return "sequencetrigger";
-  }
 
-  virtual ObjectSettings get_settings();
-  virtual void after_editor_set();
+  virtual std::string get_class() const override { return "sequencetrigger"; }
+  virtual std::string get_display_name() const override { return _("Sequence trigger"); }
+  virtual bool has_variable_size() const override { return true; }
 
-  void event(Player& player, EventType type);
-  void draw(DrawingContext& context);
+  virtual ObjectSettings get_settings() override;
+  virtual void after_editor_set() override;
+
+  virtual void event(Player& player, EventType type) override;
+  virtual void draw(DrawingContext& context) override;
 
   std::string get_sequence_name() const;
 
@@ -46,6 +45,13 @@ private:
   EventType triggerevent;
   Sequence sequence;
   Vector new_size;
+  std::string new_spawnpoint;
+  std::string fade_tilemap;
+  TilemapFadeType fade;
+
+private:
+  SequenceTrigger(const SequenceTrigger&) = delete;
+  SequenceTrigger& operator=(const SequenceTrigger&) = delete;
 };
 
 #endif

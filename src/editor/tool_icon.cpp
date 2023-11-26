@@ -14,51 +14,47 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <string>
-
 #include "editor/tool_icon.hpp"
-#include "math/rect.hpp"
-#include "supertux/globals.hpp"
-#include "supertux/resources.hpp"
-#include "video/renderer.hpp"
-#include "video/video_system.hpp"
+
+#include "video/drawing_context.hpp"
+#include "video/surface.hpp"
 
 ToolIcon::ToolIcon(const std::string& icon) :
-  pos(0, 0),
-  surfaces(),
-  mode(0),
-  surf_count(0)
+  m_pos(0, 0),
+  m_surfaces(),
+  m_mode(0),
+  m_surf_count(0)
 {
   push_mode(icon);
 }
 
-ToolIcon::~ToolIcon() {
-
+void
+ToolIcon::push_mode(const std::string& icon)
+{
+  auto surface = Surface::from_file(icon);
+  m_surfaces.push_back(surface);
+  m_surf_count++;
 }
 
 void
-ToolIcon::push_mode(const std::string& icon) {
-  auto surface = Surface::create(icon);
-  surfaces.push_back(surface);
-  surf_count++;
+ToolIcon::draw(DrawingContext& context)
+{
+  context.color().draw_surface(m_surfaces[m_mode], m_pos, LAYER_GUI - 9);
 }
 
 void
-ToolIcon::draw(DrawingContext& context) {
-  context.draw_surface(surfaces[mode], pos, LAYER_GUI - 9);
-}
-
-void
-ToolIcon::next_mode() {
-  mode++;
-  if (mode >= surf_count) {
-    mode = 0;
+ToolIcon::next_mode()
+{
+  m_mode++;
+  if (m_mode >= m_surf_count) {
+    m_mode = 0;
   }
 }
 
 SurfacePtr
-ToolIcon::get_current_surface() const {
-  return surfaces[mode];
+ToolIcon::get_current_surface() const
+{
+  return m_surfaces[m_mode];
 }
 
 /* EOF */

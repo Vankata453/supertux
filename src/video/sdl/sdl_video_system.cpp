@@ -16,21 +16,83 @@
 
 #include "video/sdl/sdl_video_system.hpp"
 
+#include <sstream>
+
+#include "math/rect.hpp"
 #include "supertux/gameconfig.hpp"
-#include "video/lightmap.hpp"
+#include "supertux/globals.hpp"
+#include "util/log.hpp"
 #include "video/renderer.hpp"
-#include "video/sdl/sdl_lightmap.hpp"
-#include "video/sdl/sdl_renderer.hpp"
-#include "video/sdl/sdl_surface_data.hpp"
+#include "video/sdl/sdl_screen_renderer.hpp"
 #include "video/sdl/sdl_texture.hpp"
-#include "video/texture.hpp"
-#include "video/video_system.hpp"
+#include "video/sdl/sdl_texture_renderer.hpp"
+#include "video/sdl_surface.hpp"
+#include "video/texture_manager.hpp"
 
 SDLVideoSystem::SDLVideoSystem() :
-  m_renderer(new SDLRenderer),
-  m_lightmap(new SDLLightmap),
-  m_texture_manager(new TextureManager)
+  m_sdl_renderer(nullptr, &SDL_DestroyRenderer),
+  m_viewport(),
+  m_renderer(),
+  m_lightmap(),
+  m_texture_manager()
 {
+  create_window();
+
+  m_renderer.reset(new SDLScreenRenderer(*this, m_sdl_renderer.get()));
+  m_texture_manager.reset(new TextureManager);
+
+  apply_config();
+}
+
+SDLVideoSystem::~SDLVideoSystem()
+{
+}
+
+std::string
+SDLVideoSystem::get_name() const
+{
+  SDL_version version;
+  SDL_GetVersion(&version);
+  std::ostringstream out;
+  out << "SDL "
+      << static_cast<int>(version.major)
+      << "." << static_cast<int>(version.minor)
+      << "." << static_cast<int>(version.patch);
+  return out.str();
+}
+
+void
+SDLVideoSystem::create_window()
+{
+  log_info << "Creating SDLVideoSystem" << std::endl;
+
+  SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "2");
+
+  create_sdl_window(0);
+
+  m_sdl_renderer.reset(SDL_CreateRenderer(m_sdl_window.get(), -1, 0));
+  if (!m_sdl_renderer)
+  {
+    std::stringstream msg;
+    msg << "Couldn't create SDL_Renderer: " << SDL_GetError();
+    throw std::runtime_error(msg.str());
+  }
+}
+
+void
+SDLVideoSystem::apply_config()
+{
+  apply_video_mode();
+
+  { // apply_viewport
+    Size target_size = (g_config->use_fullscreen && g_config->fullscreen_size != Size(0, 0)) ?
+      g_config->fullscreen_size :
+      g_config->window_size;
+
+    m_viewport = Viewport::from_size(target_size, m_desktop_size);
+  }
+
+  m_lightmap.reset(new SDLTextureRenderer(*this, m_sdl_renderer.get(), m_viewport.get_screen_size(), 5));
 }
 
 Renderer&
@@ -39,41 +101,67 @@ SDLVideoSystem::get_renderer() const
   return *m_renderer;
 }
 
-Lightmap&
+Renderer&
 SDLVideoSystem::get_lightmap() const
 {
   return *m_lightmap;
 }
 
 TexturePtr
-SDLVideoSystem::new_texture(SDL_Surface* image)
+SDLVideoSystem::new_texture(const SDL_Surface& image, const Sampler& sampler)
 {
-  return TexturePtr(new SDLTexture(image));
-}
-
-SurfaceData*
-SDLVideoSystem::new_surface_data(const Surface& surface)
-{
-  return new SDLSurfaceData(surface);
+  return TexturePtr(new SDLTexture(image, sampler));
 }
 
 void
-SDLVideoSystem::free_surface_data(SurfaceData* surface_data)
+SDLVideoSystem::set_vsync(int mode)
 {
-  delete surface_data;
+  log_warning << "Setting vsync not supported by SDL renderer" << std::endl;
+}
+
+int
+SDLVideoSystem::get_vsync() const
+{
+  return 0;
 }
 
 void
-SDLVideoSystem::apply_config()
+SDLVideoSystem::flip()
 {
-  m_renderer->apply_config();
+  m_renderer->flip();
 }
 
-void
-SDLVideoSystem::resize(int w, int h)
+SDLSurfacePtr
+SDLVideoSystem::make_screenshot()
 {
-  m_renderer->resize(w, h);
-  m_lightmap.reset(new SDLLightmap);
+  int width;
+  int height;
+  if (SDL_GetRendererOutputSize(m_renderer->get_sdl_renderer(), &width, &height) != 0)
+  {
+    log_warning << "SDL_GetRenderOutputSize failed: " << SDL_GetError() << std::endl;
+    return {};
+  }
+  else
+  {
+    SDLSurfacePtr surface = SDLSurface::create_rgba(width, height);
+
+    SDL_LockSurface(surface.get());
+    int ret = SDL_RenderReadPixels(m_renderer->get_sdl_renderer(), nullptr,
+                                   SDL_PIXELFORMAT_ABGR8888,
+                                   surface->pixels,
+                                   surface->pitch);
+    SDL_UnlockSurface(surface.get());
+
+    if (ret != 0)
+    {
+      log_warning << "SDL_RenderReadPixels failed: " << SDL_GetError() << std::endl;
+      return {};
+    }
+    else
+    {
+      return surface;
+    }
+  }
 }
 
 /* EOF */

@@ -16,6 +16,8 @@
 
 #include "physfs/physfs_file_system.hpp"
 
+#include <physfs.h>
+
 #include "physfs/ifile_stream.hpp"
 
 PhysFSFileSystem::PhysFSFileSystem()
@@ -28,7 +30,7 @@ PhysFSFileSystem::open_directory(const std::string& pathname)
   std::vector<std::string> files;
 
   char** directory = PHYSFS_enumerateFiles(pathname.c_str());
-  for(char** i = directory; *i != 0; ++i)
+  for (char** i = directory; *i != nullptr; ++i)
   {
     files.push_back(*i);
   }
@@ -40,7 +42,7 @@ PhysFSFileSystem::open_directory(const std::string& pathname)
 std::unique_ptr<std::istream>
 PhysFSFileSystem::open_file(const std::string& filename)
 {
-  return std::unique_ptr<std::istream>(new IFileStream(filename));
+  return std::make_unique<IFileStream>(filename);
 }
 
 bool
@@ -49,6 +51,12 @@ PhysFSFileSystem::is_directory(const std::string& filename)
   PHYSFS_Stat statbuf;
   PHYSFS_stat(filename.c_str(), &statbuf);
   return statbuf.filetype == PHYSFS_FILETYPE_DIRECTORY;
+}
+
+bool
+PhysFSFileSystem::remove(const std::string& filename)
+{
+  return PHYSFS_delete(filename.c_str()) == 0;
 }
 
 /* EOF */

@@ -16,26 +16,18 @@
 
 #include "supertux/menu/editor_level_select_menu.hpp"
 
-#include <sstream>
+#include <physfs.h>
 
-#include "audio/sound_manager.hpp"
 #include "editor/editor.hpp"
 #include "gui/dialog.hpp"
 #include "gui/menu_item.hpp"
-#include "physfs/ifile_streambuf.hpp"
-#include "supertux/menu/editor_levelset_menu.hpp"
-#include "supertux/menu/menu_storage.hpp"
 #include "supertux/game_manager.hpp"
-#include "supertux/globals.hpp"
 #include "supertux/level.hpp"
 #include "supertux/level_parser.hpp"
 #include "supertux/levelset.hpp"
-#include "supertux/screen_fade.hpp"
-#include "supertux/screen_manager.hpp"
-#include "supertux/title_screen.hpp"
+#include "supertux/menu/editor_levelset_menu.hpp"
 #include "supertux/world.hpp"
 #include "util/file_system.hpp"
-#include "util/gettext.hpp"
 
 EditorLevelSelectMenu::EditorLevelSelectMenu() :
   m_levelset()
@@ -46,22 +38,22 @@ EditorLevelSelectMenu::EditorLevelSelectMenu() :
 EditorLevelSelectMenu::EditorLevelSelectMenu(std::unique_ptr<World> world) :
   m_levelset()
 {
-  Editor::current()->world = std::move(world);
+  Editor::current()->set_world(std::move(world));
   initialize();
 }
 
 void EditorLevelSelectMenu::initialize() {
   auto editor = Editor::current();
-  auto& world = editor->world;
+  World* world = editor->get_world();
   auto basedir = world->get_basedir();
-  editor->deactivate_request = true;
+  editor->m_deactivate_request = true;
   m_levelset = std::unique_ptr<Levelset>(new Levelset(basedir, /* recursively = */ true));
   auto num_levels = m_levelset->get_num_levels();
 
   add_label(world->get_title());
   add_hl();
 
-  if(num_levels == 0)
+  if (num_levels == 0)
   {
     add_inactive(_("Empty levelset"));
   }
@@ -71,12 +63,21 @@ void EditorLevelSelectMenu::initialize() {
     {
       std::string filename = m_levelset->get_level_filename(i);
       std::string full_filename = FileSystem::join(basedir, filename);
-      std::string title = GameManager::current()->get_level_name(full_filename);
+      std::string title = LevelParser::get_level_name(full_filename);
       add_entry(i, title);
     }
   }
 
   add_hl();
+
+  std::string worldmap_file = FileSystem::join(basedir, "worldmap.stwm");
+  if (PHYSFS_exists(worldmap_file.c_str())) {
+    add_entry(-4, _("Edit worldmap"));
+  } else {
+    add_entry(-5, _("Create worldmap"));
+  }
+  add_hl();
+
   add_entry(-1, _("Create Level"));
   add_entry(-3, _("Level subset properties"));
   add_back(_("Back"),-2);
@@ -84,40 +85,66 @@ void EditorLevelSelectMenu::initialize() {
 
 EditorLevelSelectMenu::~EditorLevelSelectMenu()
 {
-  Editor::current()->reactivate_request = true;
+  auto editor = Editor::current();
+  if (editor == nullptr) {
+    return;
+  }
+  editor->m_reactivate_request = true;
 }
 
 void
 EditorLevelSelectMenu::create_level()
 {
-  auto editor = Editor::current();
-  auto& world = editor->world;
-  auto basedir = world->get_basedir();
-  editor->set_worldmap_mode(false);
-  auto new_level = LevelParser::from_nothing(basedir);
-  new_level->save(basedir + "/" + new_level->filename);
-  editor->set_level(new_level->filename);
-  MenuManager::instance().clear_menu_stack();
-
-  std::unique_ptr<Dialog> dialog(new Dialog);
-  dialog->set_text(_("Share this level under license CC-BY-SA 4.0 International (advised).\nIt allows modifications and redistribution by third-parties.\nIf you don't agree with this license, change it in level properties.\nDISCLAIMER: The SuperTux authors take no responsibility for your choice of license."));
-  dialog->clear_buttons();
-  dialog->add_button(_("OK"), [] {});
-  MenuManager::instance().set_dialog(std::move(dialog));
+  create_item(false);
 }
 
 void
-EditorLevelSelectMenu::menu_action(MenuItem* item)
+EditorLevelSelectMenu::create_worldmap()
+{
+  create_item(true);
+}
+
+void
+EditorLevelSelectMenu::create_item(bool worldmap)
 {
   auto editor = Editor::current();
-  auto& world = editor->world;
-  if (item->id >= 0)
+  World* world = editor->get_world();
+  auto basedir = world->get_basedir();
+  auto new_item = worldmap ?
+      LevelParser::from_nothing_worldmap(basedir, world->m_title) :
+      LevelParser::from_nothing(basedir);
+  new_item->save(basedir + "/" + new_item->m_filename);
+  editor->set_level(new_item->m_filename);
+  MenuManager::instance().clear_menu_stack();
+
+  if (worldmap)
   {
-    editor->set_level(m_levelset->get_level_filename(item->id));
-    editor->set_worldmap_mode(false);
+    Dialog::show_message(_("Share this worldmap under license CC-BY-SA 4.0 International (advised).\n"
+                           "It allows modifications and redistribution by third-parties.\nIf you don't "
+                           "agree with this license, change it in worldmap properties.\nDISCLAIMER: The "
+                           "SuperTux authors take no responsibility for your choice of license."));
+  }
+  else
+  {
+    Dialog::show_message(_("Share this level under license CC-BY-SA 4.0 International (advised).\n"
+                           "It allows modifications and redistribution by third-parties.\nIf you don't "
+                           "agree with this license, change it in level properties.\nDISCLAIMER: The "
+                           "SuperTux authors take no responsibility for your choice of license."));
+  }
+}
+
+void
+EditorLevelSelectMenu::menu_action(MenuItem& item)
+{
+  auto editor = Editor::current();
+  World* world = editor->get_world();
+  if (item.get_id() >= 0)
+  {
+    editor->set_level(m_levelset->get_level_filename(item.get_id()));
+
     MenuManager::instance().clear_menu_stack();
   } else {
-    switch (item->id) {
+    switch (item.get_id()) {
       case -1:
         create_level();
         break;
@@ -125,9 +152,16 @@ EditorLevelSelectMenu::menu_action(MenuItem* item)
         MenuManager::instance().pop_menu();
         break;
       case -3: {
-        auto menu = std::unique_ptr<Menu>(new EditorLevelsetMenu(world.get()));
+        auto menu = std::unique_ptr<Menu>(new EditorLevelsetMenu(world));
         MenuManager::instance().push_menu(std::move(menu));
       } break;
+      case -4:
+        editor->set_level("worldmap.stwm");
+        MenuManager::instance().clear_menu_stack();
+        break;
+      case -5:
+        create_worldmap();
+        break;
       default:
         break;
     }

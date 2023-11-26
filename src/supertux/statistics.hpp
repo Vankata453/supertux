@@ -25,56 +25,71 @@
 #include "video/surface_ptr.hpp"
 
 class DrawingContext;
+class Level;
 
 /** This class is a layer between level and worldmap to keep
- *  track of stuff like scores, and minor, but funny things, like
- *  number of jumps and stuff */
-class Statistics
+    track of stuff like scores, and minor, but funny things, like
+    number of jumps and stuff */
+class Statistics final
 {
+private:
   static Color header_color;
   static Color text_color;
-public:
-  int coins; /**< coins collected */
-  int total_coins; /**< coins in level */
-  int badguys; /**< badguys actively killed */
-  int total_badguys; /**< (vincible) badguys in level */
-  float time; /**< seconds needed */
-  int secrets; /**< secret areas found */
-  int total_secrets; /**< secret areas in level */
 
 public:
-  Statistics(); /**< Creates new statistics, call reset() before counting */
-  ~Statistics();
-
-  /**
-   * serialize statistics object as squirrel table "statistics"
-   */
-  void serialize_to_squirrel(HSQUIRRELVM vm);
-
-  /**
-   * unserialize statistics object from squirrel table "statistics"
-   */
-  void unserialize_from_squirrel(HSQUIRRELVM vm);
-
-  void draw_worldmap_info(DrawingContext& context, float target_time); /**< draw worldmap stat HUD */
-  void draw_endseq_panel(DrawingContext& context, Statistics* best_stats, SurfacePtr backdrop); /**< draw panel shown during level's end sequence */
-
-  void zero(); /**< Set stats to zero */
-  void reset(); /**< Set stats (but not totals) to zero */
-  void merge(const Statistics& stats); /**< Given another Statistics object finds the best of each one */
-  void operator+=(const Statistics& o); /**< Add two Statistics objects */
-  bool completed(const Statistics& stats, const float target_time) const; /* Check if stats match total stats */
-
-  void declare_invalid(); /**< marks statistics as invalid for their entire lifetime (e.g. after cheating). Invalid statistics will not be merged or drawn. */
-
   static std::string coins_to_string(int coins, int total_coins);
   static std::string frags_to_string(int badguys, int total_badguys);
   static std::string time_to_string(float time);
   static std::string secrets_to_string(int secrets, int total_secrets);
 
+public:
+  enum Status { INVALID, ACCUMULATING, FINAL };
+
+public:
+  Statistics(); /**< Creates new statistics, call reset() before counting */
+
+  /** serialize statistics object as squirrel table "statistics" */
+  void serialize_to_squirrel(HSQUIRRELVM vm) const;
+
+  /** unserialize statistics object from squirrel table "statistics" */
+  void unserialize_from_squirrel(HSQUIRRELVM vm);
+
+  void draw_worldmap_info(DrawingContext& context, float target_time); /**< draw worldmap stat HUD */
+  void draw_endseq_panel(DrawingContext& context, Statistics* best_stats, SurfacePtr backdrop); /**< draw panel shown during level's end sequence */
+
+  void init(const Level& level);
+  void finish(float time);
+  void invalidate();
+
+  Status get_status() const { return m_status; }
+
+public:
+  void update(const Statistics& stats); /**< Given another Statistics object finds the best of each one */
+  bool completed(const Statistics& stats, const float target_time) const; /* Check if stats match total stats */
+
+  float get_time() const { return m_time; }
+
 private:
-  bool valid; /**< stores whether these statistics can be trusted */
-  int max_width; /** < Gets the max width of a stats line, 255 by default */
+  void calculate_max_caption_length();
+
+private:
+  enum Status m_status;
+
+public:
+  int m_total_coins; /**< coins in level */
+  int m_total_badguys; /**< (vincible) badguys in level */
+  int m_total_secrets; /**< secret areas in level */
+
+  int m_coins; /**< coins collected */
+  int m_badguys; /**< badguys actively killed */
+  int m_secrets; /**< secret areas found */
+
+private:
+  float m_time; /**< seconds needed */
+
+private:
+  int m_max_width; /** < Gets the max width of a stats line, 255 by default */
+
   /** Captions */
   std::string CAPTION_MAX_COINS;
   std::string CAPTION_MAX_FRAGGING;
@@ -82,11 +97,16 @@ private:
   std::string CAPTION_BEST_TIME;
   std::string CAPTION_TARGET_TIME;
 
-private:
-  void calculate_max_caption_length();
+  float WMAP_INFO_LEFT_X;
+  float WMAP_INFO_RIGHT_X;
+  float WMAP_INFO_TOP_Y1;
+  float WMAP_INFO_TOP_Y2;
 
+private:
+  Statistics(const Statistics&) = delete;
+  Statistics& operator=(const Statistics&) = delete;
 };
 
-#endif /*SUPERTUX_STATISTICS_H*/
+#endif
 
 /* EOF */

@@ -32,10 +32,10 @@ EndSequence::~EndSequence()
 }
 
 void
-EndSequence::update(float elapsed_time)
+EndSequence::update(float dt_sec)
 {
   if (!isrunning) return;
-  running(elapsed_time);
+  running(dt_sec);
 }
 
 void
@@ -50,7 +50,7 @@ EndSequence::start()
   isrunning = true;
   isdone = false;
 
-  auto& tux = *Sector::current()->player;
+  Player& tux = Sector::get().get_player();
   end_sequence_controller.reset(new CodeController());
   tux.set_controller(end_sequence_controller.get());
   tux.set_speedlimit(230); //MAX_WALK_XM
@@ -91,7 +91,7 @@ EndSequence::starting()
 }
 
 void
-EndSequence::running(float /*elapsed_time*/)
+EndSequence::running(float /*dt_sec*/)
 {
   end_sequence_controller->update();
 }

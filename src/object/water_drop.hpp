@@ -22,14 +22,14 @@
 
 /** When a badguy melts, it creates this object. */
 
-class WaterDrop : public MovingSprite
+class WaterDrop final : public MovingSprite
 {
 public:
-  WaterDrop(const Vector& pos, const std::string& sprite_path_, Vector velocity);
+  WaterDrop(const Vector& pos, const std::string& sprite_path_, const Vector& velocity);
 
-  virtual void update(float elapsed_time);
-  virtual void collision_solid(const CollisionHit& hit);
-  virtual HitResponse collision(GameObject& other, const CollisionHit& );
+  virtual void update(float dt_sec) override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision(GameObject& other, const CollisionHit& ) override;
 
 private:
   Physic physic;
@@ -38,7 +38,7 @@ private:
     WDS_FALLING,
     WDS_SPLASH,
     WDS_PUDDLE
-  }WaterDropState;
+  } WaterDropState;
 
   WaterDropState wd_state;
 

@@ -19,20 +19,19 @@
 
 #include "gui/menu.hpp"
 
-class Color;
-
-class ColorMenu : public Menu
+class ColorMenu final : public Menu
 {
 public:
   ColorMenu(Color* color_);
 
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
 
 private:
   Color* color;
 
-  ColorMenu(const ColorMenu&);
-  ColorMenu& operator=(const ColorMenu&);
+private:
+  ColorMenu(const ColorMenu&) = delete;
+  ColorMenu& operator=(const ColorMenu&) = delete;
 };
 
 #endif

@@ -18,77 +18,75 @@
 
 #include "editor/editor.hpp"
 #include "object/tilemap.hpp"
+#include "supertux/debug.hpp"
 #include "supertux/level.hpp"
-#include "supertux/globals.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/resources.hpp"
 #include "supertux/sector.hpp"
-#include "util/gettext.hpp"
 #include "util/reader_mapping.hpp"
-#include "util/writer.hpp"
 #include "video/drawing_context.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 static const float MESSAGE_TIME=3.5;
 
 SecretAreaTrigger::SecretAreaTrigger(const ReaderMapping& reader) :
+  TriggerBase(reader),
   message_timer(),
-  message_displayed(),
+  message_displayed(false),
   message(),
   fade_tilemap(),
   script(),
   new_size()
 {
-  reader.get("x", bbox.p1.x);
-  reader.get("y", bbox.p1.y);
-  float w = 32, h = 32;
-  reader.get("width", w);
-  reader.get("height", h);
-  bbox.set_size(w, h);
+  reader.get("x", m_col.m_bbox.get_left());
+  reader.get("y", m_col.m_bbox.get_top());
+  float w,h;
+  reader.get("width", w, 32.0f);
+  reader.get("height", h, 32.0f);
+  m_col.m_bbox.set_size(w, h);
+  new_size.x = w;
+  new_size.y = h;
   reader.get("fade-tilemap", fade_tilemap);
   reader.get("message", message);
-  if(message.empty() && !Editor::is_active()) {
+  if (message.empty() && !Editor::is_active()) {
     message = _("You found a secret area!");
   }
   reader.get("script", script);
-
-  message_displayed = false;
 }
 
 SecretAreaTrigger::SecretAreaTrigger(const Rectf& area, std::string fade_tilemap_) :
   message_timer(),
-  message_displayed(),
+  message_displayed(false),
   message(_("You found a secret area!")),
   fade_tilemap(fade_tilemap_),
   script(),
   new_size()
 {
-  bbox = area;
-  message_displayed = false;
+  m_col.m_bbox = area;
 }
 
 ObjectSettings
-SecretAreaTrigger::get_settings() {
-  new_size.x = bbox.get_width();
-  new_size.y = bbox.get_height();
-  ObjectSettings result(_("Secret area"));
-  result.options.push_back( ObjectOption(MN_TEXTFIELD, _("Name"), &name));
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Width"), &new_size.x, "width"));
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Height"), &new_size.y, "height"));
-  result.options.push_back( ObjectOption(MN_TEXTFIELD, _("Fade-tilemap"), &fade_tilemap,
-                                         "fade-tilemap", true, false));
-  result.options.push_back( ObjectOption(MN_TEXTFIELD, _("Message"), &message, "message"));
-  result.options.push_back( ObjectOption(MN_SCRIPT, _("Script"), &script,
-                                         "script", true, false));
+SecretAreaTrigger::get_settings()
+{
+  new_size.x = m_col.m_bbox.get_width();
+  new_size.y = m_col.m_bbox.get_height();
+
+  ObjectSettings result = TriggerBase::get_settings();
+
+  result.add_text(_("Name"), &m_name);
+  result.add_text(_("Fade tilemap"), &fade_tilemap, "fade-tilemap");
+  result.add_translatable_text(_("Message"), &message, "message");
+  result.add_script(_("Script"), &script, "script");
+
+  result.reorder({"fade-tilemap", "script", "sprite", "message", "region", "name", "x", "y"});
+
   return result;
 }
 
 void
-SecretAreaTrigger::after_editor_set() {
-  bbox.set_size(new_size.x, new_size.y);
-}
-
-SecretAreaTrigger::~SecretAreaTrigger()
+SecretAreaTrigger::after_editor_set()
 {
+  m_col.m_bbox.set_size(new_size.x, new_size.y);
 }
 
 std::string
@@ -103,12 +101,12 @@ SecretAreaTrigger::draw(DrawingContext& context)
   if (message_timer.started()) {
     context.push_transform();
     context.set_translation(Vector(0, 0));
-    Vector pos = Vector(0, SCREEN_HEIGHT/2 - Resources::normal_font->get_height()/2);
-    context.draw_center_text(Resources::normal_font, message, pos, LAYER_HUD, SecretAreaTrigger::text_color);
+    Vector pos = Vector(0, static_cast<float>(SCREEN_HEIGHT) / 2.0f - Resources::normal_font->get_height() / 2.0f);
+    context.color().draw_center_text(Resources::normal_font, message, pos, LAYER_HUD, SecretAreaTrigger::text_color);
     context.pop_transform();
   }
-  if (Editor::is_active()) {
-    context.draw_filled_rect(bbox, Color(0.0f, 1.0f, 0.0f, 0.6f),
+  if (Editor::is_active() || g_debug.show_collision_rects) {
+    context.color().draw_filled_rect(m_col.m_bbox, Color(0.0f, 1.0f, 0.0f, 0.6f),
                              0.0f, LAYER_OBJECTS);
   } else if (message_timer.check()) {
     remove_me();
@@ -118,26 +116,23 @@ SecretAreaTrigger::draw(DrawingContext& context)
 void
 SecretAreaTrigger::event(Player& , EventType type)
 {
-  if(type == EVENT_TOUCH) {
+  if (type == EVENT_TOUCH) {
     if (!message_displayed) {
       message_timer.start(MESSAGE_TIME);
       message_displayed = true;
-      Sector::current()->get_level()->stats.secrets++;
+      Sector::get().get_level().m_stats.m_secrets++;
 
       if (!fade_tilemap.empty()) {
         // fade away tilemaps
-        auto& sector = *Sector::current();
-        for(const auto& i : sector.gameobjects) {
-          auto tm = dynamic_cast<TileMap*>(i.get());
-          if (!tm) continue;
-          if (tm->get_name() != fade_tilemap) continue;
-          tm->fade(0.0, 1.0);
+        for (auto& tm : Sector::get().get_objects_by_type<TileMap>()) {
+          if (tm.get_name() == fade_tilemap) {
+            tm.fade(0.0, 1.0);
+          }
         }
       }
 
-      if(!script.empty()) {
-        std::istringstream stream(script);
-        Sector::current()->run_script(stream, "SecretAreaScript");
+      if (!script.empty()) {
+        Sector::get().run_script(script, "SecretAreaScript");
       }
     }
   }

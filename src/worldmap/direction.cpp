@@ -14,43 +14,44 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "direction.hpp"
+#include "worldmap/direction.hpp"
 
-#include "editor/object_settings.hpp"
+#include "editor/object_option.hpp"
+#include "util/gettext.hpp"
 #include "util/log.hpp"
 
 namespace worldmap {
 
 Direction reverse_dir(Direction direction)
 {
-  switch(direction)
+  switch (direction)
   {
-    case D_WEST:
-      return D_EAST;
-    case D_EAST:
-      return D_WEST;
-    case D_NORTH:
-      return D_SOUTH;
-    case D_SOUTH:
-      return D_NORTH;
-    case D_NONE:
-      return D_NONE;
+    case Direction::WEST:
+      return Direction::EAST;
+    case Direction::EAST:
+      return Direction::WEST;
+    case Direction::NORTH:
+      return Direction::SOUTH;
+    case Direction::SOUTH:
+      return Direction::NORTH;
+    case Direction::NONE:
+      return Direction::NONE;
   }
-  return D_NONE;
+  return Direction::NONE;
 }
 
 std::string
 direction_to_string(Direction direction)
 {
-  switch(direction)
+  switch (direction)
   {
-    case D_WEST:
+    case Direction::WEST:
       return "west";
-    case D_EAST:
+    case Direction::EAST:
       return "east";
-    case D_NORTH:
+    case Direction::NORTH:
       return "north";
-    case D_SOUTH:
+    case Direction::SOUTH:
       return "south";
     default:
       return "none";
@@ -61,30 +62,19 @@ Direction
 string_to_direction(const std::string& directory)
 {
   if (directory == "west")
-    return D_WEST;
+    return Direction::WEST;
   else if (directory == "east")
-    return D_EAST;
+    return Direction::EAST;
   else if (directory == "north")
-    return D_NORTH;
+    return Direction::NORTH;
   else if (directory == "south")
-    return D_SOUTH;
+    return Direction::SOUTH;
   else if (directory == "none")
-    return D_NONE;
+    return Direction::NONE;
   else {
     log_warning << "unknown direction: \"" << directory << "\"" << std::endl;
-    return D_NONE;
+    return Direction::NONE;
   }
-}
-
-ObjectOption
-dir_option(Direction *dir) {
-  ObjectOption result(MN_STRINGSELECT, _("Direction"), dir);
-  result.select.push_back(_("none"));
-  result.select.push_back(_("west"));
-  result.select.push_back(_("east"));
-  result.select.push_back(_("north"));
-  result.select.push_back(_("south"));
-  return result;
 }
 
 } // namespace worldmap

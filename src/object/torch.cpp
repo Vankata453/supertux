@@ -1,5 +1,6 @@
 //  SuperTux
 //  Copyright (C) 2014 Ingo Ruhnke <grumbel@gmail.com>
+//  Copyright (C) 2017 M. Teufel <mteufel@supertux.org>
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -22,27 +23,26 @@
 #include "util/reader_mapping.hpp"
 
 Torch::Torch(const ReaderMapping& reader) :
+  MovingObject(reader),
+  ExposedObject<Torch, scripting::Torch>(this),
   m_torch(),
-  m_flame(),
-  m_flame_glow(),
-  m_flame_light(),
+  m_flame(SpriteManager::current()->create("images/objects/torch/flame.sprite")),
+  m_flame_glow(SpriteManager::current()->create("images/objects/torch/flame_glow.sprite")),
+  m_flame_light(SpriteManager::current()->create("images/objects/torch/flame_light.sprite")),
   m_burning(true),
   sprite_name("images/objects/torch/torch1.sprite")
 {
-  reader.get("x", bbox.p1.x);
-  reader.get("y", bbox.p1.y);
+  reader.get("x", m_col.m_bbox.get_left());
+  reader.get("y", m_col.m_bbox.get_top());
 
   reader.get("sprite", sprite_name);
-
-  bbox.p2.x = bbox.p1.x + 50;
-  bbox.p2.y = bbox.p1.y + 50;
+  reader.get("burning", m_burning, true);
 
   m_torch = SpriteManager::current()->create(sprite_name);
-  m_flame = SpriteManager::current()->create("images/objects/torch/flame.sprite");
-  m_flame_glow = SpriteManager::current()->create("images/objects/torch/flame_glow.sprite");
-  m_flame_glow->set_blend(Blend(GL_SRC_ALPHA, GL_ONE));
-  m_flame_light = SpriteManager::current()->create("images/objects/torch/flame_light.sprite");
-  m_flame_light->set_blend(Blend(GL_SRC_ALPHA, GL_ONE));
+  m_col.m_bbox.set_size(static_cast<float>(m_torch->get_width()),
+                static_cast<float>(m_torch->get_height()));
+  m_flame_glow->set_blend(Blend::ADD);
+  m_flame_light->set_blend(Blend::ADD);
   set_group(COLGROUP_TOUCHABLE);
 }
 
@@ -51,19 +51,16 @@ Torch::draw(DrawingContext& context)
 {
   if (m_burning)
   {
-    m_flame->draw(context, get_pos(), LAYER_TILES - 1);
+    m_flame->draw(context.color(), get_pos(), LAYER_TILES - 1);
 
-    context.push_target();
-    context.set_target(DrawingContext::LIGHTMAP);
-    m_flame_light->draw(context, get_pos(), 0);
-    context.pop_target();
+    m_flame_light->draw(context.light(), get_pos(), 0);
   }
 
-  m_torch->draw(context, get_pos(), LAYER_TILES - 1);
+  m_torch->draw(context.color(), get_pos(), LAYER_TILES - 1);
 
   if (m_burning)
   {
-    m_flame_glow->draw(context, get_pos(), LAYER_TILES - 1);
+    m_flame_glow->draw(context.color(), get_pos(), LAYER_TILES - 1);
   }
 }
 
@@ -75,27 +72,42 @@ Torch::update(float)
 HitResponse
 Torch::collision(GameObject& other, const CollisionHit& )
 {
-  // FIXME: this doesn't work, as bbox is wrong
   auto player = dynamic_cast<Player*>(&other);
-  if(player != 0)
+  if (player != nullptr && !m_burning)
   {
     m_burning = true;
   }
   return ABORT_MOVE;
 }
 
-ObjectSettings Torch::get_settings()
+ObjectSettings
+Torch::get_settings()
 {
   ObjectSettings result = MovingObject::get_settings();
-  ObjectOption spr(MN_FILE, _("Sprite"), &sprite_name, "sprite");
-  spr.select.push_back(".sprite");
-  result.options.push_back(spr);
+
+  result.add_bool(_("Burning"), &m_burning, "burning", true);
+  result.add_sprite(_("Sprite"), &sprite_name, "sprite", std::string("images/objects/torch/torch1.sprite"));
+
+  result.reorder({"sprite", "x", "y"});
+
   return result;
 }
 
 void Torch::after_editor_set()
 {
   m_torch = SpriteManager::current()->create(sprite_name);
+}
+
+bool
+Torch::get_burning() const
+{
+  return m_burning;
+}
+
+void
+Torch::set_burning(bool burning_)
+{
+  m_burning = burning_;
 }
 
 /* EOF */

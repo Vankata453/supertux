@@ -16,21 +16,19 @@
 
 #include "gui/item_goto.hpp"
 
-#include <stdio.h>
+#include <assert.h>
 
-#include "gui/menu.hpp"
 #include "gui/menu_manager.hpp"
-#include "supertux/menu/menu_storage.hpp"
 
-ItemGoTo::ItemGoTo(const std::string& text_, int target_menu_, int _id) :
-  MenuItem(text_, _id),
+ItemGoTo::ItemGoTo(const std::string& text, int target_menu_, int id) :
+  MenuItem(text, id),
   target_menu(target_menu_)
 {
 }
 
 void
-ItemGoTo::process_action(MenuAction action) {
-  if (action == MENU_ACTION_HIT) {
+ItemGoTo::process_action(const MenuAction& action) {
+  if (action == MenuAction::HIT) {
     assert(target_menu != 0);
     MenuManager::instance().push_menu(target_menu);
   }

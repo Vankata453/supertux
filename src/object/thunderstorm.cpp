@@ -19,20 +19,21 @@
 #include "audio/sound_manager.hpp"
 #include "editor/editor.hpp"
 #include "object/electrifier.hpp"
-#include "scripting/squirrel_util.hpp"
-#include "supertux/globals.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
 #include "util/reader.hpp"
 #include "util/reader_mapping.hpp"
+#include "video/drawing_context.hpp"
 
 namespace {
+
 const float LIGHTNING_DELAY = 2.0f;
 const float FLASH_DISPLAY_TIME = 0.1f;
 const float ELECTRIFY_TIME = 0.5f;
-}
+
+} // namespace
 
 Thunderstorm::Thunderstorm(const ReaderMapping& reader) :
+  GameObject(reader),
   ExposedObject<Thunderstorm, scripting::Thunderstorm>(this),
   running(true),
   interval(10.0f),
@@ -41,10 +42,9 @@ Thunderstorm::Thunderstorm(const ReaderMapping& reader) :
   time_to_lightning(),
   flash_display_timer()
 {
-  reader.get("name", name);
   reader.get("running", running);
   reader.get("interval", interval);
-  if(interval <= 0) {
+  if (interval <= 0) {
     log_warning << "Running a thunderstorm with non-positive time interval is a bad idea" << std::endl;
   }
   layer = reader_get_layer (reader, /* default = */ LAYER_BACKGROUNDTILES-1);
@@ -59,21 +59,24 @@ Thunderstorm::Thunderstorm(const ReaderMapping& reader) :
 }
 
 ObjectSettings
-Thunderstorm::get_settings() {
+Thunderstorm::get_settings()
+{
   ObjectSettings result = GameObject::get_settings();
-  result.options.push_back( ObjectOption(MN_TOGGLE, _("Running"), &running,
-                                         "running"));
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Interval"), &interval,
-                                         "interval"));
 
-  result.options.push_back( ObjectOption(MN_REMOVE, "", NULL));
+  result.add_int(_("Z-pos"), &layer, "z-pos", LAYER_BACKGROUNDTILES - 1);
+  result.add_bool(_("Running"), &running, "running", true);
+  result.add_float(_("Interval"), &interval, "interval", 10.0f);
+
+  result.reorder({"interval", "name", "z-pos"});
+
+  result.add_remove();
+
   return result;
 }
 
 void
 Thunderstorm::update(float )
 {
-  if (Editor::is_active()) return;
   if (!running) return;
 
   if (time_to_thunder.check()) {
@@ -94,7 +97,10 @@ Thunderstorm::draw(DrawingContext& context)
   float alpha = 0.33f;
   context.push_transform();
   context.set_translation(Vector(0, 0));
-  context.draw_filled_rect(Vector(0, 0), Vector(SCREEN_WIDTH, SCREEN_HEIGHT), Color(1, 1, 1, alpha), layer);
+  context.color().draw_filled_rect(Rectf(0, 0,
+                                         static_cast<float>(context.get_width()),
+                                         static_cast<float>(context.get_height())),
+                                   Color(1, 1, 1, alpha), layer);
   context.pop_transform();
 
 }
@@ -140,8 +146,18 @@ Thunderstorm::flash()
 void
 Thunderstorm::electrify()
 {
-  Sector::current()->add_object(std::make_shared<Electrifier>(200, 1421, ELECTRIFY_TIME));
-  Sector::current()->add_object(std::make_shared<Electrifier>(201, 1422, ELECTRIFY_TIME));
+  auto changing_tiles = TileChangeMap({
+    {200, 1421}, {201, 1422},
+    {3419, 3523}, {3420, 3524},
+    {3421, 3525}, {3422, 3526},
+    {3423, 3527}, {3424, 3528},
+    {3425, 3529}, {3426, 3530},
+    {3427, 3523}, {3428, 3524},
+    {3429, 3525}, {3430, 3526},
+    {3431, 3527}, {3432, 3528},
+    {3433, 3529}, {3434, 3530}
+  });
+  Sector::get().add<Electrifier>(changing_tiles, ELECTRIFY_TIME);
 }
 
 /* EOF */

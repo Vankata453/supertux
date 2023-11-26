@@ -30,16 +30,18 @@ class ReaderCollection;
 class ReaderObject final
 {
 public:
-  ReaderObject();
-  ReaderObject(const ReaderDocument* doc, const sexp::Value* sx);
+  ReaderObject(const ReaderDocument& doc, const sexp::Value& sx);
 
   std::string get_name() const;
   ReaderMapping get_mapping() const;
   ReaderCollection get_collection() const;
 
+  const ReaderDocument& get_doc() const { return m_doc; }
+  const sexp::Value& get_sexp() const { return m_sx; }
+
 private:
-  const ReaderDocument* m_doc;
-  const sexp::Value* m_sx;
+  const ReaderDocument& m_doc;
+  const sexp::Value& m_sx;
 };
 
 #endif

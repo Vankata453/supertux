@@ -15,18 +15,17 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADER_SUPERTUX_SUPERTUX_LANGUAGE_MENU_HPP
-#define HEADER_SUPERTUX_SUPERTUX_LANGUAGE_MENU_HPP
+#ifndef HEADER_SUPERTUX_SUPERTUX_MENU_LANGUAGE_MENU_HPP
+#define HEADER_SUPERTUX_SUPERTUX_MENU_LANGUAGE_MENU_HPP
 
-#include "util/gettext.hpp"
 #include "gui/menu.hpp"
 
-class LanguageMenu : public Menu
+class LanguageMenu final : public Menu
 {
 public:
   LanguageMenu();
 
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
 };
 
 #endif

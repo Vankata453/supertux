@@ -19,16 +19,16 @@
 #define HEADER_SUPERTUX_SUPERTUX_TILE_SET_PARSER_HPP
 
 #include <string>
-#include <stdint.h>
 #include <vector>
+#include <boost/optional.hpp>
 
+#include "math/rect.hpp"
 #include "supertux/tile.hpp"
-#include "util/reader_fwd.hpp"
 
+class ReaderMapping;
 class TileSet;
-class Tile;
 
-class TileSetParser
+class TileSetParser final
 {
 private:
   TileSet&    m_tileset;
@@ -43,11 +43,12 @@ public:
 private:
   void parse_tile(const ReaderMapping& reader);
   void parse_tiles(const ReaderMapping& reader);
-  std::vector<Tile::ImageSpec> parse_imagespecs(const ReaderMapping& cur) const;
+  std::vector<SurfacePtr> parse_imagespecs(const ReaderMapping& cur,
+                                           const boost::optional<Rect>& region = boost::none) const;
 
 private:
-  TileSetParser(const TileSetParser&);
-  TileSetParser& operator=(const TileSetParser&);
+  TileSetParser(const TileSetParser&) = delete;
+  TileSetParser& operator=(const TileSetParser&) = delete;
 };
 
 #endif

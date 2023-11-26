@@ -31,18 +31,33 @@ class Rectf;
 /**
  * Helper class for InfoBox: Represents a line of text
  */
-class InfoBoxLine
+class InfoBoxLine final
 {
 public:
   enum LineType { NORMAL, NORMAL_LEFT, SMALL, HEADING, REFERENCE, IMAGE};
 
   InfoBoxLine(char format_char, const std::string& text);
-  ~InfoBoxLine();
 
   void draw(DrawingContext& context, const Rectf& bbox, int layer);
   float get_height() const;
 
   static std::vector<std::unique_ptr<InfoBoxLine> > split(const std::string& text, float width);
+
+  static bool is_valid_format_char(char format_char)
+  {
+    switch (format_char)
+    {
+      case ' ':
+      case '-':
+      case '*':
+      case '\t':
+      case '#':
+      case '!':
+        return true;
+      default:
+        return false;
+    }
+  }
 
 private:
   InfoBoxLine::LineType lineType;
@@ -52,8 +67,8 @@ private:
   SurfacePtr image;
 
 private:
-  InfoBoxLine(const InfoBoxLine&);
-  InfoBoxLine& operator=(const InfoBoxLine&);
+  InfoBoxLine(const InfoBoxLine&) = delete;
+  InfoBoxLine& operator=(const InfoBoxLine&) = delete;
 };
 
 #endif

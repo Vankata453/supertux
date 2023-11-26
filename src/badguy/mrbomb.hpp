@@ -18,38 +18,38 @@
 #define HEADER_SUPERTUX_BADGUY_MRBOMB_HPP
 
 #include "badguy/walking_badguy.hpp"
+#include "object/portable.hpp"
 
-class MrBomb : public WalkingBadguy,
+class MrBomb final : public WalkingBadguy,
                public Portable
 {
 public:
   MrBomb(const ReaderMapping& reader);
-  MrBomb(const Vector& pos, Direction d);
 
-  void kill_fall();
-  void ignite();
-  HitResponse collision(GameObject& object, const CollisionHit& hit);
-  HitResponse collision_player(Player& player, const CollisionHit& hit);
+  virtual void kill_fall() override;
+  virtual void ignite() override;
+  virtual HitResponse collision(GameObject& object, const CollisionHit& hit) override;
+  virtual HitResponse collision_player(Player& player, const CollisionHit& hit) override;
 
-  void active_update(float elapsed_time);
+  virtual void active_update(float dt_sec) override;
 
-  void grab(MovingObject& object, const Vector& pos, Direction dir);
-  void ungrab(MovingObject& object, Direction dir);
-  bool is_portable() const;
+  virtual void grab(MovingObject& object, const Vector& pos, Direction dir) override;
+  virtual void ungrab(MovingObject& object, Direction dir) override;
+  virtual bool is_portable() const override;
 
-  bool is_freezable() const;
-  std::string get_class() const {
-    return "mrbomb";
-  }
-  std::string get_display_name() const {
-    return _("Mr. Bomb");
-  }
+  virtual bool is_freezable() const override;
+  virtual std::string get_class() const override { return "mrbomb"; }
+  virtual std::string get_display_name() const override { return _("Mr. Bomb"); }
 
 protected:
-  bool collision_squished(GameObject& object);
+  virtual bool collision_squished(GameObject& object) override;
 
 private:
   bool grabbed;
+
+private:
+  MrBomb(const MrBomb&) = delete;
+  MrBomb& operator=(const MrBomb&) = delete;
 };
 
 #endif

@@ -17,30 +17,26 @@
 #ifndef HEADER_SUPERTUX_GUI_ITEM_INACTIVE_HPP
 #define HEADER_SUPERTUX_GUI_ITEM_INACTIVE_HPP
 
-#include <list>
-#include <memory>
-#include <SDL.h>
-
 #include "gui/menu_item.hpp"
 
 class Color;
 
-class ItemInactive : public MenuItem
+class ItemInactive final : public MenuItem
 {
-  public:
-    ItemInactive(const std::string& text_);
+public:
+  ItemInactive(const std::string& text_);
 
-    /** Returns true when the menu item has no action and therefore can be skipped.
-        Useful for labels and horizontal lines.*/
-    virtual bool skippable() const {
-      return true;
-    }
+  /** Returns true when the menu item has no action and therefore can be skipped.
+      Useful for labels and horizontal lines.*/
+  virtual bool skippable() const override {
+    return true;
+  }
 
-    virtual Color get_color() const;
+  virtual Color get_color() const override;
 
-  private:
-    ItemInactive(const ItemInactive&);
-    ItemInactive& operator=(const ItemInactive&);
+private:
+  ItemInactive(const ItemInactive&) = delete;
+  ItemInactive& operator=(const ItemInactive&) = delete;
 };
 
 #endif

@@ -19,22 +19,21 @@
 
 #include "badguy/walking_badguy.hpp"
 
-class MrTree : public WalkingBadguy
+class MrTree final : public WalkingBadguy
 {
 public:
   MrTree(const ReaderMapping& reader);
 
-  bool is_freezable() const;
-  std::string get_class() const {
-    return "mrtree";
-  }
-  std::string get_display_name() const {
-    return _("Mr. Tree");
-  }
+  virtual bool is_freezable() const override;
+  virtual std::string get_class() const override { return "mrtree"; }
+  virtual std::string get_display_name() const override { return _("Mr. Tree"); }
 
 protected:
-  bool collision_squished(GameObject& object);
+  virtual bool collision_squished(GameObject& object) override;
 
+private:
+  MrTree(const MrTree&) = delete;
+  MrTree& operator=(const MrTree&) = delete;
 };
 
 #endif

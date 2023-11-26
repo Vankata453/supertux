@@ -17,25 +17,25 @@
 #ifndef HEADER_SUPERTUX_OBJECT_RAINSPLASH_HPP
 #define HEADER_SUPERTUX_OBJECT_RAINSPLASH_HPP
 
-#include "sprite/sprite.hpp"
+#include "math/vector.hpp"
 #include "sprite/sprite_manager.hpp"
 #include "supertux/game_object.hpp"
 
 class Player;
 
-class RainSplash : public GameObject
+class RainSplash final : public GameObject
 {
 public:
   RainSplash(const Vector& pos, bool vertical);
   ~RainSplash();
-  virtual bool do_save() const {
+  virtual bool is_saveable() const override {
     return false;
   }
 
 protected:
   virtual void hit(Player& );
-  virtual void update(float time);
-  virtual void draw(DrawingContext& context);
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
 
 private:
   SpritePtr sprite;

@@ -19,42 +19,45 @@
 
 #include "gui/menu_item.hpp"
 
-#include "supertux/timer.hpp"
-
-class ItemIntField : public MenuItem
+class ItemIntField final : public MenuItem
 {
-  public:
-    ItemIntField(const std::string& text_, int* input_, int id_ = -1);
+public:
+  ItemIntField(const std::string& text_, int* input_, int id_ = -1);
 
-    /** Draws the menu item. */
-    virtual void draw(DrawingContext&, Vector pos, int menu_width, bool active);
+  /** Draws the menu item. */
+  virtual void draw(DrawingContext&, const Vector& pos, int menu_width, bool active) override;
 
-    /** Returns the minimum width of the menu item. */
-    virtual int get_width() const;
+  /** Returns the minimum width of the menu item. */
+  virtual int get_width() const override;
 
-    /** Processes the menu action. */
-    virtual void process_action(MenuAction action);
+  /** Processes the menu action. */
+  virtual void process_action(const MenuAction& action) override;
 
-    int* number;
+  int* number;
 
-    void change_input(const std::string& input_) {
-      input = input_;
-    }
+  void change_input(const std::string& input_) {
+    input = input_;
+  }
 
-    /** Processes the given event. */
-    virtual void event(const SDL_Event& ev);
+  /** Processes the given event. */
+  virtual void event(const SDL_Event& ev) override;
 
-  private:
+  virtual bool changes_width() const override {
+    return true;
+  }
 
-    std::string input;
-    int flickw;
+private:
 
-    void add_char(char c);
+  std::string input;
+  int flickw;
 
-    ItemIntField(const ItemIntField&);
-    ItemIntField& operator=(const ItemIntField&);
+  void add_char(char c);
+
+private:
+  ItemIntField(const ItemIntField&) = delete;
+  ItemIntField& operator=(const ItemIntField&) = delete;
 };
 
-#endif // HEADER_SUPERTUX_GUI_ITEM_INTFIELD_HPP
+#endif
 
 /* EOF */

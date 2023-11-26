@@ -14,13 +14,13 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "math/random_generator.hpp"
+#include "object/star.hpp"
+
+#include "math/random.hpp"
 #include "object/player.hpp"
 #include "object/sprite_particle.hpp"
-#include "object/star.hpp"
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
 
 static const float INITIALJUMP = -400;
@@ -30,68 +30,58 @@ static const float JUMPSTAR_SPEED = -300;
 Star::Star(const Vector& pos, Direction direction) :
   MovingSprite(pos, "images/powerups/star/star.sprite", LAYER_OBJECTS, COLGROUP_MOVING),
   physic(),
-  light(0.0f,0.0f,0.0f),
   lightsprite(SpriteManager::current()->create("images/objects/lightmap_light/lightmap_light-small.sprite"))
 {
-  physic.set_velocity((direction == LEFT) ? -STAR_SPEED : STAR_SPEED, INITIALJUMP);
+  physic.set_velocity((direction == Direction::LEFT) ? -STAR_SPEED : STAR_SPEED, INITIALJUMP);
   //set light for glow effect
-  lightsprite->set_blend(Blend(GL_SRC_ALPHA, GL_ONE));
+  lightsprite->set_blend(Blend::ADD);
   lightsprite->set_color(Color(0.4f, 0.4f, 0.4f));
 }
 
 void
-Star::update(float elapsed_time)
+Star::update(float dt_sec)
 {
-  movement = physic.get_movement(elapsed_time);
+  m_col.m_movement = physic.get_movement(dt_sec);
 
   // when near Tux, spawn particles
-  auto player = Sector::current()->get_nearest_player (bbox);
-  if (player) {
-    float disp_x = player->get_bbox().p1.x - bbox.p1.x;
-    float disp_y = player->get_bbox().p1.y - bbox.p1.y;
+  if (auto* player = Sector::get().get_nearest_player (m_col.m_bbox)) {
+    float disp_x = player->get_bbox().get_left() - m_col.m_bbox.get_left();
+    float disp_y = player->get_bbox().get_top() - m_col.m_bbox.get_top();
     if (disp_x*disp_x + disp_y*disp_y <= 256*256)
     {
       if (graphicsRandom.rand(0, 2) == 0) {
-        float px = graphicsRandom.randf(bbox.p1.x+0, bbox.p2.x-0);
-        float py = graphicsRandom.randf(bbox.p1.y+0, bbox.p2.y-0);
+        float px = graphicsRandom.randf(m_col.m_bbox.get_left()+0, m_col.m_bbox.get_right()-0);
+        float py = graphicsRandom.randf(m_col.m_bbox.get_top()+0, m_col.m_bbox.get_bottom()-0);
         Vector ppos = Vector(px, py);
         Vector pspeed = Vector(0, 0);
         Vector paccel = Vector(0, 0);
-        Sector::current()->add_object(std::make_shared<SpriteParticle>(
-                                        "images/objects/particles/sparkle.sprite",
-                                        // draw bright sparkles when very close to Tux, dark sparkles when slightly further
-                                        (disp_x*disp_x + disp_y*disp_y <= 128*128) ?
-                                        // make every other a longer sparkle to make trail a bit fuzzy
-                                        (size_t(game_time*20)%2) ? "small" : "medium" : "dark",
-                                        ppos, ANCHOR_MIDDLE, pspeed, paccel, LAYER_OBJECTS+1+5));
+        Sector::get().add<SpriteParticle>(
+          "images/objects/particles/sparkle.sprite",
+          // draw bright sparkles when very close to Tux, dark sparkles when slightly further
+          (disp_x*disp_x + disp_y*disp_y <= 128*128) ?
+          // make every other a longer sparkle to make trail a bit fuzzy
+          (size_t(g_game_time*20)%2) ? "small" : "medium" : "dark",
+          ppos, ANCHOR_MIDDLE, pspeed, paccel, LAYER_OBJECTS+1+5);
       }
     }
   }
 }
 
 void
-Star::draw(DrawingContext& context){
-  //Draw the Sprite.
+Star::draw(DrawingContext& context)
+{
   MovingSprite::draw(context);
-  //Draw the light when dark
-  context.get_light( bbox.get_middle(), &light );
-  if (light.red + light.green + light.blue < 3.0){
-    MovingSprite::draw(context);
-    context.push_target();
-    context.set_target(DrawingContext::LIGHTMAP);
-    lightsprite->draw(context, bbox.get_middle(), 0);
-    context.pop_target();
-  }
+  lightsprite->draw(context.light(), m_col.m_bbox.get_middle(), 0);
 }
 
 void
 Star::collision_solid(const CollisionHit& hit)
 {
-  if(hit.bottom) {
+  if (hit.bottom) {
     physic.set_velocity_y(JUMPSTAR_SPEED);
-  } else if(hit.top) {
+  } else if (hit.top) {
     physic.set_velocity_y(0);
-  } else if(hit.left || hit.right) {
+  } else if (hit.left || hit.right) {
     physic.set_velocity_x(-physic.get_velocity_x());
   }
 }
@@ -100,7 +90,7 @@ HitResponse
 Star::collision(GameObject& other, const CollisionHit& )
 {
   auto player = dynamic_cast<Player*> (&other);
-  if(player) {
+  if (player) {
     player->make_invincible();
     remove_me();
     return ABORT_MOVE;

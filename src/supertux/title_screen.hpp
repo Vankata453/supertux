@@ -15,43 +15,45 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADER_SUPERTUX_SUPERTUX_TITLE_HPP
-#define HEADER_SUPERTUX_SUPERTUX_TITLE_HPP
+#ifndef HEADER_SUPERTUX_SUPERTUX_TITLE_SCREEN_HPP
+#define HEADER_SUPERTUX_SUPERTUX_TITLE_SCREEN_HPP
 
-#include "supertux/game_session.hpp"
-#include "supertux/savegame.hpp"
+#include "supertux/screen.hpp"
+#include "video/surface_ptr.hpp"
+
+#include <string>
 
 class CodeController;
+class GameSession;
 class Savegame;
 
-/**
- * Screen that displays the SuperTux logo, lets players start a new game, etc.
- */
-class TitleScreen : public Screen
+/** Screen that displays the SuperTux logo, lets players start a new
+    game, etc. */
+class TitleScreen final : public Screen
 {
 public:
   TitleScreen(Savegame& savegame);
   virtual ~TitleScreen();
 
-  virtual void setup();
-  virtual void leave();
+  virtual void setup() override;
+  virtual void leave() override;
 
-  virtual void draw(DrawingContext& context);
-
-  virtual void update(float elapsed_time);
+  virtual void draw(Compositor& compositor) override;
+  virtual void update(float dt_sec, const Controller& controller) override;
 
 private:
   void make_tux_jump();
 
 private:
-  SurfacePtr frame;
-  std::unique_ptr<CodeController> controller;
-  std::unique_ptr<GameSession> titlesession;
-  std::string copyright_text;
+  SurfacePtr m_frame;
+  std::unique_ptr<CodeController> m_controller;
+  std::unique_ptr<GameSession> m_titlesession;
+  std::string m_copyright_text;
+  std::string m_videosystem_name;
 
 private:
-  TitleScreen(const TitleScreen&);
-  TitleScreen& operator=(const TitleScreen&);
+  TitleScreen(const TitleScreen&) = delete;
+  TitleScreen& operator=(const TitleScreen&) = delete;
 };
 
 #endif

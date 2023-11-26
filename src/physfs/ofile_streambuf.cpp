@@ -16,6 +16,7 @@
 
 #include "physfs/ofile_streambuf.hpp"
 
+#include <physfs.h>
 #include <sstream>
 #include <stdexcept>
 
@@ -23,10 +24,10 @@ OFileStreambuf::OFileStreambuf(const std::string& filename) :
   file()
 {
   file = PHYSFS_openWrite(filename.c_str());
-  if(file == 0) {
+  if (file == nullptr) {
     std::stringstream msg;
     msg << "Couldn't open file '" << filename << "': "
-        << PHYSFS_getLastError();
+        << PHYSFS_getLastErrorCode();
     throw std::runtime_error(msg.str());
   }
 
@@ -42,19 +43,19 @@ OFileStreambuf::~OFileStreambuf()
 int
 OFileStreambuf::overflow(int c)
 {
-  char c2 = (char)c;
+  char c2 = static_cast<char>(c);
 
-  if(pbase() == pptr())
+  if (pbase() == pptr())
     return 0;
 
   size_t size = pptr() - pbase();
   PHYSFS_sint64 res = PHYSFS_writeBytes(file, pbase(), size);
-  if(res <= 0)
+  if (res <= 0)
     return traits_type::eof();
 
-  if(c != traits_type::eof()) {
+  if (c != traits_type::eof()) {
     PHYSFS_sint64 res_ = PHYSFS_writeBytes(file, &c2, 1);
-    if(res_ <= 0)
+    if (res_ <= 0)
       return traits_type::eof();
   }
 

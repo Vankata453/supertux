@@ -14,18 +14,16 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <config.h>
-#include <stdexcept>
+#include "trigger/switch.hpp"
+
+#include <sstream>
 
 #include "audio/sound_manager.hpp"
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
-#include "trigger/switch.hpp"
-#include "util/gettext.hpp"
-
-#include <sstream>
+#include "util/log.hpp"
+#include "util/reader_mapping.hpp"
 
 namespace {
 const std::string SWITCH_SOUND = "sounds/switch.ogg";
@@ -39,11 +37,11 @@ Switch::Switch(const ReaderMapping& reader) :
   state(OFF),
   bistable()
 {
-  if (!reader.get("x", bbox.p1.x)) throw std::runtime_error("no x position set");
-  if (!reader.get("y", bbox.p1.y)) throw std::runtime_error("no y position set");
+  if (!reader.get("x", m_col.m_bbox.get_left())) throw std::runtime_error("no x position set");
+  if (!reader.get("y", m_col.m_bbox.get_top())) throw std::runtime_error("no y position set");
   if (!reader.get("sprite", sprite_name)) sprite_name = "images/objects/switch/left.sprite";
   sprite = SpriteManager::current()->create(sprite_name);
-  bbox.set_size(sprite->get_current_hitbox_width(), sprite->get_current_hitbox_height());
+  m_col.m_bbox.set_size(sprite->get_current_hitbox_width(), sprite->get_current_hitbox_height());
 
   reader.get("script", script);
   bistable = reader.get("off-script", off_script);
@@ -56,15 +54,16 @@ Switch::~Switch()
 }
 
 ObjectSettings
-Switch::get_settings() {
-  ObjectSettings result(_("Switch"));
-  result.options.push_back( ObjectOption(MN_TEXTFIELD, _("Name"), &name));
-  ObjectOption spr(MN_FILE, _("Sprite"), &sprite_name, "sprite", true, false);
-  spr.select.push_back(".sprite");
-  result.options.push_back(spr);
-  result.options.push_back( ObjectOption(MN_SCRIPT, _("Turn on script"), &script, "script"));
-  result.options.push_back( ObjectOption(MN_SCRIPT, _("Turn off script"), &off_script,
-                                         "off-script", true, false));
+Switch::get_settings()
+{
+  ObjectSettings result = TriggerBase::get_settings();
+
+  result.add_sprite(_("Sprite"), &sprite_name, "sprite", std::string("images/objects/switch/left.sprite"));
+  result.add_script(_("Turn on script"), &script, "script");
+  result.add_script(_("Turn off script"), &off_script, "off-script");
+
+  result.reorder({"script", "off-script", "sprite", "x", "y"});
+
   return result;
 }
 
@@ -80,29 +79,27 @@ Switch::update(float )
     case OFF:
       break;
     case TURN_ON:
-      if(sprite->animation_done()) {
-        std::istringstream stream(script);
+      if (sprite->animation_done()) {
         std::ostringstream location;
-        location << "switch" << bbox.p1;
-        Sector::current()->run_script(stream, location.str());
+        location << "switch" << m_col.m_bbox.p1();
+        Sector::get().run_script(script, location.str());
 
         sprite->set_action("on", 1);
         state = ON;
       }
       break;
     case ON:
-      if(sprite->animation_done() && !bistable) {
+      if (sprite->animation_done() && !bistable) {
         sprite->set_action("turnoff", 1);
         state = TURN_OFF;
       }
       break;
     case TURN_OFF:
-      if(sprite->animation_done()) {
+      if (sprite->animation_done()) {
         if (bistable) {
-          std::istringstream stream(off_script);
           std::ostringstream location;
-          location << "switch" << bbox.p1;
-          Sector::current()->run_script(stream, location.str());
+          location << "switch" << m_col.m_bbox.p1();
+          Sector::get().run_script(off_script, location.str());
         }
 
         sprite->set_action("off");
@@ -115,13 +112,13 @@ Switch::update(float )
 void
 Switch::draw(DrawingContext& context)
 {
-  sprite->draw(context, bbox.p1, LAYER_TILES);
+  sprite->draw(context.color(), m_col.m_bbox.p1(), LAYER_TILES);
 }
 
 void
 Switch::event(Player& , EventType type)
 {
-  if(type != EVENT_ACTIVATE) return;
+  if (type != EVENT_ACTIVATE) return;
 
   switch (state) {
     case OFF:
@@ -141,7 +138,6 @@ Switch::event(Player& , EventType type)
     case TURN_OFF:
       break;
   }
-
 }
 
 /* EOF */

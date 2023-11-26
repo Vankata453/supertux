@@ -19,26 +19,33 @@
 
 #include "supertux/game_object.hpp"
 #include "supertux/timer.hpp"
+#include <map>
 #include <stdint.h>
 
-//Changes all tiles with the given ID to a new one for a given amount of time, then removes itself
-//Used by the Kugelblitz to electrify water - can be used for other effects, too
-class Electrifier : public GameObject
+namespace {
+  /** A one-to-one relation that maps one tile ID with another */
+  typedef std::map<uint32_t, uint32_t> TileChangeMap;
+}
+
+/* Changes all tiles sharing an ID of a key in a TileChangeMap to the
+   key's assigned value(another tile ID) for a given amount of time,
+   then removes itself Used by the Kugelblitz to electrify water - can
+   be used for other effects, too */
+class Electrifier final : public GameObject
 {
 public:
+  Electrifier(TileChangeMap replacements, float seconds);
   Electrifier(uint32_t oldtile, uint32_t newtile, float seconds);
-  ~Electrifier();
-  virtual bool do_save() const {
+  virtual bool is_saveable() const override {
     return false;
   }
 
 protected:
-  virtual void update(float time);
-  virtual void draw(DrawingContext& context);
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
 
 private:
-  uint32_t change_from;
-  uint32_t change_to;
+  TileChangeMap change_map;
   Timer duration;
 };
 

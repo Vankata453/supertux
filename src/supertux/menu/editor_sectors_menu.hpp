@@ -19,22 +19,23 @@
 
 #include "gui/menu.hpp"
 
-class EditorSectorsMenu : public Menu
+class EditorSectorsMenu final : public Menu
 {
 public:
   EditorSectorsMenu();
   ~EditorSectorsMenu();
 
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
 
 private:
   void create_sector();
   void delete_sector();
 
-  EditorSectorsMenu(const EditorSectorsMenu&);
-  EditorSectorsMenu& operator=(const EditorSectorsMenu&);
+private:
+  EditorSectorsMenu(const EditorSectorsMenu&) = delete;
+  EditorSectorsMenu& operator=(const EditorSectorsMenu&) = delete;
 };
 
-#endif // HEADER_SUPERTUX_SUPERTUX_MENU_EDITOR_SECTORS_MENU_HPP
+#endif
 
 /* EOF */

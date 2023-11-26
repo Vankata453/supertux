@@ -16,25 +16,26 @@
 
 #include "gui/item_file.hpp"
 
-#include <stdio.h>
-
 #include "gui/menu.hpp"
 #include "gui/menu_filesystem.hpp"
 #include "gui/menu_manager.hpp"
-#include "supertux/menu/menu_storage.hpp"
 
-ItemFile::ItemFile(const std::string& text_, std::string* filename_,
-                     const std::vector<std::string>& extensions_, int _id) :
-  MenuItem(text_, _id),
-  filename(filename_),
-  extensions(extensions_)
+ItemFile::ItemFile(const std::string& text, std::string* filename,
+                   const std::vector<std::string>& extensions,
+                   const std::string& basedir,
+                   int id) :
+  MenuItem(text, id),
+  m_filename(filename),
+  m_extensions(extensions),
+  m_basedir(basedir)
 {
 }
 
 void
-ItemFile::process_action(MenuAction action) {
-  if (action == MENU_ACTION_HIT) {
-    MenuManager::instance().push_menu(std::unique_ptr<Menu>(new FileSystemMenu(filename, extensions)));
+ItemFile::process_action(const MenuAction& action)
+{
+  if (action == MenuAction::HIT) {
+    MenuManager::instance().push_menu(std::make_unique<FileSystemMenu>(m_filename, m_extensions, m_basedir));
   }
 }
 

@@ -16,17 +16,18 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "supertux/menu/language_menu.hpp"
+#include "addon/addon_manager.hpp"
 
 extern "C" {
 #include <findlocale.h>
 }
-#include "addon/addon_manager.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
-#include "supertux/menu/addon_menu.hpp"
-#include "supertux/menu/menu_storage.hpp"
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
+#include "supertux/resources.hpp"
+#include "supertux/menu/menu_storage.hpp"
+#include "util/gettext.hpp"
 
 enum {
   MNID_LANGUAGE_AUTO_DETECT = 0,
@@ -56,9 +57,9 @@ LanguageMenu::LanguageMenu()
 }
 
 void
-LanguageMenu::menu_action(MenuItem* item)
+LanguageMenu::menu_action(MenuItem& item)
 {
-  if (item->id == MNID_LANGUAGE_AUTO_DETECT) // auto detect
+  if (item.get_id() == MNID_LANGUAGE_AUTO_DETECT) // auto detect
   {
     FL_Locale *locale;
     FL_FindLocale(&locale);
@@ -70,7 +71,7 @@ LanguageMenu::menu_action(MenuItem* item)
     g_config->save();
     MenuManager::instance().clear_menu_stack();
   }
-  else if (item->id == MNID_LANGUAGE_ENGLISH) // english
+  else if (item.get_id() == MNID_LANGUAGE_ENGLISH) // english
   {
     g_config->locale = "en";
     g_dictionary_manager->set_language(tinygettext::Language::from_name(g_config->locale));
@@ -84,7 +85,7 @@ LanguageMenu::menu_action(MenuItem* item)
 
     for (auto& lang : languages)
     {
-      if (item->id == mnid++)
+      if (item.get_id() == mnid++)
       {
         g_config->locale = lang.str();
         g_dictionary_manager->set_language(lang);
@@ -93,8 +94,19 @@ LanguageMenu::menu_action(MenuItem* item)
       }
     }
   }
-  if(g_dictionary_manager->get_language().get_language() != "en")
+
+  // Reload font files
+  Resources::load();
+
+  if (g_dictionary_manager->get_language().get_language() != "en" &&
+      !AddonManager::current()->is_addon_installed("language-pack"))
+  {
     MenuManager::instance().push_menu(MenuStorage::LANGPACK_AUTO_UPDATE_MENU);
+  }
+  else
+  {
+    MenuManager::instance().clear_menu_stack();
+  }
 }
 
 /* EOF */

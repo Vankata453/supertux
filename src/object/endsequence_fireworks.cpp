@@ -17,7 +17,6 @@
 #include "object/endsequence_fireworks.hpp"
 
 #include "object/fireworks.hpp"
-#include "supertux/globals.hpp"
 #include "supertux/screen_manager.hpp"
 #include "supertux/sector.hpp"
 
@@ -41,14 +40,14 @@ EndSequenceFireworks::starting()
 {
   EndSequence::starting();
   endsequence_timer.start(7.3f * ScreenManager::current()->get_speed());
-  Sector::current()->add_object(std::make_shared<Fireworks>());
+  Sector::get().add<Fireworks>();
 }
 
 void
-EndSequenceFireworks::running(float elapsed_time)
+EndSequenceFireworks::running(float dt_sec)
 {
-  EndSequence::running(elapsed_time);
-  //Player& tux = *Sector::current()->player;
+  EndSequence::running(dt_sec);
+  //Player& tux = *Sector::get().player;
 
   if (tux_may_walk) {
     end_sequence_controller->press(Controller::JUMP);

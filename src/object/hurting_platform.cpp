@@ -18,7 +18,6 @@
 
 #include "badguy/badguy.hpp"
 #include "object/player.hpp"
-#include "supertux/object_factory.hpp"
 
 HurtingPlatform::HurtingPlatform(const ReaderMapping& reader)
   : Platform(reader, "images/objects/sawblade/sawblade.sprite")
@@ -31,7 +30,7 @@ HurtingPlatform::collision(GameObject& other, const CollisionHit& )
 {
   auto player = dynamic_cast<Player*>(&other);
   if (player) {
-    if(player->is_invincible()) {
+    if (player->is_invincible()) {
       return ABORT_MOVE;
     }
     player->kill(false);

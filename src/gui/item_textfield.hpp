@@ -19,42 +19,44 @@
 
 #include "gui/menu_item.hpp"
 
-#include "supertux/timer.hpp"
-
 class ItemTextField : public MenuItem
 {
-  public:
-    ItemTextField(const std::string& text_, std::string* input_, int id_ = -1);
+public:
+  ItemTextField(const std::string& text_, std::string* input_, int id_ = -1);
 
-    /** Draws the menu item. */
-    virtual void draw(DrawingContext&, Vector pos, int menu_width, bool active);
+  /** Draws the menu item. */
+  virtual void draw(DrawingContext&, const Vector& pos, int menu_width, bool active) override;
 
-    /** Returns the minimum width of the menu item. */
-    virtual int get_width() const;
+  /** Returns the minimum width of the menu item. */
+  virtual int get_width() const override;
 
-    /** Processes the menu action. */
-    virtual void process_action(MenuAction action);
+  /** Processes the menu action. */
+  virtual void process_action(const MenuAction& action) override;
 
-    std::string* input;
+  std::string* input;
 
-    void change_input(const std::string& input_) {
-      *input = input_;
-    }
+  void change_input(const std::string& input_) {
+    *input = input_;
+  }
 
-    /** Calls when the user wants to remove an invalid char. */
-    virtual void invalid_remove() {}
+  /** Calls when the user wants to remove an invalid char. */
+  virtual void invalid_remove() {}
 
-    /** Processes the given event. */
-    virtual void event(const SDL_Event& ev);
+  /** Processes the given event. */
+  virtual void event(const SDL_Event& ev) override;
 
-  protected:
-    int flickw;
+  virtual bool changes_width() const override {
+    return true;
+  }
 
-  private:
-    ItemTextField(const ItemTextField&);
-    ItemTextField& operator=(const ItemTextField&);
+protected:
+  int flickw;
+
+private:
+  ItemTextField(const ItemTextField&) = delete;
+  ItemTextField& operator=(const ItemTextField&) = delete;
 };
 
-#endif // HEADER_SUPERTUX_GUI_ITEM_TEXTFIELD_HPP
+#endif
 
 /* EOF */

@@ -14,43 +14,42 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "supertux/globals.hpp"
 #include "supertux/shrinkfade.hpp"
+
+#include "supertux/globals.hpp"
 #include "video/drawing_context.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 ShrinkFade::ShrinkFade(const Vector& dest_, float fade_time_) :
-  dest(dest_),
-  fade_time(fade_time_),
-  accum_time(0),
-  initial_size(SCREEN_HEIGHT > SCREEN_WIDTH ? SCREEN_HEIGHT : SCREEN_WIDTH)
-{
-}
-
-ShrinkFade::~ShrinkFade()
+  m_dest(dest_),
+  m_fade_time(fade_time_),
+  m_accum_time(0),
+  m_initial_size(static_cast<float>(SCREEN_HEIGHT > SCREEN_WIDTH ? SCREEN_HEIGHT : SCREEN_WIDTH))
 {
 }
 
 void
-ShrinkFade::update(float elapsed_time)
+ShrinkFade::update(float dt_sec)
 {
-  accum_time += elapsed_time;
-  if(accum_time > fade_time)
-    accum_time = fade_time;
+  m_accum_time += dt_sec;
+  if (m_accum_time > m_fade_time)
+    m_accum_time = m_fade_time;
 }
 
 void
 ShrinkFade::draw(DrawingContext& context)
 {
-  float progress = accum_time / fade_time;
-  float diameter = 2 * initial_size * (1.0f - progress);
-  context.draw_inverse_ellipse(dest, Vector(1.1f * diameter, diameter),
-                               Color(0, 0, 0), LAYER_GUI+1);
+  float progress = m_accum_time / m_fade_time;
+  float diameter = 2 * m_initial_size * (1.0f - progress);
+  context.color().draw_inverse_ellipse(m_dest, Vector(1.1f * diameter, diameter),
+                                         Color(0, 0, 0), LAYER_GUI + 1);
 }
 
 bool
 ShrinkFade::done() const
 {
-  return accum_time >= fade_time;
+  return m_accum_time >= m_fade_time;
 }
 
 /* EOF */

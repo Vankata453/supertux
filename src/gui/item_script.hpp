@@ -17,27 +17,22 @@
 #ifndef HEADER_SUPERTUX_GUI_ITEM_SCRIPT_HPP
 #define HEADER_SUPERTUX_GUI_ITEM_SCRIPT_HPP
 
-#include <list>
-#include <memory>
-#include <SDL.h>
-
 #include "gui/menu_item.hpp"
 
-#include "gui/menu.hpp"
-
-class ItemScript : public MenuItem
+class ItemScript final : public MenuItem
 {
-  public:
-    ItemScript(const std::string& text_, std::string* script_, int id = -1);
+public:
+  ItemScript(const std::string& text_, std::string* script_, int id = -1);
 
-    /** Processes the menu action. */
-    virtual void process_action(MenuAction action);
+  /** Processes the menu action. */
+  virtual void process_action(const MenuAction& action) override;
 
-  private:
-    std::string* script;
+private:
+  std::string* script;
 
-    ItemScript(const ItemScript&);
-    ItemScript& operator=(const ItemScript&);
+private:
+  ItemScript(const ItemScript&) = delete;
+  ItemScript& operator=(const ItemScript&) = delete;
 };
 
 #endif

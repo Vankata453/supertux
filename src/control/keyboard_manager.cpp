@@ -17,15 +17,11 @@
 
 #include "control/keyboard_manager.hpp"
 
-#include "control/controller.hpp"
 #include "control/joystick_manager.hpp"
+#include "control/input_manager.hpp"
 #include "control/keyboard_config.hpp"
 #include "gui/menu_manager.hpp"
 #include "supertux/console.hpp"
-#include "supertux/menu/joystick_menu.hpp"
-#include "supertux/menu/keyboard_menu.hpp"
-#include "supertux/menu/menu_storage.hpp"
-#include "util/writer.hpp"
 
 KeyboardManager::KeyboardManager(InputManager* parent,
                                  KeyboardConfig& keyboard_config) :
@@ -33,10 +29,6 @@ KeyboardManager::KeyboardManager(InputManager* parent,
   m_keyboard_config(keyboard_config),
   wait_for_key(-1),
   m_lock_text_input(false)
-{
-}
-
-KeyboardManager::~KeyboardManager()
 {
 }
 
@@ -82,10 +74,10 @@ KeyboardManager::process_key_event(const SDL_KeyboardEvent& event)
   {
     auto control = key_mapping->second;
     bool value = (event.type == SDL_KEYDOWN);
-    m_parent->get_controller()->set_control(control, value);
+    m_parent->get_controller().set_control(control, value);
     if (m_keyboard_config.jump_with_up_kbd && control == Controller::UP)
     {
-      m_parent->get_controller()->set_control(Controller::JUMP, value);
+      m_parent->get_controller().set_control(Controller::JUMP, value);
     }
   }
 }
@@ -94,7 +86,7 @@ void
 KeyboardManager::process_text_input_event(const SDL_TextInputEvent& event)
 {
   if (!m_lock_text_input && Console::current()->hasFocus()) {
-    for(int i = 0; event.text[i] != '\0'; ++i)
+    for (int i = 0; event.text[i] != '\0'; ++i)
     {
       Console::current()->input(event.text[i]);
     }
@@ -184,7 +176,7 @@ KeyboardManager::process_menu_key_event(const SDL_KeyboardEvent& event)
   /* we use default keys when the menu is open (to avoid problems when
    * redefining keys to invalid settings
    */
-  switch(event.keysym.sym) {
+  switch (event.keysym.sym) {
     case SDLK_UP:
       control = Controller::UP;
       break;
@@ -214,7 +206,7 @@ KeyboardManager::process_menu_key_event(const SDL_KeyboardEvent& event)
       control = Controller::REMOVE;
       break;
     default:
-      if(m_keyboard_config.keymap.count(event.keysym.sym) == 0)
+      if (m_keyboard_config.keymap.count(event.keysym.sym) == 0)
       {
         return;
       }
@@ -222,7 +214,7 @@ KeyboardManager::process_menu_key_event(const SDL_KeyboardEvent& event)
       break;
   }
 
-  m_parent->get_controller()->set_control(control, (event.type == SDL_KEYDOWN));
+  m_parent->get_controller().set_control(control, (event.type == SDL_KEYDOWN));
 }
 
 void

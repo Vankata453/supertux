@@ -19,24 +19,20 @@
 
 #include "badguy/walking_badguy.hpp"
 
-class Stumpy : public WalkingBadguy
+class Stumpy final : public WalkingBadguy
 {
 public:
   Stumpy(const ReaderMapping& reader);
   Stumpy(const Vector& pos, Direction d);
 
-  void initialize();
-  void active_update(float elapsed_time);
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit);
+  virtual void initialize() override;
+  virtual void active_update(float dt_sec) override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit) override;
 
-  bool is_freezable() const;
-  std::string get_class() const {
-    return "stumpy";
-  }
-  std::string get_display_name() const {
-    return _("Stumpy");
-  }
+  virtual bool is_freezable() const override;
+  virtual std::string get_class() const override { return "stumpy"; }
+  virtual std::string get_display_name() const override { return _("Stumpy"); }
 
 protected:
   enum MyState {
@@ -44,11 +40,15 @@ protected:
   };
 
 protected:
-  bool collision_squished(GameObject& object);
+  virtual bool collision_squished(GameObject& object) override;
 
 private:
   MyState mystate;
   Timer   invincible_timer;
+
+private:
+  Stumpy(const Stumpy&) = delete;
+  Stumpy& operator=(const Stumpy&) = delete;
 };
 
 #endif

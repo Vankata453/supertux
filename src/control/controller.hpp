@@ -39,6 +39,7 @@ public:
     REMOVE,
 
     CHEAT_MENU,
+    DEBUG_MENU,
     CONSOLE,
 
     PEEK_LEFT,
@@ -70,6 +71,10 @@ protected:
   bool controls[CONTROLCOUNT];
   /** control status at last frame */
   bool oldControls[CONTROLCOUNT];
+
+private:
+  Controller(const Controller&) = delete;
+  Controller& operator=(const Controller&) = delete;
 };
 
 #endif

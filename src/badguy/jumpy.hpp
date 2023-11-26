@@ -19,25 +19,21 @@
 
 #include "badguy/badguy.hpp"
 
-class Jumpy : public BadGuy
+class Jumpy final : public BadGuy
 {
 public:
   Jumpy(const ReaderMapping& reader);
 
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision_badguy(BadGuy& other, const CollisionHit& hit);
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_badguy(BadGuy& other, const CollisionHit& hit) override;
 
-  void active_update(float);
+  virtual void active_update(float) override;
 
-  void freeze();
-  bool is_freezable() const;
-  bool is_flammable() const;
-  std::string get_class() const {
-    return "jumpy";
-  }
-  std::string get_display_name() const {
-    return _("Jumpy");
-  }
+  virtual void freeze() override;
+  virtual bool is_freezable() const override;
+  virtual bool is_flammable() const override;
+  virtual std::string get_class() const override { return "jumpy"; }
+  virtual std::string get_display_name() const override { return _("Jumpy"); }
 
 private:
   HitResponse hit(const CollisionHit& hit);
@@ -45,6 +41,10 @@ private:
 private:
   Vector pos_groundhit;
   bool groundhit_pos_set;
+
+private:
+  Jumpy(const Jumpy&) = delete;
+  Jumpy& operator=(const Jumpy&) = delete;
 };
 
 #endif

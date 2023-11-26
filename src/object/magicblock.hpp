@@ -26,37 +26,39 @@
 
 #include "object/moving_sprite.hpp"
 
-class MagicBlock: public MovingSprite
+#include <memory>
+
+class MagicBlock final: public MovingSprite
 {
 public:
   MagicBlock(const ReaderMapping& reader);
 
-  bool collides(GameObject& other, const CollisionHit& hit) const;
-  HitResponse collision(GameObject& other, const CollisionHit& hit);
-  void update(float elapsed_time);
-  void draw(DrawingContext& context);
-  std::string get_class() const {
-    return "magicblock";
-  }
-  std::string get_display_name() const {
-    return _("Magic block");
-  }
+  virtual bool collides(GameObject& other, const CollisionHit& hit) const override;
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual std::string get_class() const override { return "magicblock"; }
+  virtual std::string get_display_name() const override { return _("Magic block"); }
 
-  virtual ObjectSettings get_settings();
-  virtual void after_editor_set();
+  virtual ObjectSettings get_settings() override;
+  virtual void after_editor_set() override;
 
 private:
-  bool is_solid;
-  float trigger_red;
-  float trigger_green;
-  float trigger_blue;
-  float solid_time;
-  float switch_delay; /**< seconds until switching solidity */
-  Rectf solid_box;
-  Color color;
-  Color light;
-  Vector center;
-  bool black;
+  bool m_is_solid;
+  float m_trigger_red;
+  float m_trigger_green;
+  float m_trigger_blue;
+  float m_solid_time;
+  float m_switch_delay; /**< seconds until switching solidity */
+  Rectf m_solid_box;
+  Color m_color;
+  std::shared_ptr<Color> m_light;
+  Vector m_center;
+  bool m_black;
+
+private:
+  MagicBlock(const MagicBlock&) = delete;
+  MagicBlock& operator=(const MagicBlock&) = delete;
 };
 
 #endif

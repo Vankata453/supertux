@@ -21,48 +21,41 @@
 
 class SoundSource;
 
-/**
- * Badguy "Dart" - Your average poison dart
- */
-class Dart : public BadGuy
+/** Badguy "Dart" - Your average poison dart */
+class Dart final : public BadGuy
 {
 public:
   Dart(const ReaderMapping& reader);
   Dart(const Vector& pos, Direction d, const BadGuy* parent);
-  ~Dart();
 
-  void initialize();
-  void activate();
-  void deactivate();
+  virtual void initialize() override;
+  virtual void activate() override;
+  virtual void deactivate() override;
 
-  void active_update(float elapsed_time);
+  virtual void active_update(float dt_sec) override;
 
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit);
-  HitResponse collision_player(Player& player, const CollisionHit& hit);
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit) override;
+  virtual HitResponse collision_player(Player& player, const CollisionHit& hit) override;
 
   virtual bool updatePointers(const GameObject* from_object, GameObject* to_object);
-  std::string get_class() const {
-    return "dart";
-  }
-  std::string get_display_name() const {
-    return _("Dart");
-  }
+  virtual std::string get_class() const override { return "dart"; }
+  virtual std::string get_display_name() const override { return _("Dart"); }
 
-  bool is_flammable() const;
+  virtual bool is_flammable() const override;
 
-  void stop_looping_sounds();
-  void play_looping_sounds();
+  virtual bool is_hurtable() const override { return false; }
 
-  void after_editor_set();
+  virtual void stop_looping_sounds() override;
+  virtual void play_looping_sounds() override;
 
 protected:
   const BadGuy* parent; /**< collisions with this BadGuy will be ignored */
   std::unique_ptr<SoundSource> sound_source; /**< SoundSource for ambient sound */
 
 private:
-  Dart(const Dart&);
-  Dart& operator=(const Dart&);
+  Dart(const Dart&) = delete;
+  Dart& operator=(const Dart&) = delete;
 };
 
 #endif

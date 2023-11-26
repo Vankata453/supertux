@@ -16,40 +16,30 @@
 
 #include "supertux/menu/editor_sector_menu.hpp"
 
-#include "gui/menu.hpp"
 #include "gui/menu_item.hpp"
-#include "gui/menu_manager.hpp"
 #include "editor/editor.hpp"
-#include "supertux/menu/menu_storage.hpp"
-#include "supertux/menu/options_menu.hpp"
 #include "supertux/level.hpp"
-#include "supertux/screen_manager.hpp"
 #include "supertux/sector.hpp"
 #include "util/gettext.hpp"
-#include "video/color.hpp"
 
 EditorSectorMenu::EditorSectorMenu() :
-  sector(Editor::current()->currentsector),
-  sector_name_ptr(sector->get_name_ptr()),
-  original_name(*sector_name_ptr),
+  sector(Editor::current()->get_sector()),
+  original_name(sector->get_name()),
   size(sector->get_editor_size()),
-  new_size(size)
+  new_size(size),
+  offset(0, 0)
 {
   add_label(_("Sector") + " " + sector->get_name());
   add_hl();
-  add_textfield(_("Name"), sector_name_ptr);
-  add_script(_("Initialization script"), sector->get_init_script_ptr());
-  add_color(_("Ambient light"), sector->get_ambient_light_ptr());
-  add_numfield(_("Gravity"), &sector->gravity);
-
-  std::vector<std::string> music_formats;
-  music_formats.push_back(".ogg");
-  music_formats.push_back(".music");
-  add_file(_("Music"), &sector->music, music_formats);
+  add_textfield(_("Name"), &sector->m_name);
+  add_script(_("Initialization script"), &sector->m_init_script);
+  add_floatfield(_("Gravity"), &sector->m_gravity);
 
   add_hl();
   add_intfield(_("Width"), &(new_size.width));
   add_intfield(_("Height"), &(new_size.height));
+  add_intfield(_("Resize offset X"), &(offset.width));
+  add_intfield(_("Resize offset Y"), &(offset.height));
   add_entry(MNID_RESIZESECTOR, _("Resize"));
 
   add_hl();
@@ -58,14 +48,18 @@ EditorSectorMenu::EditorSectorMenu() :
 
 EditorSectorMenu::~EditorSectorMenu()
 {
+  auto editor = Editor::current();
+  if (editor == nullptr) {
+    return;
+  }
   // Makes sure that the name of the sector isn't already used.
-  Level* level = Editor::current()->get_level();
+  auto level = editor->get_level();
   bool is_sector = false;
-  for(auto const& sector_ : level->sectors) {
-    if(sector_->get_name() == sector->get_name()) {
+  for (auto const& sector_ : level->m_sectors) {
+    if (sector_->get_name() == sector->get_name()) {
       if (is_sector) {
         // Puts the name that was there before when the name is already used.
-        *sector_name_ptr = original_name;
+        sector->set_name(original_name);
         break;
       } else {
         is_sector = true;
@@ -75,12 +69,12 @@ EditorSectorMenu::~EditorSectorMenu()
 }
 
 void
-EditorSectorMenu::menu_action(MenuItem* item)
+EditorSectorMenu::menu_action(MenuItem& item)
 {
-  switch (item->id) {
+  switch (item.get_id()) {
     case MNID_RESIZESECTOR:
-      if (new_size.width > 0 && new_size.height > 0) {
-        sector->resize_sector(size, new_size);
+      if (new_size.is_valid()) {
+        sector->resize_sector(size, new_size, offset);
         size = new_size;
       }
       break;

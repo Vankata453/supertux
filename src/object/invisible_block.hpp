@@ -18,29 +18,31 @@
 #define HEADER_SUPERTUX_OBJECT_INVISIBLE_BLOCK_HPP
 
 #include "object/block.hpp"
-#include "util/reader_fwd.hpp"
 
-class InvisibleBlock : public Block
+class ReaderMapping;
+
+class InvisibleBlock final : public Block
 {
 public:
   InvisibleBlock(const Vector& pos);
-  InvisibleBlock(const ReaderMapping& lisp);
-  std::string get_class() const {
-    return "invisible_block";
-  }
-  std::string get_display_name() const {
-    return _("Invisible block");
-  }
+  InvisibleBlock(const ReaderMapping& mapping);
 
-  virtual void draw(DrawingContext& context);
-  virtual bool collides(GameObject& other, const CollisionHit& hit) const;
-  virtual HitResponse collision(GameObject& other, const CollisionHit& hit);
+  virtual std::string get_class() const override { return "invisible_block"; }
+  virtual std::string get_display_name() const override { return _("Invisible block"); }
 
-protected:
-  virtual void hit(Player& player);
+  virtual void draw(DrawingContext& context) override;
+  virtual bool collides(GameObject& other, const CollisionHit& hit) const override;
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+
+private:
+  virtual void hit(Player& player) override;
 
 private:
   bool visible;
+
+private:
+  InvisibleBlock(const InvisibleBlock&) = delete;
+  InvisibleBlock& operator=(const InvisibleBlock&) = delete;
 };
 
 #endif

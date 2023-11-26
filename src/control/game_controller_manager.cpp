@@ -32,7 +32,7 @@ GameControllerManager::GameControllerManager(InputManager* parent) :
 
 GameControllerManager::~GameControllerManager()
 {
-  for(const auto& con : m_game_controllers)
+  for (const auto& con : m_game_controllers)
   {
     SDL_GameControllerClose(con);
   }
@@ -42,13 +42,13 @@ void
 GameControllerManager::process_button_event(const SDL_ControllerButtonEvent& ev)
 {
   //log_info << "button event: " << static_cast<int>(ev.button) << " " << static_cast<int>(ev.state) << std::endl;
-  auto controller = m_parent->get_controller();
-  auto set_control = [this, &controller](Controller::Control control, bool value)
+  Controller& controller = m_parent->get_controller();
+  auto set_control = [this, &controller](Controller::Control control, Uint8 value)
   {
-    m_button_state[control] = value;
-    controller->set_control(control, m_button_state[control] || m_stick_state[control]);
+    m_button_state[control] = (value != 0);
+    controller.set_control(control, m_button_state[control] == SDL_PRESSED || m_stick_state[control] == SDL_PRESSED);
   };
-  switch(ev.button)
+  switch (ev.button)
   {
     case SDL_CONTROLLER_BUTTON_A:
       set_control(Controller::JUMP, ev.state);
@@ -120,11 +120,11 @@ GameControllerManager::process_axis_event(const SDL_ControllerAxisEvent& ev)
   // to OR the values together
 
   //log_info << "axis event: " << static_cast<int>(ev.axis) << " " << ev.value << std::endl;
-  auto controller = m_parent->get_controller();
+  Controller& controller = m_parent->get_controller();
   auto set_control = [this, &controller](Controller::Control control, bool value)
   {
     m_stick_state[control] = value;
-    controller->set_control(control, m_button_state[control] || m_stick_state[control]);
+    controller.set_control(control, m_button_state[control] || m_stick_state[control]);
   };
 
   auto axis2button = [this, &set_control](int value,
@@ -147,7 +147,7 @@ GameControllerManager::process_axis_event(const SDL_ControllerAxisEvent& ev)
       }
     };
 
-  switch(ev.axis)
+  switch (ev.axis)
   {
     case SDL_CONTROLLER_AXIS_LEFTX:
       axis2button(ev.value, Controller::LEFT, Controller::RIGHT);
@@ -201,7 +201,7 @@ GameControllerManager::on_controller_added(int joystick_index)
 void
 GameControllerManager::on_controller_removed(int instance_id)
 {
-  for(auto& controller : m_game_controllers)
+  for (auto& controller : m_game_controllers)
   {
     auto joy = SDL_GameControllerGetJoystick(controller);
     SDL_JoystickID id = SDL_JoystickInstanceID(joy);

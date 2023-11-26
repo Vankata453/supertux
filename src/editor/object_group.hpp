@@ -22,22 +22,29 @@
 
 #include "editor/object_icon.hpp"
 
-#include "util/reader_fwd.hpp"
+class ReaderMapping;
 
-class ObjectGroup
+class ObjectGroup final
 {
-  public:
-    ObjectGroup();
-    ObjectGroup(const ReaderMapping& reader);
-    ~ObjectGroup();
+public:
+  ObjectGroup();
+  ObjectGroup(const ReaderMapping& reader);
 
-    std::string name;
-    std::vector<ObjectIcon> icons;
-    bool for_worldmap;
+  void add_icon(const std::string& object, const std::string& icon_path);
 
-    void add_icon(const std::string& object, const std::string& icon_path);
+  std::string get_name() const { return m_name; }
+
+  bool is_worldmap() const { return m_for_worldmap;  }
+
+  const std::vector<ObjectIcon>& get_icons() const { return m_icons; }
+  std::vector<ObjectIcon>& get_icons() { return m_icons; }
+
+private:
+  std::string m_name;
+  std::vector<ObjectIcon> m_icons;
+  bool m_for_worldmap;
 };
 
-#endif // HEADER_SUPERTUX_EDITOR_OBJECT_GROUP_HPP
+#endif
 
 /* EOF */

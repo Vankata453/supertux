@@ -18,33 +18,27 @@
 #ifndef HEADER_SUPERTUX_BADGUY_YETI_HPP
 #define HEADER_SUPERTUX_BADGUY_YETI_HPP
 
-#include <memory>
-
 #include "badguy/badguy.hpp"
 
-class Yeti : public BadGuy
+class Yeti final : public BadGuy
 {
 public:
-  Yeti(const ReaderMapping& lisp);
-  ~Yeti();
+  Yeti(const ReaderMapping& mapping);
 
-  void draw(DrawingContext& context);
-  void initialize();
-  void active_update(float elapsed_time);
-  void collision_solid(const CollisionHit& hit);
-  bool collision_squished(GameObject& object);
+  virtual void draw(DrawingContext& context) override;
+  virtual void initialize() override;
+  virtual void active_update(float dt_sec) override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual bool collision_squished(GameObject& object) override;
+  virtual void kill_fall() override;
+
+  virtual bool is_flammable() const override;
+  virtual std::string get_class() const override { return "yeti"; }
+  virtual std::string get_display_name() const override { return _("Yeti"); }
+
+  virtual ObjectSettings get_settings() override;
+
   void kill_squished(GameObject& object);
-  void kill_fall();
-
-  bool is_flammable() const;
-  std::string get_class() const {
-    return "yeti";
-  }
-  std::string get_display_name() const {
-    return _("Yeti");
-  }
-
-  virtual ObjectSettings get_settings();
 
 private:
   void run();
@@ -57,13 +51,16 @@ private:
 
   void take_hit(Player& player);
 
+  void add_snow_explosions();
+
 private:
   enum YetiState {
     JUMP_DOWN,
     RUN,
     JUMP_UP,
     BE_ANGRY,
-    SQUISHED
+    SQUISHED,
+    FALLING
   };
 
 private:
@@ -83,6 +80,16 @@ private:
 
   bool fixed_pos;
   std::string hud_icon;
+
+  class SnowExplosionParticle: public BadGuy
+  {
+  public:
+    SnowExplosionParticle(const Vector& pos, const Vector& velocity);
+  };
+
+private:
+  Yeti(const Yeti&) = delete;
+  Yeti& operator=(const Yeti&) = delete;
 };
 
 #endif

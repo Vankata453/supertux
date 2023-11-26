@@ -19,21 +19,21 @@
 
 #ifndef SCRIPTING_API
 #include <string>
+#include "scripting/game_object.hpp"
 
 class TextObject;
 #endif
 
 namespace scripting {
 
-class Text
+class Text final
+#ifndef SCRIPTING_API
+  : public GameObject<::TextObject>
+#endif
 {
 #ifndef SCRIPTING_API
-private:
-  ::TextObject* m_parent;
-
 public:
-  Text(::TextObject* parent);
-  ~Text();
+  using GameObject::GameObject;
 
 private:
   Text(const Text&) = delete;
@@ -54,7 +54,7 @@ public:
   int  get_anchor_point() const;
 };
 
-}
+} // namespace scripting
 
 #endif
 

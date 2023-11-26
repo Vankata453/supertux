@@ -25,42 +25,39 @@ class MrIceBlock : public WalkingBadguy,
 {
 public:
   MrIceBlock(const ReaderMapping& reader);
-  MrIceBlock(const Vector& pos, Direction d);
 
-  void initialize();
-  HitResponse collision(GameObject& object, const CollisionHit& hit);
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit);
-  HitResponse collision_player(Player& player, const CollisionHit& hit);
+  virtual void initialize() override;
+  virtual HitResponse collision(GameObject& object, const CollisionHit& hit) override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit) override;
+  virtual HitResponse collision_player(Player& player, const CollisionHit& hit) override;
 
-  void active_update(float elapsed_time);
+  virtual void active_update(float dt_sec) override;
 
-  void grab(MovingObject& object, const Vector& pos, Direction dir);
-  void ungrab(MovingObject& object, Direction dir);
-  bool is_portable() const;
+  virtual void grab(MovingObject& object, const Vector& pos, Direction dir) override;
+  virtual void ungrab(MovingObject& object, Direction dir) override;
+  virtual bool is_portable() const override;
 
-  bool can_break() const;
+  virtual bool can_break() const override;
 
-  void ignite();
+  virtual void ignite() override;
+
+  virtual std::string get_class() const override { return "mriceblock"; }
+  virtual std::string get_display_name() const override { return _("Mr. Ice Block"); }
+
   bool can_break();
-
-  std::string get_class() const {
-    return "mriceblock";
-  }
-  std::string get_display_name() const {
-    return _("Mr. Ice Block");
-  }
 
 protected:
   enum IceState {
     ICESTATE_NORMAL,
     ICESTATE_FLAT,
     ICESTATE_GRABBED,
-    ICESTATE_KICKED
+    ICESTATE_KICKED,
+    ICESTATE_WAKING
   };
 
 protected:
-  bool collision_squished(GameObject& object);
+  virtual bool collision_squished(GameObject& object) override;
   void set_state(IceState state, bool up = false);
 
 private:
@@ -68,22 +65,10 @@ private:
   Timer nokick_timer;
   Timer flat_timer;
   int squishcount;
-};
 
-class SmartBlock : public MrIceBlock
-{
-public:
-  SmartBlock(const ReaderMapping& reader);
-
-  virtual std::string get_water_sprite() const {
-    return "images/objects/water_drop/pink_drop.sprite";
-  }
-  std::string get_class() const {
-    return "smartblock";
-  }
-  std::string get_display_name() const {
-    return _("Smart Block");
-  }
+private:
+  MrIceBlock(const MrIceBlock&) = delete;
+  MrIceBlock& operator=(const MrIceBlock&) = delete;
 };
 
 #endif

@@ -22,36 +22,34 @@
 class GhostTree;
 class SoundSource;
 
-class TreeWillOWisp : public BadGuy
+class TreeWillOWisp final : public BadGuy
 {
 public:
   TreeWillOWisp(GhostTree* tree, const Vector& pos, float radius, float speed);
   virtual ~TreeWillOWisp();
 
-  void activate();
+  virtual void activate() override;
+  virtual void active_update(float dt_sec) override;
 
-  /**
-   * make TreeWillOWisp vanish
-   */
+  virtual bool is_flammable() const override { return false; }
+  virtual bool is_freezable() const override { return false; }
+  virtual void kill_fall() override { vanish(); }
+
+  virtual void draw(DrawingContext& context) override;
+
+  virtual void stop_looping_sounds() override;
+  virtual void play_looping_sounds() override;
+
+  /** make TreeWillOWisp vanish */
   void vanish();
   void start_sucking(const Vector& suck_target);
 
-  void active_update(float elapsed_time);
   void set_color(const Color& color);
   Color get_color() const;
 
-  virtual bool is_flammable() const { return false; }
-  virtual bool is_freezable() const { return false; }
-  virtual void kill_fall() { vanish(); }
-
-  virtual void draw(DrawingContext& context);
-
-  virtual void stop_looping_sounds();
-  virtual void play_looping_sounds();
-
 protected:
-  virtual bool collides(GameObject& other, const CollisionHit& hit) const;
-  HitResponse collision_player(Player& player, const CollisionHit& hit);
+  virtual bool collides(GameObject& other, const CollisionHit& hit) const override;
+  virtual HitResponse collision_player(Player& player, const CollisionHit& hit) override;
 
 private:
   enum MyState {
@@ -75,8 +73,8 @@ private:
   Vector suck_target;
 
 private:
-  TreeWillOWisp(const TreeWillOWisp&);
-  TreeWillOWisp& operator=(const TreeWillOWisp&);
+  TreeWillOWisp(const TreeWillOWisp&) = delete;
+  TreeWillOWisp& operator=(const TreeWillOWisp&) = delete;
 };
 
 #endif

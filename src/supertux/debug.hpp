@@ -1,0 +1,54 @@
+//  SuperTux
+//  Copyright (C) 2018 Ingo Ruhnke <grumbel@gmail.com>
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#ifndef HEADER_SUPERTUX_SUPERTUX_DEBUG_HPP
+#define HEADER_SUPERTUX_SUPERTUX_DEBUG_HPP
+
+class Debug
+{
+public:
+  Debug();
+
+  void set_use_bitmap_fonts(bool value);
+  bool get_use_bitmap_fonts() const;
+
+  void set_game_speed_multiplier(float v);
+  float get_game_speed_multiplier() const;
+
+public:
+  /** Show collision rectangles of moving objects */
+  bool show_collision_rects;
+
+  /** Draw the path on the worldmap, including invisible paths */
+  bool show_worldmap_path;
+
+private:
+  /** Use old bitmap fonts instead of TTF */
+  bool m_use_bitmap_fonts;
+
+  /** Speed up or slow down the game */
+  float m_game_speed_multiplier;
+
+private:
+  Debug(const Debug&) = delete;
+  Debug& operator=(const Debug&) = delete;
+};
+
+extern Debug g_debug;
+
+#endif
+
+/* EOF */

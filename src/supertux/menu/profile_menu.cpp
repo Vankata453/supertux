@@ -29,7 +29,7 @@ ProfileMenu::ProfileMenu()
 {
   add_label(_("Select Profile"));
   add_hl();
-  for(int i = 1; i <= 5; ++i)
+  for (int i = 1; i <= 5; ++i)
   {
     std::ostringstream out;
     if (i == g_config->profile)
@@ -48,9 +48,9 @@ ProfileMenu::ProfileMenu()
 }
 
 void
-ProfileMenu::menu_action(MenuItem* item)
+ProfileMenu::menu_action(MenuItem& item)
 {
-  g_config->profile = item->id;
+  g_config->profile = item.get_id();
   g_run_timer = -1.f; // Reset RTA run timer
   MenuManager::instance().clear_menu_stack();
 }

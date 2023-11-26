@@ -19,23 +19,19 @@
 
 #include "badguy/badguy.hpp"
 
-class AngryStone : public BadGuy
+class AngryStone final : public BadGuy
 {
 public:
   AngryStone(const ReaderMapping& reader);
 
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit);
-  void active_update(float elapsed_time);
-  void kill_fall();
-  bool is_freezable() const;
-  bool is_flammable() const;
-  std::string get_class() const {
-    return "angrystone";
-  }
-  std::string get_display_name() const {
-    return _("Angry stone");
-  }
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit) override;
+  virtual void active_update(float dt_sec) override;
+  virtual void kill_fall() override;
+  virtual bool is_freezable() const override;
+  virtual bool is_flammable() const override;
+  virtual std::string get_class() const override { return "angrystone"; }
+  virtual std::string get_display_name() const override { return _("Angry stone"); }
 
 protected:
   enum AngryStoneState {
@@ -50,6 +46,10 @@ private:
   Vector oldWallDirection; /**< if wall was hit during last attack: 1-normalized vector of last attack direction, (0,0) otherwise */
   Timer timer;
   AngryStoneState state;
+
+private:
+  AngryStone(const AngryStone&) = delete;
+  AngryStone& operator=(const AngryStone&) = delete;
 };
 
 #endif

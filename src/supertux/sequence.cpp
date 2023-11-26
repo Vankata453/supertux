@@ -14,8 +14,6 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <string>
-
 #include "supertux/sequence.hpp"
 #include "util/log.hpp"
 
@@ -40,7 +38,7 @@ std::string sequence_to_string(const Sequence& seq) {
     case SEQ_FIREWORKS:
       return "fireworks";
     default:
-      return "unknown sequence " + std::to_string( (int)seq );
+      return "unknown sequence " + std::to_string( static_cast<int>(seq) );
   }
 }
 

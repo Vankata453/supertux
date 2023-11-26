@@ -19,19 +19,19 @@
 
 #include "gui/menu.hpp"
 
-class EditorObjectgroupMenu : public Menu
+class EditorObjectgroupMenu final : public Menu
 {
 public:
   EditorObjectgroupMenu();
   ~EditorObjectgroupMenu();
 
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
 
 private:
-  EditorObjectgroupMenu(const EditorObjectgroupMenu&);
-  EditorObjectgroupMenu& operator=(const EditorObjectgroupMenu&);
+  EditorObjectgroupMenu(const EditorObjectgroupMenu&) = delete;
+  EditorObjectgroupMenu& operator=(const EditorObjectgroupMenu&) = delete;
 };
 
-#endif // HEADER_SUPERTUX_SUPERTUX_MENU_EDITOR_OBJECTGROUP_MENU_HPP
+#endif
 
 /* EOF */

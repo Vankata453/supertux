@@ -17,25 +17,21 @@
 #ifndef HEADER_SUPERTUX_GUI_ITEM_GOTO_HPP
 #define HEADER_SUPERTUX_GUI_ITEM_GOTO_HPP
 
-#include <list>
-#include <memory>
-#include <SDL.h>
-
 #include "gui/menu_item.hpp"
 
-class ItemGoTo : public MenuItem
+class ItemGoTo final : public MenuItem
 {
-  public:
-    ItemGoTo(const std::string& text_, int target_menu_, int id = -1);
+public:
+  ItemGoTo(const std::string& text_, int target_menu_, int id = -1);
 
-    /** Processes the menu action. */
-    virtual void process_action(MenuAction action);
+  /** Processes the menu action. */
+  virtual void process_action(const MenuAction& action) override;
 
-    int target_menu;
+  int target_menu;
 
-  private:
-    ItemGoTo(const ItemGoTo&);
-    ItemGoTo& operator=(const ItemGoTo&);
+private:
+  ItemGoTo(const ItemGoTo&) = delete;
+  ItemGoTo& operator=(const ItemGoTo&) = delete;
 };
 
 #endif

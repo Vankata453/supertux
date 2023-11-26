@@ -17,65 +17,58 @@
 #ifndef HEADER_SUPERTUX_OBJECT_GRADIENT_HPP
 #define HEADER_SUPERTUX_OBJECT_GRADIENT_HPP
 
-#include "scripting/exposed_object.hpp"
+#include "squirrel/exposed_object.hpp"
 #include "scripting/gradient.hpp"
 #include "supertux/game_object.hpp"
 #include "video/drawing_context.hpp"
 
 class ReaderMapping;
 
-class Gradient : public GameObject,
-                 public ExposedObject<Gradient, scripting::Gradient>
+class Gradient final :
+  public GameObject,
+  public ExposedObject<Gradient, scripting::Gradient>
 {
 public:
   Gradient();
   Gradient(const ReaderMapping& reader);
   virtual ~Gradient();
-  virtual bool do_save() const;
-  virtual void save(Writer& writer);
 
-  void set_gradient(Color top, Color bottom);
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
 
-  Color get_gradient_top() const
-  { return gradient_top; }
+  virtual bool is_saveable() const override;
 
-  Color get_gradient_bottom() const
-  { return gradient_bottom; }
+  virtual std::string get_class() const override { return "gradient"; }
+  virtual std::string get_display_name() const override { return _("Gradient"); }
 
-  GradientDirection get_direction() const
-  { return gradient_direction; }
-
-  void set_direction(const GradientDirection& direction);
-
-  virtual void update(float elapsed_time);
-
-  virtual void draw(DrawingContext& context);
-
-  std::string get_class() const {
-    return "gradient";
-  }
-
-  std::string get_display_name() const {
-    return _("Gradient");
-  }
-
-  int get_layer() const
-  { return layer; }
-
-  virtual ObjectSettings get_settings();
-
-  virtual const std::string get_icon_path() const {
+  virtual const std::string get_icon_path() const override {
     return "images/engine/editor/gradient.png";
   }
 
+  virtual ObjectSettings get_settings() override;
+
+  void set_gradient(Color top, Color bottom);
+  Color get_gradient_top() const { return m_gradient_top; }
+  Color get_gradient_bottom() const { return m_gradient_bottom; }
+
+  GradientDirection get_direction() const { return m_gradient_direction; }
+  void set_direction(const GradientDirection& direction);
+
+  int get_layer() const { return m_layer; }
+
 private:
-  int layer;
-  Color gradient_top;
-  Color gradient_bottom;
-  GradientDirection gradient_direction;
-  Rectf gradient_region;
+  int m_layer;
+  Color m_gradient_top;
+  Color m_gradient_bottom;
+  GradientDirection m_gradient_direction;
+  Blend m_blend;
+  DrawingTarget m_target;
+
+private:
+  Gradient(const Gradient&) = delete;
+  Gradient& operator=(const Gradient&) = delete;
 };
 
-#endif /*SUPERTUX_BACKGROUND_H*/
+#endif
 
 /* EOF */

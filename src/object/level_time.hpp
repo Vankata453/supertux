@@ -17,9 +17,7 @@
 #ifndef HEADER_SUPERTUX_OBJECT_LEVEL_TIME_HPP
 #define HEADER_SUPERTUX_OBJECT_LEVEL_TIME_HPP
 
-#include <memory>
-
-#include "scripting/exposed_object.hpp"
+#include "squirrel/exposed_object.hpp"
 #include "scripting/level_time.hpp"
 #include "supertux/game_object.hpp"
 #include "video/color.hpp"
@@ -27,61 +25,47 @@
 
 class ReaderMapping;
 
-class LevelTime : public GameObject,
-                  public ExposedObject<LevelTime, scripting::LevelTime>
+class LevelTime final : public GameObject,
+                        public ExposedObject<LevelTime, scripting::LevelTime>
 {
   static Color text_color;
 public:
   LevelTime(const ReaderMapping& reader);
 
-  void update(float elapsed_time);
-  void draw(DrawingContext& context);
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
 
-  /**
-   * @name Scriptable Methods
-   * @{
-   */
+  /** @name Scriptable Methods
+      @{ */
 
-  /**
-   * Resumes the countdown
-   */
+  /** Resumes the countdown */
   void start();
 
-  /**
-   * Pauses the countdown
-   */
+  /** Pauses the countdown */
   void stop();
 
-  /**
-   * Returns the number of seconds left on the clock
-   */
+  /** Returns the number of seconds left on the clock */
   float get_time() const;
 
-  /**
-   * Changes the number of seconds left on the clock
-   */
+  /** Changes the number of seconds left on the clock */
   void set_time(float time_left);
 
-  /**
-   * @}
-   */
-  std::string get_class() const {
-    return "leveltime";
-  }
-  std::string get_display_name() const {
-    return _("Level time");
-  }
+  /** @} */
+  virtual std::string get_class() const override { return "leveltime"; }
+  virtual std::string get_display_name() const override { return _("Level time"); }
 
-  virtual ObjectSettings get_settings();
+  virtual ObjectSettings get_settings() override;
 
-  virtual const std::string get_icon_path() const {
-    return "images/engine/editor/clock.png";
-  }
+  virtual const std::string get_icon_path() const override { return "images/engine/editor/clock.png"; }
 
 private:
   SurfacePtr time_surface;
   bool running;
   float time_left;
+
+private:
+  LevelTime(const LevelTime&) = delete;
+  LevelTime& operator=(const LevelTime&) = delete;
 };
 
 #endif

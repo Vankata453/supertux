@@ -18,12 +18,19 @@
 #include "supertux/resources.hpp"
 
 #include "gui/mousecursor.hpp"
+#include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
-#include "supertux/player_status.hpp"
+#include "supertux/debug.hpp"
+#include "supertux/gameconfig.hpp"
+#include "supertux/globals.hpp"
+#include "video/bitmap_font.hpp"
 #include "video/font.hpp"
+#include "video/surface.hpp"
+#include "video/ttf_font.hpp"
 
 std::unique_ptr<MouseCursor> Resources::mouse_cursor;
 
+FontPtr Resources::console_font;
 FontPtr Resources::fixed_font;
 FontPtr Resources::normal_font;
 FontPtr Resources::small_font;
@@ -34,32 +41,66 @@ SurfacePtr Resources::checkbox_checked;
 SurfacePtr Resources::back;
 SurfacePtr Resources::arrow_left;
 SurfacePtr Resources::arrow_right;
+SurfacePtr Resources::no_tile;
 
-Resources::Resources()
+std::string Resources::current_font;
+
+void
+Resources::load()
 {
   // Load the mouse-cursor
-  mouse_cursor.reset(new MouseCursor("images/engine/menu/mousecursor.png",
-                                     "images/engine/menu/mousecursor-click.png",
-                                     "images/engine/menu/mousecursor-link.png"));
+  mouse_cursor.reset(new MouseCursor(SpriteManager::current()->create("images/engine/menu/mousecursor.sprite")));
   MouseCursor::set_current(mouse_cursor.get());
 
-  // Load global images:
-  fixed_font.reset(new Font(Font::FIXED, "fonts/white.stf"));
-  normal_font.reset(new Font(Font::VARIABLE, "fonts/white.stf"));
-  small_font.reset(new Font(Font::VARIABLE, "fonts/white-small.stf", 1));
-  big_font.reset(new Font(Font::VARIABLE, "fonts/white-big.stf", 3));
+  if (g_debug.get_use_bitmap_fonts())
+  {
+    console_font.reset(new BitmapFont(BitmapFont::FIXED, "fonts/andale12.stf", 1));
+    fixed_font.reset(new BitmapFont(BitmapFont::FIXED, "fonts/white.stf"));
+    normal_font.reset(new BitmapFont(BitmapFont::VARIABLE, "fonts/white.stf"));
+    small_font.reset(new BitmapFont(BitmapFont::VARIABLE, "fonts/white-small.stf", 1));
+    big_font.reset(new BitmapFont(BitmapFont::VARIABLE, "fonts/white-big.stf", 3));
+  }
+  else
+  {
+    console_font.reset(new TTFFont("fonts/SuperTux-Medium.ttf", 12, 1.25f, 0, 1));
+
+    auto font = get_font_for_locale(g_config->locale);
+    if(font != current_font)
+    {
+      current_font = font;
+      fixed_font.reset(new TTFFont(font, 18, 1.25f, 2, 1));
+      normal_font = fixed_font;
+      small_font.reset(new TTFFont(font, 10, 1.25f, 2, 1));
+      big_font.reset(new TTFFont(font, 22, 1.25f, 2, 1));
+    }
+  }
 
   /* Load menu images */
-  checkbox = Surface::create("images/engine/menu/checkbox-unchecked.png");
-  checkbox_checked = Surface::create("images/engine/menu/checkbox-checked.png");
-  back = Surface::create("images/engine/menu/arrow-back.png");
-  arrow_left = Surface::create("images/engine/menu/arrow-left.png");
-  arrow_right = Surface::create("images/engine/menu/arrow-right.png");
+  checkbox = Surface::from_file("images/engine/menu/checkbox-unchecked.png");
+  checkbox_checked = Surface::from_file("images/engine/menu/checkbox-checked.png");
+  back = Surface::from_file("images/engine/menu/arrow-back.png");
+  arrow_left = Surface::from_file("images/engine/menu/arrow-left.png");
+  arrow_right = Surface::from_file("images/engine/menu/arrow-right.png");
+  no_tile = Surface::from_file("images/tiles/auxiliary/notile.png");
 }
 
-Resources::~Resources()
+std::string
+Resources::get_font_for_locale(const std::string& locale)
+{
+  if(locale == "ne")
+    return "fonts/NotoSansDevanagari-Medium.ttf";
+  if(locale == "cmn" || locale == "ja" || locale == "zh_CN" || locale == "zh_TW")
+    return "fonts/NotoSansCJKjp-Medium.otf";
+  if(locale == "he")
+    return "fonts/NotoSansHebrew-Medium.ttf";
+  return "fonts/SuperTux-Medium.ttf";
+}
+
+void
+Resources::unload()
 {
   // Free menu images
+  no_tile.reset();
   checkbox.reset();
   checkbox_checked.reset();
   back.reset();
@@ -67,12 +108,23 @@ Resources::~Resources()
   arrow_right.reset();
 
   // Free global images:
+  console_font.reset();
   fixed_font.reset();
   normal_font.reset();
   small_font.reset();
   big_font.reset();
 
   mouse_cursor.reset();
+}
+
+Resources::Resources()
+{
+  load();
+}
+
+Resources::~Resources()
+{
+  unload();
 }
 
 /* EOF */

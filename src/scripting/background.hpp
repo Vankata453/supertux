@@ -19,20 +19,22 @@
 
 #ifndef SCRIPTING_API
 #include <string>
+
+#include "scripting/game_object.hpp"
+
 class Background;
 #endif
 
 namespace scripting {
 
-class Background
+class Background final
+#ifndef SCRIPTING_API
+  : public GameObject<::Background>
+#endif
 {
 #ifndef SCRIPTING_API
-private:
-  ::Background* m_parent;
-
 public:
-  Background(::Background* parent);
-  ~Background();
+  using GameObject::GameObject;
 
 private:
   Background(const Background&) = delete;
@@ -46,7 +48,7 @@ public:
   void set_speed(float speed);
 };
 
-}
+} // namespace scripting
 
 #endif
 

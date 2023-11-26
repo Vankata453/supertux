@@ -20,20 +20,21 @@
 #ifndef SCRIPTING_API
 #include <string>
 
+#include "scripting/game_object.hpp"
+
 class Player;
 #endif
 
 namespace scripting {
 
-class Player
+class Player final
+#ifndef SCRIPTING_API
+  : public GameObject<::Player>
+#endif
 {
 #ifndef SCRIPTING_API
-private:
-  ::Player* m_parent;
-
 public:
-  Player(::Player* parent);
-  ~Player();
+  using GameObject::GameObject;
 
 private:
   Player(const Player&) = delete;
@@ -53,8 +54,16 @@ public:
   bool set_bonus(const std::string& bonus);
   /**
    * Give tux more coins
+   *
+   * If count is a negative amount of coins, that number of coins will be taken
+   * from the player (until the number of coins the player has is 0, when it
+   * will stop changing).
    */
   void add_coins(int count);
+  /**
+   * Returns the number of coins the player currently has.
+   */
+  int get_coins() const;
   /**
    * Make tux invincible for a short amount of time
    */
@@ -146,13 +155,18 @@ public:
   void use_scripting_controller(bool use_or_release);
 
   /**
+   * Check whether player is carrying a certain object
+   * @param name Name of the Portable object to check for
+   */
+   bool has_grabbed(const std::string& name) const;
+
+  /**
    * Instructs the scriptable controller to press or release a button
    */
   void do_scripting_controller(const std::string& control, bool pressed);
 
   float get_velocity_x() const;
   float get_velocity_y() const;
-
 };
 
 } // namespace scripting

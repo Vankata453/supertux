@@ -19,44 +19,61 @@
 
 #include "object/moving_sprite.hpp"
 
-/**
- * Used to construct a pair of pneumatic platforms: If one is pushed down, the other one rises
- */
-class PneumaticPlatform : public MovingSprite
+class PneumaticPlatform;
+
+class PneumaticPlatformChild final : public MovingSprite
 {
+  friend class PneumaticPlatform;
+
 public:
-  PneumaticPlatform(const ReaderMapping& reader);
-  PneumaticPlatform(PneumaticPlatform* master);
-  virtual ~PneumaticPlatform();
+  PneumaticPlatformChild(const ReaderMapping& reader, bool left, PneumaticPlatform& parent);
+  virtual ~PneumaticPlatformChild();
 
-  virtual HitResponse collision(GameObject& other, const CollisionHit& hit);
-  virtual void update(float elapsed_time);
-  std::string get_class() const {
-    return "pneumatic-platform";
-  }
-  std::string get_display_name() const {
-    return _("Pneumatic platform");
-  }
-
-  bool do_save() const {
-    return this == master;
-  }
-
-  void move_to(const Vector& pos);
-  void editor_delete();
-  void after_editor_set();
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual void update(float dt_sec) override;
+  virtual bool is_saveable() const override { return false; }
 
 protected:
-  PneumaticPlatform* master; /**< pointer to PneumaticPlatform that does movement calculation */
-  PneumaticPlatform* slave; /**< pointer to PneumaticPlatform that reacts to master platform's movement calculation */
-  float start_y; /**< vertical start position */
-  float offset_y; /**< vertical offset from the start position in px */
-  float speed_y; /**< vertical speed */
-  std::set<GameObject*> contacts; /**< objects that are currently pushing on the platform */
+  PneumaticPlatform& m_parent;
+  bool m_left;
+  std::set<GameObject*> m_contacts; /**< objects that are currently pushing on the platform */
 
 private:
-  PneumaticPlatform(const PneumaticPlatform&);
-  PneumaticPlatform& operator=(const PneumaticPlatform&);
+  PneumaticPlatformChild(const PneumaticPlatformChild&) = delete;
+  PneumaticPlatformChild& operator=(const PneumaticPlatformChild&) = delete;
+};
+
+/** Used to construct a pair of pneumatic platforms: If one is pushed
+    down, the other one rises */
+class PneumaticPlatform final : public GameObject
+{
+  friend class PneumaticPlatformChild;
+
+public:
+  PneumaticPlatform(const ReaderMapping& mapping);
+  virtual ~PneumaticPlatform();
+
+  virtual void draw(DrawingContext& context) override;
+  virtual void update(float dt_sec) override;
+
+  virtual std::string get_class() const override { return "pneumatic-platform"; }
+  virtual std::string get_display_name() const override { return _("Pneumatic platform"); }
+
+  virtual ObjectSettings get_settings() override;
+  virtual void after_editor_set() override;
+  virtual void editor_delete() override;
+
+private:
+  Vector m_pos;
+  std::string m_sprite_name;
+  float m_start_y; /**< vertical start position */
+  float m_speed_y; /**< vertical speed */
+  float m_offset_y; /**< vertical offset from the start position in px */
+  std::vector<PneumaticPlatformChild*> m_children;
+
+private:
+  PneumaticPlatform(const PneumaticPlatform&) = delete;
+  PneumaticPlatform& operator=(const PneumaticPlatform&) = delete;
 };
 
 #endif

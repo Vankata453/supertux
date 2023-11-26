@@ -17,21 +17,21 @@
 #ifndef HEADER_SUPERTUX_OBJECT_FLOATING_IMAGE_HPP
 #define HEADER_SUPERTUX_OBJECT_FLOATING_IMAGE_HPP
 
-#include "object/anchor_point.hpp"
+#include "math/anchor_point.hpp"
 #include "sprite/sprite_ptr.hpp"
 #include "supertux/game_object.hpp"
 
-class FloatingImage : public GameObject
+class FloatingImage final : public GameObject
 {
 public:
   FloatingImage(const std::string& sprite);
   virtual ~FloatingImage();
-  virtual bool do_save() const {
+  virtual bool is_saveable() const override {
     return false;
   }
 
   void set_layer(int layer_) {
-    this->layer = layer_;
+    layer = layer_;
   }
 
   int get_layer() const {
@@ -39,21 +39,21 @@ public:
   }
 
   void set_pos(const Vector& pos_) {
-    this->pos = pos_;
+    pos = pos_;
   }
   const Vector& get_pos() const {
     return pos;
   }
 
   void set_anchor_point(AnchorPoint anchor_) {
-    this->anchor = anchor_;
+    anchor = anchor_;
   }
   AnchorPoint get_anchor_point() const {
     return anchor;
   }
 
   void set_visible(bool visible_) {
-    this->visible = visible_;
+    visible = visible_;
   }
   bool get_visible() const {
     return visible;
@@ -65,8 +65,8 @@ public:
   void fade_in(float fadetime);
   void fade_out(float fadetime);
 
-  void update(float elapsed_time);
-  void draw(DrawingContext& context);
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
 
 private:
   SpritePtr sprite;

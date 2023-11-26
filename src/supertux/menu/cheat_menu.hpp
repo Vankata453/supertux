@@ -19,7 +19,7 @@
 
 #include "gui/menu.hpp"
 
-class CheatMenu : public Menu
+class CheatMenu final : public Menu
 {
 private:
   enum MenuIDs {
@@ -38,7 +38,7 @@ private:
 public:
   CheatMenu();
 
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
 
 private:
   CheatMenu(const CheatMenu&) = delete;

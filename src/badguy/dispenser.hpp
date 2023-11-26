@@ -18,72 +18,77 @@
 #define HEADER_SUPERTUX_BADGUY_DISPENSER_HPP
 
 #include "badguy/badguy.hpp"
+#include "scripting/dispenser.hpp"
+#include "squirrel/exposed_object.hpp"
 
-class Dispenser : public BadGuy
+class Dispenser final : public BadGuy,
+                        public ExposedObject<Dispenser, scripting::Dispenser>
 {
+private:
+  enum class DispenserType {
+    DROPPER, ROCKETLAUNCHER, CANNON, POINT
+  };
+
+  static DispenserType DispenserType_from_string(const std::string& type_string);
+  static std::string DispenserType_to_string(DispenserType type);
+
 public:
   Dispenser(const ReaderMapping& reader);
 
-  void draw(DrawingContext& context);
-  void activate();
-  void deactivate();
-  void active_update(float elapsed_time);
+  virtual void draw(DrawingContext& context) override;
+  virtual void activate() override;
+  virtual void deactivate() override;
+  virtual void active_update(float dt_sec) override;
 
-  void freeze();
-  void unfreeze();
-  bool is_freezable() const;
-  bool is_flammable() const;
-  std::string get_class() const {
-    return "dispenser";
-  }
-  std::string get_display_name() const {
-    return _("Dispenser");
-  }
-  std::string get_type_string() const {
-    switch(type) {
-    case DT_DROPPER:
-      return "dropper";
-    case DT_ROCKETLAUNCHER:
-      return "rocketlauncher";
-    case DT_CANNON:
-      return "cannon";
-    case DT_POINT:
-      return "point";
-    default:
-      return "unknown";
+  virtual void freeze() override;
+  virtual void unfreeze() override;
+  virtual bool is_freezable() const override;
+  virtual bool is_flammable() const override;
+  virtual std::string get_class() const override { return "dispenser"; }
+  virtual std::string get_display_name() const override { return _("Dispenser"); }
+
+  virtual ObjectSettings get_settings() override;
+  virtual void after_editor_set() override;
+
+  void notify_dead() {
+    if (m_limit_dispensed_badguys) {
+      m_current_badguys--;
     }
   }
 
-  ObjectSettings get_settings();
-  void after_editor_set();
-
 protected:
-  bool collision_squished(GameObject& object);
-  HitResponse collision(GameObject& other, const CollisionHit& hit);
+  virtual bool collision_squished(GameObject& object) override;
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
   void launch_badguy();
 
 private:
-
   void set_correct_action();
 
-  /** CollisionGroup the badguy should be in while active */
-  CollisionGroup colgroup_active;
+private:
+  float m_cycle;
+  std::vector<std::string> m_badguys;
+  unsigned int m_next_badguy;
+  Timer m_dispense_timer;
+  bool m_autotarget;
+  bool m_swivel;
+  bool m_broken;
+  bool m_random;
 
-  float cycle;
-  std::vector<std::string> badguys;
-  unsigned int next_badguy;
-  Timer dispense_timer;
-  bool autotarget;
-  bool swivel;
-  bool broken;
-  bool random;
+  DispenserType m_type;
+  std::string m_type_str;
 
-  typedef enum {
-    DT_DROPPER, DT_ROCKETLAUNCHER, DT_CANNON, DT_POINT
-  } DispenserType;
+  /** Do we need to limit the number of dispensed badguys? */
+  bool m_limit_dispensed_badguys;
 
-  DispenserType type;
-  std::string type_str;
+  /** Maximum concurrent number of badguys to be dispensed */
+  int m_max_concurrent_badguys;
+
+  /** Current amount of spawned badguys */
+  int m_current_badguys;
+
+private:
+  Dispenser(const Dispenser&) = delete;
+  Dispenser& operator=(const Dispenser&) = delete;
 };
 
 #endif

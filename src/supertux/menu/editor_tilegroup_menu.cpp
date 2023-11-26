@@ -16,20 +16,9 @@
 
 #include "supertux/menu/editor_tilegroup_menu.hpp"
 
-#include <sstream>
-
-#include "audio/sound_manager.hpp"
 #include "editor/editor.hpp"
 #include "gui/menu_item.hpp"
-#include "supertux/game_manager.hpp"
-#include "supertux/globals.hpp"
-#include "supertux/level.hpp"
-#include "supertux/screen_fade.hpp"
-#include "supertux/screen_manager.hpp"
-#include "supertux/tile_set.hpp"
-#include "supertux/title_screen.hpp"
-#include "supertux/world.hpp"
-#include "util/file_system.hpp"
+#include "gui/menu_manager.hpp"
 #include "util/gettext.hpp"
 
 EditorTilegroupMenu::EditorTilegroupMenu()
@@ -38,8 +27,8 @@ EditorTilegroupMenu::EditorTilegroupMenu()
   add_hl();
 
   int id = 0;
-  for(auto& tg : Editor::current()->tileset->tilegroups) {
-    add_entry(id, tg.name);
+  for (auto& tg : Editor::current()->get_tilegroups()) {
+    add_entry(id, _(tg.name));
     id++;
   }
 
@@ -49,19 +38,19 @@ EditorTilegroupMenu::EditorTilegroupMenu()
 
 EditorTilegroupMenu::~EditorTilegroupMenu()
 {
-  Editor::current()->reactivate_request = true;
+  auto editor = Editor::current();
+  if (editor == nullptr) {
+    return;
+  }
+  editor->m_reactivate_request = true;
 }
 
 void
-EditorTilegroupMenu::menu_action(MenuItem* item)
+EditorTilegroupMenu::menu_action(MenuItem& item)
 {
-  if (item->id >= 0)
+  if (item.get_id() >= 0)
   {
-    auto tileselect = &(Editor::current()->tileselect);
-    tileselect->active_tilegroup = Editor::current()->tileset->tilegroups[item->id].tiles;
-    tileselect->input_type = EditorInputGui::IP_TILE;
-    tileselect->reset_pos();
-    tileselect->update_mouse_icon();
+    Editor::current()->select_tilegroup(item.get_id());
   }
   MenuManager::instance().clear_menu_stack();
 }

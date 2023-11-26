@@ -24,102 +24,101 @@
 namespace scripting {
 
 FloatingImage::FloatingImage(const std::string& spritefile) :
-  floating_image(std::make_shared<::FloatingImage>(spritefile))
+  GameObject(get_game_object_manager().add<::FloatingImage>(spritefile).get_uid())
 {
-  using namespace worldmap;
-
-  if(Sector::current() != NULL) {
-    Sector::current()->add_object(floating_image);
-  } else if(WorldMap::current() != NULL) {
-    WorldMap::current()->add_object(floating_image);
-  } else {
-    throw new std::runtime_error("Neither sector nor worldmap active");
-  }
-}
-
-FloatingImage::~FloatingImage()
-{
-  floating_image->remove_me();
 }
 
 void
 FloatingImage::set_layer(int layer)
 {
-  floating_image->set_layer(layer);
+  SCRIPT_GUARD_VOID;
+  object.set_layer(layer);
 }
 
 int
 FloatingImage::get_layer() const
 {
-  return floating_image->get_layer();
+  SCRIPT_GUARD_DEFAULT;
+  return object.get_layer();
 }
 
 void
 FloatingImage::set_pos(float x, float y)
 {
-  floating_image->set_pos(Vector(x, y));
+  SCRIPT_GUARD_VOID;
+  object.set_pos(Vector(x, y));
 }
 
 float
 FloatingImage::get_pos_x() const
 {
-  return floating_image->get_pos().x;
+  SCRIPT_GUARD_DEFAULT;
+  return object.get_pos().x;
 }
 
 float
 FloatingImage::get_pos_y() const
 {
-  return floating_image->get_pos().y;
+  SCRIPT_GUARD_DEFAULT;
+  return object.get_pos().y;
 }
 
 void
 FloatingImage::set_anchor_point(int anchor)
 {
-  floating_image->set_anchor_point((AnchorPoint) anchor);
+  SCRIPT_GUARD_VOID;
+  object.set_anchor_point(static_cast<AnchorPoint>(anchor));
 }
 
 int
 FloatingImage::get_anchor_point() const
 {
-  return (int) floating_image->get_anchor_point();
+  SCRIPT_GUARD_DEFAULT;
+  return static_cast<int>(object.get_anchor_point());
 }
 
 bool
 FloatingImage::get_visible() const
 {
-  return floating_image->get_visible();
+  SCRIPT_GUARD_DEFAULT;
+  return object.get_visible();
 }
 
 void
 FloatingImage::set_visible(bool visible)
 {
-  floating_image->set_visible(visible);
+  SCRIPT_GUARD_VOID;
+  object.set_visible(visible);
 }
 
 void
 FloatingImage::set_action(const std::string& action)
 {
-  floating_image->set_action(action);
+  SCRIPT_GUARD_VOID;
+  object.set_action(action);
 }
 
 std::string
 FloatingImage::get_action() const
 {
-  return floating_image->get_action();
+  SCRIPT_GUARD_DEFAULT;
+  return object.get_action();
 }
 
 void
 FloatingImage::fade_in(float fadetime)
 {
-  floating_image->fade_in(fadetime);
+  SCRIPT_GUARD_VOID;
+  object.fade_in(fadetime);
 }
 
 void
 FloatingImage::fade_out(float fadetime)
 {
-  floating_image->fade_out(fadetime);
+  SCRIPT_GUARD_VOID;
+  object.fade_out(fadetime);
 }
 
-}
+} // scripting
 
 /* EOF */

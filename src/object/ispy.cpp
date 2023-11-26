@@ -16,54 +16,58 @@
 
 #include "object/ispy.hpp"
 
-#include "object/player.hpp"
-#include "object/tilemap.hpp"
+#include "editor/editor.hpp"
 #include "sprite/sprite.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
-#include "supertux/tile.hpp"
+#include "util/log.hpp"
 #include "util/reader_mapping.hpp"
-
-#include <sstream>
+#include "util/writer.hpp"
 
 Ispy::Ispy(const ReaderMapping& reader) :
   MovingSprite(reader, "images/objects/ispy/ispy.sprite", LAYER_TILES+5, COLGROUP_DISABLED),
   state(ISPYSTATE_IDLE),
   script(),
-  dir(AUTO)
+  dir(Direction::AUTO),
+  m_facing_down(false)
 {
   // read script to execute
   reader.get("script", script);
 
   // read direction to face in
   std::string dir_str;
-  bool facing_down;
   if (reader.get("direction", dir_str)) {
     dir = string_to_dir(dir_str);
   } else {
-    dir = LEFT;
+    if (!Editor::is_active()) {
+      dir = Direction::LEFT;
+    }
   }
-  if (!reader.get("facing-down", facing_down)) facing_down = false;
-  if (facing_down) dir = DOWN;
-  if (dir == AUTO) { log_warning << "Setting an Ispy's direction to AUTO is no good idea" << std::endl; }
+
+  reader.get("facing-down", m_facing_down, false);
+  if (!Editor::is_active()) {
+    if (m_facing_down) {
+      dir = Direction::DOWN;
+    }
+  }
+
+  if (dir == Direction::AUTO) {
+    log_warning << "Setting an Ispy's direction to AUTO is no good idea" << std::endl;
+  }
 
   // set initial sprite action
-  sprite->set_action((dir == DOWN) ? "idle-down" : ((dir == LEFT) ? "idle-left" : "idle-right"));
-}
-
-void
-Ispy::save(Writer& writer) {
-  MovingSprite::save(writer);
-  if(dir != AUTO) {
-    writer.write("direction", dir_to_string(dir), false);
-  }
+  m_sprite->set_action((dir == Direction::DOWN) ? "idle-down" : ((dir == Direction::LEFT) ? "idle-left" : "idle-right"));
 }
 
 ObjectSettings
-Ispy::get_settings() {
+Ispy::get_settings()
+{
   ObjectSettings result = MovingSprite::get_settings();
-  result.options.push_back( ObjectOption(MN_SCRIPT, _("Script"), &script, "script"));
-  result.options.push_back( dir_option(&dir) );
+
+  result.add_bool(_("Facing Down"), &m_facing_down, "facing-down", false);
+  result.add_script(_("Script"), &script, "script");
+  result.add_direction(_("Direction"), &dir, Direction::AUTO, "direction");
+
+  result.reorder({"script", "facing-down", "direction", "x", "y"});
 
   return result;
 }
@@ -72,7 +76,7 @@ void
 Ispy::after_editor_set()
 {
   MovingSprite::after_editor_set();
-  sprite->set_action((dir == DOWN) ? "idle-down" : ((dir == LEFT) ? "idle-left" : "idle-right"));
+  m_sprite->set_action((dir == Direction::DOWN) ? "idle-down" : ((dir == Direction::LEFT) ? "idle-left" : "idle-right"));
 }
 
 HitResponse
@@ -87,35 +91,34 @@ Ispy::update(float )
 
   if (state == ISPYSTATE_IDLE) {
     // check if a player has been spotted
-    Vector eye = bbox.get_middle();
-    if (dir == LEFT) eye = Vector(bbox.p1.x, bbox.get_middle().y);
-    if (dir == RIGHT) eye = Vector(bbox.p2.x, bbox.get_middle().y);
-    if (dir == UP) eye = Vector(bbox.get_middle().x, bbox.p1.y);
-    if (dir == DOWN) eye = Vector(bbox.get_middle().x, bbox.p2.y);
+    Vector eye = m_col.m_bbox.get_middle();
+    if (dir == Direction::LEFT) eye = Vector(m_col.m_bbox.get_left(), m_col.m_bbox.get_middle().y);
+    if (dir == Direction::RIGHT) eye = Vector(m_col.m_bbox.get_right(), m_col.m_bbox.get_middle().y);
+    if (dir == Direction::UP) eye = Vector(m_col.m_bbox.get_middle().x, m_col.m_bbox.get_top());
+    if (dir == Direction::DOWN) eye = Vector(m_col.m_bbox.get_middle().x, m_col.m_bbox.get_bottom());
 
-    if (Sector::current()->can_see_player(eye)) {
-      sprite->set_action((dir == DOWN) ? "alert-down" : ((dir == LEFT) ? "alert-left" : "alert-right"), 1);
+    if (Sector::get().can_see_player(eye)) {
+      m_sprite->set_action((dir == Direction::DOWN) ? "alert-down" : ((dir == Direction::LEFT) ? "alert-left" : "alert-right"), 1);
       state = ISPYSTATE_ALERT;
 
-      std::istringstream stream(script);
-      Sector::current()->run_script(stream, "Ispy");
+      Sector::get().run_script(script, "Ispy");
     }
   }
   if (state == ISPYSTATE_ALERT) {
-    if (sprite->animation_done()) {
-      sprite->set_action((dir == DOWN) ? "hiding-down" : ((dir == LEFT) ? "hiding-left" : "hiding-right"), 1);
+    if (m_sprite->animation_done()) {
+      m_sprite->set_action((dir == Direction::DOWN) ? "hiding-down" : ((dir == Direction::LEFT) ? "hiding-left" : "hiding-right"), 1);
       state = ISPYSTATE_HIDING;
     }
   }
   if (state == ISPYSTATE_HIDING) {
-    if (sprite->animation_done()) {
-      sprite->set_action((dir == DOWN) ? "showing-down" : ((dir == LEFT) ? "showing-left" : "showing-right"), 1);
+    if (m_sprite->animation_done()) {
+      m_sprite->set_action((dir == Direction::DOWN) ? "showing-down" : ((dir == Direction::LEFT) ? "showing-left" : "showing-right"), 1);
       state = ISPYSTATE_SHOWING;
     }
   }
   if (state == ISPYSTATE_SHOWING) {
-    if (sprite->animation_done()) {
-      sprite->set_action((dir == DOWN) ? "idle-down" : ((dir == LEFT) ? "idle-left" : "idle-right"));
+    if (m_sprite->animation_done()) {
+      m_sprite->set_action((dir == Direction::DOWN) ? "idle-down" : ((dir == Direction::LEFT) ? "idle-left" : "idle-right"));
       state = ISPYSTATE_IDLE;
     }
   }

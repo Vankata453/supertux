@@ -14,26 +14,19 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <algorithm>
+#include "supertux/world.hpp"
 
-#include "physfs/ifile_streambuf.hpp"
+#include <physfs.h>
+
 #include "physfs/physfs_file_system.hpp"
-#include "scripting/serialize.hpp"
-#include "scripting/squirrel_util.hpp"
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
-#include "supertux/player_status.hpp"
-#include "supertux/screen_fade.hpp"
-#include "supertux/screen_manager.hpp"
-#include "supertux/world.hpp"
-#include "supertux/savegame.hpp"
 #include "util/file_system.hpp"
 #include "util/log.hpp"
 #include "util/reader.hpp"
 #include "util/reader_document.hpp"
 #include "util/reader_mapping.hpp"
-#include "util/string_util.hpp"
-#include "worldmap/worldmap.hpp"
+#include "util/writer.hpp"
 
 std::unique_ptr<World>
 World::load(const std::string& directory)
@@ -102,10 +95,6 @@ World::World() :
 {
 }
 
-World::~World()
-{
-}
-
 void
 World::load_(const std::string& directory)
 {
@@ -114,7 +103,8 @@ World::load_(const std::string& directory)
 
   std::string filename = m_basedir + "/info";
 
-  if(!PHYSFS_exists(filename.c_str()))
+  if (!PHYSFS_exists(filename.c_str()) ||
+     PhysFSFileSystem::is_directory(filename))
   {
     set_default_values();
     return;
@@ -122,10 +112,10 @@ World::load_(const std::string& directory)
 
   try {
     register_translation_directory(filename);
-    auto doc = ReaderDocument::parse(filename);
+    auto doc = ReaderDocument::from_file(filename);
     auto root = doc.get_root();
 
-    if(root.get_name() != "supertux-world" &&
+    if (root.get_name() != "supertux-world" &&
        root.get_name() != "supertux-level-subset")
     {
       throw std::runtime_error("File is not a world or levelsubset file");
@@ -179,18 +169,18 @@ World::save(bool retry)
 
     { // make sure the levelset directory exists
       std::string dirname = FileSystem::dirname(filepath);
-      if(!PHYSFS_exists(dirname.c_str()))
+      if (!PHYSFS_exists(dirname.c_str()))
       {
-        if(!PHYSFS_mkdir(dirname.c_str()))
+        if (!PHYSFS_mkdir(dirname.c_str()))
         {
           std::ostringstream msg;
           msg << "Couldn't create directory for levelset '"
-              << dirname << "': " <<PHYSFS_getLastError();
+              << dirname << "': " <<PHYSFS_getLastErrorCode();
           throw std::runtime_error(msg.str());
         }
       }
 
-      if(!PhysFSFileSystem::is_directory(dirname))
+      if (!PhysFSFileSystem::is_directory(dirname))
       {
         std::ostringstream msg;
         msg << "Levelset path '" << dirname << "' is not a directory";
@@ -217,11 +207,11 @@ World::save(bool retry)
       log_warning << "Failed to save the levelset info, retrying..." << std::endl;
       { // create the levelset directory again
         std::string dirname = FileSystem::dirname(filepath);
-        if(!PHYSFS_mkdir(dirname.c_str()))
+        if (!PHYSFS_mkdir(dirname.c_str()))
         {
           std::ostringstream msg;
           msg << "Couldn't create directory for levelset '"
-              << dirname << "': " <<PHYSFS_getLastError();
+              << dirname << "': " <<PHYSFS_getLastErrorCode();
           throw std::runtime_error(msg.str());
         }
       }

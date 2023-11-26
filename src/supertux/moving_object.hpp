@@ -17,180 +17,98 @@
 #ifndef HEADER_SUPERTUX_SUPERTUX_MOVING_OBJECT_HPP
 #define HEADER_SUPERTUX_SUPERTUX_MOVING_OBJECT_HPP
 
-#include <stdint.h>
-
+#include "collision/collision_hit.hpp"
+#include "collision/collision_object.hpp"
+#include "collision/collision_listener.hpp"
 #include "math/rectf.hpp"
-#include "supertux/collision_hit.hpp"
 #include "supertux/game_object.hpp"
 
 class Sector;
 
-enum CollisionGroup {
-  /** Objects in DISABLED group are not tested for collisions */
-  COLGROUP_DISABLED = 0,
-
-  /** Tested against:
-      - tiles + attributes
-      - static obstacles
-      - touchables
-      - other moving objects
-      and it counts as an obstacle during static collision phase.
-
-      Use for kinematic moving objects like platforms and rocks. */
-  COLGROUP_MOVING_STATIC,
-
-  /** Tested against:
-      - tiles + attributes
-      - static obstacles
-      - touchables
-      - other moving objects
-
-      Use for ordinary objects. */
-  COLGROUP_MOVING,
-
-  /** Tested against:
-      - tiles + attributes
-      - static obstacles
-
-      Use for interactive particles and decoration. */
-  COLGROUP_MOVING_ONLY_STATIC,
-
-  /** Tested against:
-      - moving objects
-      and it counts as an obstacle during static collision phase.
-
-      Use for static obstacles that Tux walks on. */
-  COLGROUP_STATIC,
-
-  /** Tested against:
-      - moving objects
-
-      Use for triggers like spikes/areas or collectibles like coins. */
-  COLGROUP_TOUCHABLE
-};
-
 /** Base class for all dynamic/moving game objects. This class
     contains things for handling the bounding boxes and collision
     feedback. */
-class MovingObject : public GameObject
+class MovingObject : public GameObject,
+                     public CollisionListener
 {
+  friend class Sector;
+  friend class CollisionSystem;
+
 public:
   MovingObject();
+  MovingObject(const ReaderMapping& reader);
   virtual ~MovingObject();
 
-  /** this function is called when the object collided with something solid */
-  virtual void collision_solid(const CollisionHit& /*hit*/)
+  virtual void collision_solid(const CollisionHit& /*hit*/) override
   {
   }
 
-  /** when 2 objects collided, we will first call the
-      pre_collision_check functions of both objects that can decide on
-      how to react to the collision. */
-  virtual bool collides(GameObject& /*other*/, const CollisionHit& /*hit*/) const
+  virtual bool collides(GameObject& /*other*/, const CollisionHit& /*hit*/) const override
   {
     return true;
   }
 
-  /** this function is called when the object collided with any other object */
-  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) = 0;
-
-  /** called when tiles with special attributes have been touched */
-  virtual void collision_tile(uint32_t /*tile_attributes*/)
+  virtual void collision_tile(uint32_t /*tile_attributes*/) override
   {
   }
 
-  /** This function saves the object.
-   *  Editor will use that.
-   */
-  virtual void save(Writer& writer);
-  virtual std::string get_class() const {
-    return "moving-object";
-  }
-
-  const Vector& get_pos() const
+  virtual void set_pos(const Vector& pos)
   {
-    return bbox.p1;
+    m_col.set_pos(pos);
   }
 
-  /** puts resizers at its edges, used in editor input center */
-  void edit_bbox();
+  virtual void move_to(const Vector& pos)
+  {
+    m_col.move_to(pos);
+  }
 
-  /** returns the bounding box of the Object */
+  virtual bool listener_is_valid() const override { return is_valid(); }
+
+  Vector get_pos() const
+  {
+    return m_col.m_bbox.p1();
+  }
+
   const Rectf& get_bbox() const
   {
-    return bbox;
+    return m_col.m_bbox;
   }
 
   const Vector& get_movement() const
   {
-    return movement;
-  }
-
-  /** places the moving object at a specific position. Be careful when
-      using this function. There are no collision detection checks
-      performed here so bad things could happen. */
-  virtual void set_pos(const Vector& pos)
-  {
-    dest.move(pos-get_pos());
-    bbox.set_pos(pos);
-  }
-
-  /** moves entire object to a specific position, including all
-      points those the object has, exactly like the object has
-      spawned in that given pos instead.*/
-  virtual void move_to(const Vector& pos)
-  {
-    set_pos(pos);
-  }
-
-  /** sets the moving object's bbox to a specific width. Be careful
-      when using this function. There are no collision detection
-      checks performed here so bad things could happen. */
-  virtual void set_width(float w)
-  {
-    dest.set_width(w);
-    bbox.set_width(w);
-  }
-
-  /** sets the moving object's bbox to a specific size. Be careful
-      when using this function. There are no collision detection
-      checks performed here so bad things could happen. */
-  virtual void set_size(float w, float h)
-  {
-    dest.set_size(w, h);
-    bbox.set_size(w, h);
+    return m_col.m_movement;
   }
 
   CollisionGroup get_group() const
   {
-    return group;
+    return m_col.m_group;
+  }
+
+  CollisionObject* get_collision_object() {
+    return &m_col;
+  }
+
+  const CollisionObject* get_collision_object() const {
+    return &m_col;
+  }
+
+  virtual std::string get_class() const override { return "moving-object"; }
+  virtual ObjectSettings get_settings() override;
+
+  virtual void editor_select() override;
+
+protected:
+  void set_group(CollisionGroup group)
+  {
+    m_col.m_group = group;
   }
 
 protected:
-  friend class Sector;
-
-  void set_group(CollisionGroup group_)
-  {
-    this->group = group_;
-  }
-
-  /** The bounding box of the object (as used for collision detection,
-      this isn't necessarily the bounding box for graphics) */
-  Rectf bbox;
-
-  /** The movement that will happen till next frame */
-  Vector movement;
-
-  /** The collision group */
-  CollisionGroup group;
+  CollisionObject m_col;
 
 private:
-  /** this is only here for internal collision detection use (don't touch this
-      from outside collision detection code)
-
-      This field holds the currently anticipated destination of the object
-      during collision detection */
-  Rectf dest;
+  MovingObject(const MovingObject&) = delete;
+  MovingObject& operator=(const MovingObject&) = delete;
 };
 
 #endif

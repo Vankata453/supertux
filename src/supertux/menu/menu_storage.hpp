@@ -25,7 +25,7 @@ class Menu;
 class OptionsMenu;
 class ProfileMenu;
 
-class MenuStorage
+class MenuStorage final
 {
 private:
   static MenuStorage* s_instance;
@@ -52,6 +52,7 @@ public:
     WORLDMAP_CHEAT_MENU,
     GAME_MENU,
     CHEAT_MENU,
+    DEBUG_MENU,
     EDITOR_LEVELSET_SELECT_MENU,
     EDITOR_NEW_LEVELSET_MENU,
     EDITOR_LEVEL_SELECT_MENU,
@@ -71,8 +72,8 @@ public:
   std::unique_ptr<Menu> create(MenuId menu_id);
 
 private:
-  MenuStorage(const MenuStorage&);
-  MenuStorage& operator=(const MenuStorage&);
+  MenuStorage(const MenuStorage&) = delete;
+  MenuStorage& operator=(const MenuStorage&) = delete;
 };
 
 #endif

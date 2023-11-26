@@ -19,34 +19,29 @@
 
 #include "badguy/badguy.hpp"
 
-#include "audio/sound_source.hpp"
+class SoundSource;
 
 class Flame : public BadGuy
 {
 public:
   Flame(const ReaderMapping& reader);
-  Flame(const Flame& flame);
 
-  void activate();
-  void deactivate();
+  virtual void activate() override;
+  virtual void deactivate() override;
 
-  void active_update(float elapsed_time);
-  void kill_fall();
+  virtual void active_update(float dt_sec) override;
+  virtual void kill_fall() override;
 
-  void freeze();
-  bool is_freezable() const;
-  bool is_flammable() const;
+  virtual void freeze() override;
+  virtual bool is_freezable() const override;
+  virtual bool is_flammable() const override;
 
-  ObjectSettings get_settings();
-  virtual std::string get_class() const {
-    return "flame";
-  }
-  std::string get_display_name() const {
-    return _("Flame");
-  }
+  virtual ObjectSettings get_settings() override;
+  virtual std::string get_class() const override { return "flame"; }
+  virtual std::string get_display_name() const override { return _("Flame"); }
 
-  void stop_looping_sounds();
-  void play_looping_sounds();
+  virtual void stop_looping_sounds() override;
+  virtual void play_looping_sounds() override;
 
 protected:
   float angle;
@@ -54,6 +49,10 @@ protected:
   float speed;
 
   std::unique_ptr<SoundSource> sound_source;
+
+private:
+  Flame(const Flame&) = delete;
+  Flame& operator=(const Flame&) = delete;
 };
 
 #endif

@@ -14,84 +14,101 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "editor/editor.hpp"
-#include "editor/object_option.hpp"
-#include "math/random_generator.hpp"
 #include "object/path_walker.hpp"
-#include "util/gettext.hpp"
-#include "util/log.hpp"
 
 #include <math.h>
 #include <assert.h>
 
-PathWalker::PathWalker(const Path* path_, bool running_) :
-  path(path_),
-  running(running_),
-  current_node_nr(0),
-  next_node_nr(0),
-  stop_at_node_nr(running?-1:0),
-  node_time(0),
-  node_mult(),
-  walking_speed(1.0)
+#include "editor/editor.hpp"
+#include "editor/object_option.hpp"
+#include "math/random.hpp"
+#include "object/path_gameobject.hpp"
+#include "supertux/d_scope.hpp"
+#include "supertux/sector.hpp"
+#include "util/gettext.hpp"
+
+PathWalker::PathWalker(UID path_uid, bool running_) :
+  m_path_uid(path_uid),
+  m_running(running_),
+  m_current_node_nr(0),
+  m_next_node_nr(),
+  m_stop_at_node_nr(m_running?-1:0),
+  m_node_time(0),
+  m_node_mult(),
+  m_walking_speed(1.0)
 {
-  node_mult = 1 / path->nodes[0].time;
-  next_node_nr = path->nodes.size() > 1 ? 1 : 0;
+  Path* path = get_path();
+  if (!path) return;
+  if (!path->is_valid()) return;
+
+  m_next_node_nr = path->m_nodes.size() > 1 ? 1 : 0;
+  m_node_mult = 1 / path->m_nodes[0].time;
 }
 
 PathWalker::~PathWalker()
 {
 }
 
-Vector
-PathWalker::advance(float elapsed_time)
+Path*
+PathWalker::get_path() const
 {
-  if (!path->is_valid()) return Vector(0, 0);
-  if (Editor::is_active()) {
-    Vector pos__ = path->nodes.begin()->position;
-//    log_warning << "x" << pos__.x << " y" << pos__.y << std::endl;
-    return pos__;
+  if (!d_sector) return nullptr;
+
+  auto path_gameobject = d_sector->get_object_by_uid<PathGameObject>(m_path_uid);
+  if (!path_gameobject)
+  {
+    return nullptr;
   }
+  else
+  {
+    return &path_gameobject->get_path();
+  }
+}
 
-  if (!running) return path->nodes[current_node_nr].position;
+void
+PathWalker::update(float dt_sec)
+{
+  Path* path = get_path();
+  if (!path) return;
+  if (!path->is_valid()) return;
+  if (Editor::is_active()) return;
+  if (!m_running) return;
 
-  assert(elapsed_time >= 0);
+  float delta = fabsf(m_walking_speed) * dt_sec;
 
-  elapsed_time *= fabsf(walking_speed);
+  while (m_node_time + delta * m_node_mult >= 1) {
+    delta -= (1 - m_node_time) / m_node_mult;
 
-  const Path::Node* current_node = & (path->nodes[current_node_nr]);
-  while(node_time + elapsed_time * node_mult >= 1) {
-    elapsed_time -= (1 - node_time) / node_mult;
-
-    if(walking_speed > 0) {
+    if (m_walking_speed > 0) {
       advance_node();
-    } else if(walking_speed < 0) {
+    } else if (m_walking_speed < 0) {
       goback_node();
     }
 
-    current_node = & (path->nodes[current_node_nr]);
-    node_time = 0;
-    if(walking_speed > 0) {
-      node_mult = 1 / current_node->time;
+    auto current_node = & (path->m_nodes[m_current_node_nr]);
+    m_node_time = 0;
+    if (m_walking_speed > 0) {
+      m_node_mult = 1 / current_node->time;
     } else {
-      node_mult = 1 / path->nodes[next_node_nr].time;
+      m_node_mult = 1 / path->m_nodes[m_next_node_nr].time;
     }
   }
 
-  node_time += elapsed_time * node_mult;
-
-  return get_pos();
+  m_node_time += delta * m_node_mult;
 }
 
 Vector
 PathWalker::get_pos() const
 {
+  Path* path = get_path();
+  if (!path) return Vector(0, 0);
   if (!path->is_valid()) return Vector(0, 0);
-  if (Editor::is_active()) return path->nodes.begin()->position;
+  if (Editor::is_active()) return path->m_nodes.begin()->position;
 
-  const Path::Node* current_node = & (path->nodes[current_node_nr]);
-  const Path::Node* next_node = & (path->nodes[next_node_nr]);
+  const Path::Node* current_node = &(path->m_nodes[m_current_node_nr]);
+  const Path::Node* next_node = & (path->m_nodes[m_next_node_nr]);
   Vector new_pos = current_node->position +
-    (next_node->position - current_node->position) * node_time;
+    (next_node->position - current_node->position) * m_node_time;
 
   return new_pos;
 }
@@ -99,102 +116,90 @@ PathWalker::get_pos() const
 void
 PathWalker::goto_node(int node_no)
 {
-  if (path->mode == Path::UNORDERED && running) return;
-  if (node_no == stop_at_node_nr) return;
-  running = true;
-  stop_at_node_nr = node_no;
+  Path* path = get_path();
+  if (!path) return;
 
-  if (path->mode == Path::UNORDERED) {
-    next_node_nr = node_no;
-  }
+  if (node_no == m_stop_at_node_nr) return;
+  m_running = true;
+  m_stop_at_node_nr = node_no;
 }
 
 void
 PathWalker::start_moving()
 {
-  running = true;
-  stop_at_node_nr = -1;
+  m_running = true;
+  m_stop_at_node_nr = -1;
 }
 
 void
 PathWalker::stop_moving()
 {
-  stop_at_node_nr = next_node_nr;
+  m_stop_at_node_nr = static_cast<int>(m_next_node_nr);
 }
 
 void
 PathWalker::advance_node()
 {
+  Path* path = get_path();
+  if (!path) return;
   if (!path->is_valid()) return;
 
-  current_node_nr = next_node_nr;
-  if (static_cast<int>(current_node_nr) == stop_at_node_nr) running = false;
+  m_current_node_nr = m_next_node_nr;
+  if (static_cast<int>(m_current_node_nr) == m_stop_at_node_nr) m_running = false;
 
-  if (path->mode == Path::UNORDERED) {
-    next_node_nr = gameRandom.rand( path->nodes.size() );
+  if (m_next_node_nr + 1 < path->m_nodes.size()) {
+    m_next_node_nr++;
     return;
   }
 
-  if(next_node_nr + 1 < path->nodes.size()) {
-    next_node_nr++;
-    return;
-  }
-
-  switch(path->mode) {
-    case Path::ONE_SHOT:
-      next_node_nr = path->nodes.size() - 1;
-      walking_speed = 0;
+  switch (path->m_mode) {
+    case WalkMode::ONE_SHOT:
+      m_next_node_nr = path->m_nodes.size() - 1;
+      m_walking_speed = 0;
       return;
 
-    case Path::PING_PONG:
-      walking_speed = -walking_speed;
-      next_node_nr = path->nodes.size() > 1 ? path->nodes.size() - 2 : 0;
+    case WalkMode::PING_PONG:
+      m_walking_speed = -m_walking_speed;
+      m_next_node_nr = path->m_nodes.size() > 1 ? path->m_nodes.size() - 2 : 0;
       return;
 
-    case Path::CIRCULAR:
-      next_node_nr = 0;
-      return;
-
-    case Path::UNORDERED:
+    case WalkMode::CIRCULAR:
+      m_next_node_nr = 0;
       return;
   }
 
   // we shouldn't get here
   assert(false);
-  next_node_nr = path->nodes.size() - 1;
-  walking_speed = 0;
+  m_next_node_nr = path->m_nodes.size() - 1;
+  m_walking_speed = 0;
 }
 
 void
 PathWalker::goback_node()
 {
+  Path* path = get_path();
+  if (!path) return;
   if (!path->is_valid()) return;
 
-  current_node_nr = next_node_nr;
+  m_current_node_nr = m_next_node_nr;
 
-  if(next_node_nr > 0) {
-    next_node_nr--;
+  if (m_next_node_nr > 0) {
+    m_next_node_nr--;
     return;
   }
 
-  switch(path->mode) {
-    case Path::PING_PONG:
-      walking_speed = -walking_speed;
-      next_node_nr = path->nodes.size() > 1 ? 1 : 0;
+  switch (path->m_mode) {
+    case WalkMode::PING_PONG:
+      m_walking_speed = -m_walking_speed;
+      m_next_node_nr = path->m_nodes.size() > 1 ? 1 : 0;
       return;
     default:
       break;
   }
 
   assert(false);
-  next_node_nr = 0;
-  walking_speed = 0;
-}
-
-ObjectOption
-PathWalker::get_running_option(bool* _running) {
-  ObjectOption result(MN_TOGGLE, _("Running"), _running);
-  return result;
+  m_next_node_nr = 0;
+  m_walking_speed = 0;
 }
 
 /* EOF */

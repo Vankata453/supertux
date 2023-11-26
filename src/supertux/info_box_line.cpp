@@ -16,8 +16,9 @@
 
 #include "supertux/info_box_line.hpp"
 
-#include "supertux/textscroller.hpp"
+#include "supertux/textscroller_screen.hpp"
 #include "supertux/resources.hpp"
+#include "supertux/colorscheme.hpp"
 #include "video/drawing_context.hpp"
 #include "video/font.hpp"
 #include "video/surface.hpp"
@@ -27,7 +28,7 @@ static const float ITEMS_SPACE = 4;
 namespace {
 
 FontPtr get_font_by_format_char(char format_char) {
-  switch(format_char)
+  switch (format_char)
   {
     case ' ':
       return Resources::small_font;
@@ -45,26 +46,26 @@ FontPtr get_font_by_format_char(char format_char) {
 }
 
 Color get_color_by_format_char(char format_char) {
-  switch(format_char)
+  switch (format_char)
   {
     case ' ':
-      return TextScroller::small_color;
+      return ColorScheme::Text::small_color;
     case '-':
-      return TextScroller::heading_color;
+      return ColorScheme::Text::heading_color;
     case '*':
-      return TextScroller::reference_color;
+      return ColorScheme::Text::reference_color;
     case '\t':
     case '#':
     case '!':
-      return TextScroller::normal_color;
+      return ColorScheme::Text::normal_color;
     default:
-      return Color(0,0,0);
+      return ColorScheme::Text::normal_color;
       //log_warning << "Unknown format_char: '" << format_char << "'" << std::endl;
   }
 }
 
 InfoBoxLine::LineType get_linetype_by_format_char(char format_char) {
-  switch(format_char)
+  switch (format_char)
   {
     case ' ':
       return InfoBoxLine::SMALL;
@@ -88,22 +89,16 @@ InfoBoxLine::LineType get_linetype_by_format_char(char format_char) {
 } // namespace
 
 InfoBoxLine::InfoBoxLine(char format_char, const std::string& text_) :
-  lineType(NORMAL),
+  lineType(get_linetype_by_format_char(format_char)),
   font(get_font_by_format_char(format_char)),
-  color(),
+  color(get_color_by_format_char(format_char)),
   text(text_),
   image()
 {
-  lineType = get_linetype_by_format_char(format_char);
-  color = get_color_by_format_char(format_char);
   if (lineType == IMAGE)
   {
-    image = Surface::create(text);
+    image = Surface::from_file(text);
   }
-}
-
-InfoBoxLine::~InfoBoxLine()
-{
 }
 
 std::vector<std::unique_ptr<InfoBoxLine> >
@@ -114,7 +109,7 @@ InfoBoxLine::split(const std::string& text, float width)
   std::string::size_type i = 0;
   std::string::size_type l;
   char format_char = '#';
-  while(i < text.size()) {
+  while (i < text.size()) {
     // take care of empty lines - represent them as blank lines of normal text
     if (text[i] == '\n') {
       lines.emplace_back(new InfoBoxLine('\t', ""));
@@ -123,8 +118,15 @@ InfoBoxLine::split(const std::string& text, float width)
     }
 
     // extract the format_char
-    format_char = text[i];
-    i++;
+    if (is_valid_format_char(text[i]))
+    {
+      format_char = text[i];
+      i++;
+    }
+    else
+    {
+      format_char = '#';
+    }
     if (i >= text.size()) break;
 
     // extract one line
@@ -156,16 +158,16 @@ InfoBoxLine::split(const std::string& text, float width)
 void
 InfoBoxLine::draw(DrawingContext& context, const Rectf& bbox, int layer)
 {
-  Vector position = bbox.p1;
+  Vector position = bbox.p1();
   switch (lineType) {
     case IMAGE:
-      context.draw_surface(image, Vector( (bbox.p1.x + bbox.p2.x - image->get_width()) / 2, position.y), layer);
+      context.color().draw_surface(image, Vector( (bbox.get_left() + bbox.get_right() - static_cast<float>(image->get_width())) / 2.0f, position.y), layer);
       break;
     case NORMAL_LEFT:
-      context.draw_text(font, text, Vector(position.x, position.y), ALIGN_LEFT, layer, color);
+      context.color().draw_text(font, text, Vector(position.x, position.y), ALIGN_LEFT, layer, color);
       break;
     default:
-      context.draw_text(font, text, Vector((bbox.p1.x + bbox.p2.x) / 2, position.y), ALIGN_CENTER, layer, color);
+      context.color().draw_text(font, text, Vector((bbox.get_left() + bbox.get_right()) / 2, position.y), ALIGN_CENTER, layer, color);
       break;
   }
 }
@@ -175,7 +177,7 @@ InfoBoxLine::get_height() const
 {
   switch (lineType) {
     case IMAGE:
-      return image->get_height() + ITEMS_SPACE;
+      return static_cast<float>(image->get_height()) + ITEMS_SPACE;
     case NORMAL_LEFT:
       return font->get_height() + ITEMS_SPACE;
     default:

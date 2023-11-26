@@ -14,70 +14,56 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADER_SUPERTUX_VIDEO_GL_TEXTURE_HPP
-#define HEADER_SUPERTUX_VIDEO_GL_TEXTURE_HPP
+#ifndef HEADER_SUPERTUX_VIDEO_GL_GL_TEXTURE_HPP
+#define HEADER_SUPERTUX_VIDEO_GL_GL_TEXTURE_HPP
 
+#include <boost/optional.hpp>
+
+#include "video/color.hpp"
+#include "video/gl.hpp"
+#include "video/sampler.hpp"
 #include "video/texture.hpp"
 
-/**
- * This class is a wrapper around a texture handle. It stores the texture width
- * and height and provides convenience functions for uploading SDL_Surfaces
- * into the texture
- */
-class GLTexture : public Texture
-{
-protected:
-  GLuint m_handle;
-  unsigned int m_texture_width;
-  unsigned int m_texture_height;
-  unsigned int m_image_width;
-  unsigned int m_image_height;
+class Sampler;
 
+/** This class is a wrapper around a texture handle. It stores the
+    texture width and height and provides convenience functions for
+    uploading SDL_Surfaces into the texture. */
+class GLTexture final : public Texture
+{
 public:
-  GLTexture(unsigned int width, unsigned int height);
-  GLTexture(SDL_Surface* image);
+  GLTexture(int width, int height, boost::optional<Color> fill_color = boost::none);
+  GLTexture(const SDL_Surface& image, const Sampler& sampler);
   ~GLTexture();
 
-  const GLuint &get_handle() const {
-    return m_handle;
-  }
+  virtual int get_texture_width() const override { return m_texture_width; }
+  virtual int get_texture_height() const override { return m_texture_height; }
 
-  void set_handle(GLuint handle) {
-    m_handle = handle;
-  }
+  virtual int get_image_width() const override { return m_image_width; }
+  virtual int get_image_height() const override { return m_image_height; }
 
-  unsigned int get_texture_width() const
-  {
-    return m_texture_width;
-  }
+  void set_handle(GLuint handle) { m_handle = handle; }
+  const GLuint &get_handle() const { return m_handle; }
 
-  unsigned int get_texture_height() const
-  {
-    return m_texture_height;
-  }
+  const Sampler& get_sampler() const { return m_sampler; }
 
-  unsigned int get_image_width() const
-  {
-    return m_image_width;
-  }
-
-  unsigned int get_image_height() const
-  {
-    return m_image_height;
-  }
-
-  void set_image_width(unsigned int width)
-  {
-    m_image_width = width;
-  }
-
-  void set_image_height(unsigned int height)
-  {
-    m_image_height = height;
-  }
+  void set_image_width(int width) { m_image_width = width; }
+  void set_image_height(int height) { m_image_height = height; }
 
 private:
   void set_texture_params();
+
+private:
+  GLuint m_handle;
+  Sampler m_sampler;
+  int m_texture_width;
+  int m_texture_height;
+  int m_image_width;
+  int m_image_height;
+
+private:
+  GLTexture(const GLTexture&) = delete;
+  GLTexture& operator=(const GLTexture&) = delete;
 };
 
 #endif

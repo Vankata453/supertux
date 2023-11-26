@@ -24,11 +24,10 @@ class Vector;
 /** This is a very simplistic physics engine handling accelerated and constant
  * movement along with gravity.
  */
-class Physic
+class Physic final
 {
 public:
   Physic();
-  ~Physic();
 
   /// Resets all velocities and accelerations to 0.
   void reset();
@@ -68,7 +67,7 @@ public:
   /** Set gravity modifier factor to apply to object when enabled */
   void set_gravity_modifier(float gravity);
 
-  Vector get_movement(float elapsed_time);
+  Vector get_movement(float dt_sec);
 
 private:
   /** horizontal and vertical acceleration */

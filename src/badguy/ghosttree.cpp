@@ -16,19 +16,18 @@
 
 #include "badguy/ghosttree.hpp"
 
+#include <algorithm>
+#include <math.h>
+
 #include "audio/sound_manager.hpp"
 #include "badguy/root.hpp"
 #include "badguy/treewillowisp.hpp"
-#include "math/random_generator.hpp"
+#include "math/random.hpp"
 #include "object/lantern.hpp"
 #include "object/player.hpp"
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
-
-#include <algorithm>
-#include <math.h>
 
 static const size_t WILLOWISP_COUNT = 10;
 static const float ROOT_TOP_OFFSET = 64;
@@ -36,8 +35,8 @@ static const float WILLOWISP_TOP_OFFSET = -64;
 static const Vector SUCK_TARGET_OFFSET = Vector(-16,-16);
 static const float SUCK_TARGET_SPREAD = 8;
 
-GhostTree::GhostTree(const ReaderMapping& lisp) :
-  BadGuy(lisp, "images/creatures/ghosttree/ghosttree.sprite", LAYER_OBJECTS - 10),
+GhostTree::GhostTree(const ReaderMapping& mapping) :
+  BadGuy(mapping, "images/creatures/ghosttree/ghosttree.sprite", LAYER_OBJECTS - 10),
   mystate(STATE_IDLE),
   willowisp_timer(),
   willo_spawn_y(0),
@@ -50,7 +49,7 @@ GhostTree::GhostTree(const ReaderMapping& lisp) :
   root_timer(),
   treecolor(0),
   suck_lantern_color(),
-  suck_lantern(0),
+  suck_lantern(nullptr),
   willowisps()
 {
   set_colgroup_active(COLGROUP_TOUCHABLE);
@@ -58,18 +57,14 @@ GhostTree::GhostTree(const ReaderMapping& lisp) :
   SoundManager::current()->preload("sounds/tree_suck.ogg");
 }
 
-GhostTree::~GhostTree()
-{
-}
-
 void
 GhostTree::die()
 {
   mystate = STATE_DYING;
-  sprite->set_action("dying", 1);
+  m_sprite->set_action("dying", 1);
   glow_sprite->set_action("dying", 1);
 
-  for(const auto& willo : willowisps) {
+  for (const auto& willo : willowisps) {
     willo->vanish();
   }
   run_dead_script();
@@ -84,16 +79,16 @@ GhostTree::activate()
 }
 
 void
-GhostTree::active_update(float /*elapsed_time*/)
+GhostTree::active_update(float /*dt_sec*/)
 {
   if (mystate == STATE_IDLE) {
-    if(colorchange_timer.check()) {
+    if (colorchange_timer.check()) {
       SoundManager::current()->play("sounds/tree_howling.ogg", get_pos());
       suck_timer.start(3);
       treecolor = (treecolor + 1) % 3;
 
       Color col;
-      switch(treecolor) {
+      switch (treecolor) {
         case 0: col = Color(1, 0, 0); break;
         case 1: col = Color(0, 1, 0); break;
         case 2: col = Color(0, 0, 1); break;
@@ -105,13 +100,13 @@ GhostTree::active_update(float /*elapsed_time*/)
       glow_sprite->set_color(col);
     }
 
-    if(suck_timer.check()) {
+    if (suck_timer.check()) {
       Color col = glow_sprite->get_color();
       SoundManager::current()->play("sounds/tree_suck.ogg", get_pos());
-      for(const auto& willo : willowisps) {
-        if(willo->get_color() == col) {
+      for (const auto& willo : willowisps) {
+        if (willo->get_color() == col) {
           willo->start_sucking(
-            bbox.get_middle() + SUCK_TARGET_OFFSET
+            m_col.m_bbox.get_middle() + SUCK_TARGET_OFFSET
             + Vector(gameRandom.randf(-SUCK_TARGET_SPREAD, SUCK_TARGET_SPREAD),
                      gameRandom.randf(-SUCK_TARGET_SPREAD, SUCK_TARGET_SPREAD)));
         }
@@ -119,23 +114,21 @@ GhostTree::active_update(float /*elapsed_time*/)
       mystate = STATE_SUCKING;
     }
 
-    if(willowisp_timer.check()) {
-      if(willowisps.size() < WILLOWISP_COUNT) {
-        Vector pos = Vector(bbox.get_width() / 2, bbox.get_height() / 2 + willo_spawn_y + WILLOWISP_TOP_OFFSET);
-        auto willowisp = std::make_shared<TreeWillOWisp>(this, pos, 200 + willo_radius, willo_speed);
-
-        Sector::current()->add_object(willowisp);
-        willowisps.push_back(willowisp);
+    if (willowisp_timer.check()) {
+      if (willowisps.size() < WILLOWISP_COUNT) {
+        Vector pos = Vector(m_col.m_bbox.get_width() / 2, m_col.m_bbox.get_height() / 2 + willo_spawn_y + WILLOWISP_TOP_OFFSET);
+        auto& willowisp = Sector::get().add<TreeWillOWisp>(this, pos, 200 + willo_radius, willo_speed);
+        willowisps.push_back(&willowisp);
 
         willo_spawn_y -= 40;
-        if(willo_spawn_y < -160)
+        if (willo_spawn_y < -160)
           willo_spawn_y = 0;
 
         willo_radius += 20;
-        if(willo_radius > 120)
+        if (willo_radius > 120)
           willo_radius = 0;
 
-        if(willo_speed == 1.8f) {
+        if (willo_speed == 1.8f) {
           willo_speed = 1.5f;
         } else {
           willo_speed = 1.8f;
@@ -145,24 +138,23 @@ GhostTree::active_update(float /*elapsed_time*/)
           willo_color = (willo_color + 1) % 3;
         } while(willo_color == treecolor);
 
-        switch(willo_color) {
-          case 0: willowisp->set_color(Color(1, 0, 0)); break;
-          case 1: willowisp->set_color(Color(0, 1, 0)); break;
-          case 2: willowisp->set_color(Color(0, 0, 1)); break;
-          case 3: willowisp->set_color(Color(1, 1, 0)); break;
-          case 4: willowisp->set_color(Color(1, 0, 1)); break;
-          case 5: willowisp->set_color(Color(0, 1, 1)); break;
+        switch (willo_color) {
+          case 0: willowisp.set_color(Color(1, 0, 0)); break;
+          case 1: willowisp.set_color(Color(0, 1, 0)); break;
+          case 2: willowisp.set_color(Color(0, 0, 1)); break;
+          case 3: willowisp.set_color(Color(1, 1, 0)); break;
+          case 4: willowisp.set_color(Color(1, 0, 1)); break;
+          case 5: willowisp.set_color(Color(0, 1, 1)); break;
           default: assert(false);
         }
       }
     }
 
-    if(root_timer.check()) {
+    if (root_timer.check()) {
       /* TODO indicate root with an animation */
       auto player = get_nearest_player();
       if (player) {
-        auto root = std::make_shared<Root>(Vector(player->get_bbox().get_left(), bbox.get_bottom()+ROOT_TOP_OFFSET));
-        Sector::current()->add_object(root);
+        Sector::get().add<Root>(Vector(player->get_bbox().get_left(), m_col.m_bbox.get_bottom()+ROOT_TOP_OFFSET));
       }
     }
   } else if (mystate == STATE_SWALLOWING) {
@@ -170,25 +162,25 @@ GhostTree::active_update(float /*elapsed_time*/)
       // suck in lantern
       assert (suck_lantern);
       Vector pos = suck_lantern->get_pos();
-      Vector delta = bbox.get_middle() + SUCK_TARGET_OFFSET - pos;
+      Vector delta = m_col.m_bbox.get_middle() + SUCK_TARGET_OFFSET - pos;
       Vector dir_ = delta.unit();
       if (delta.norm() < 1) {
         dir_ = delta;
-        suck_lantern->ungrab(*this, RIGHT);
+        suck_lantern->ungrab(*this, Direction::RIGHT);
         suck_lantern->remove_me();
-        suck_lantern = 0;
-        sprite->set_action("swallow", 1);
+        suck_lantern = nullptr;
+        m_sprite->set_action("swallow", 1);
       } else {
         pos += dir_;
-        suck_lantern->grab(*this, pos, RIGHT);
+        suck_lantern->grab(*this, pos, Direction::RIGHT);
       }
     } else {
       // wait until lantern is swallowed
-      if (sprite->animation_done()) {
+      if (m_sprite->animation_done()) {
         if (is_color_deadly(suck_lantern_color)) {
           die();
         } else {
-          sprite->set_action("default");
+          m_sprite->set_action("normal");
           mystate = STATE_IDLE;
           spawn_lantern();
         }
@@ -206,15 +198,15 @@ GhostTree::is_color_deadly(Color color) const
 }
 
 void
-GhostTree::willowisp_died(TreeWillOWisp *willowisp)
+GhostTree::willowisp_died(TreeWillOWisp* willowisp)
 {
   if ((mystate == STATE_SUCKING) && (willowisp->was_sucked)) {
     mystate = STATE_IDLE;
   }
   willowisps.erase(std::find_if(willowisps.begin(), willowisps.end(),
-                                [willowisp](const std::shared_ptr<TreeWillOWisp>& lhs)
+                                [willowisp](GameObject* lhs)
                                 {
-                                  return lhs.get() == willowisp;
+                                  return lhs == willowisp;
                                 }));
 }
 
@@ -223,17 +215,14 @@ GhostTree::draw(DrawingContext& context)
 {
   BadGuy::draw(context);
 
-  context.push_target();
   context.push_transform();
-  context.set_target(DrawingContext::LIGHTMAP);
   if (mystate == STATE_SUCKING) {
-    context.set_alpha(0.5 + fmodf(game_time, 0.5));
+    context.set_alpha(0.5f + fmodf(g_game_time, 0.5f));
   } else {
-    context.set_alpha(0.5);
+    context.set_alpha(0.5f);
   }
-  glow_sprite->draw(context, get_pos(), layer);
+  glow_sprite->draw(context.light(), get_pos(), m_layer);
   context.pop_transform();
-  context.pop_target();
 }
 
 bool
@@ -248,7 +237,7 @@ GhostTree::collides(GameObject& other, const CollisionHit& ) const
 HitResponse
 GhostTree::collision(GameObject& other, const CollisionHit& )
 {
-  if(mystate != STATE_SUCKING) return ABORT_MOVE;
+  if (mystate != STATE_SUCKING) return ABORT_MOVE;
 
   auto player = dynamic_cast<Player*>(&other);
   if (player) {
@@ -258,7 +247,7 @@ GhostTree::collision(GameObject& other, const CollisionHit& )
   Lantern* lantern = dynamic_cast<Lantern*>(&other);
   if (lantern) {
     suck_lantern = lantern;
-    suck_lantern->grab(*this, suck_lantern->get_pos(), RIGHT);
+    suck_lantern->grab(*this, suck_lantern->get_pos(), Direction::RIGHT);
     suck_lantern_color = lantern->get_color();
     mystate = STATE_SWALLOWING;
   }
@@ -269,8 +258,7 @@ GhostTree::collision(GameObject& other, const CollisionHit& )
 void
 GhostTree::spawn_lantern()
 {
-  auto lantern = std::make_shared<Lantern>(bbox.get_middle() + SUCK_TARGET_OFFSET);
-  Sector::current()->add_object(lantern);
+  Sector::get().add<Lantern>(m_col.m_bbox.get_middle() + SUCK_TARGET_OFFSET);
 }
 
 /* EOF */

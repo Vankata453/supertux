@@ -19,35 +19,32 @@
 
 #include "badguy/walking_badguy.hpp"
 
-class Color;
-
-class WalkingCandle : public WalkingBadguy
+class WalkingCandle final : public WalkingBadguy
 {
 public:
   WalkingCandle(const ReaderMapping& reader);
 
-  bool is_freezable() const;
-  bool is_flammable() const;
+  virtual bool is_freezable() const override;
+  virtual bool is_flammable() const override;
 
-  void freeze();
-  void unfreeze();
+  virtual void freeze() override;
+  virtual void unfreeze() override;
 
-  HitResponse collision(GameObject& other, const CollisionHit& hit);
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
 
-  void kill_fall() { };
+  virtual void kill_fall() override {}
 
-  ObjectSettings get_settings();
-  virtual void after_editor_set();
-  std::string get_class() const {
-    return "mrcandle";
-  }
-  std::string get_display_name() const {
-    return _("Mr. Candle");
-  }
+  virtual ObjectSettings get_settings() override;
+  virtual void after_editor_set() override;
+  virtual std::string get_class() const override { return "walking_candle"; }
+  virtual std::string get_display_name() const override { return _("Mr. Candle"); }
 
 private:
-
   Color lightcolor;
+
+private:
+  WalkingCandle(const WalkingCandle&) = delete;
+  WalkingCandle& operator=(const WalkingCandle&) = delete;
 };
 
 #endif

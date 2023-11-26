@@ -17,7 +17,6 @@
 #ifndef HEADER_SUPERTUX_UTIL_LOG_HPP
 #define HEADER_SUPERTUX_UTIL_LOG_HPP
 
-#include <config.h>
 #include <ostream>
 
 enum LogLevel { LOG_NONE, LOG_FATAL, LOG_WARNING, LOG_INFO, LOG_DEBUG };
@@ -35,11 +34,6 @@ std::ostream& log_warning_f(const char* file, int line);
 
 std::ostream& log_fatal_f(const char* file, int line);
 #define log_fatal if (g_log_level >= LOG_FATAL) log_fatal_f(__FILE__, __LINE__)
-
-class Vector;
-std::ostream& operator<< (std::ostream& str, const Vector& vector);
-class Rectf;
-std::ostream& operator<< (std::ostream& str, const Rectf& rect);
 
 void log_info_callback(const std::string& str);
 void log_error_callback(const std::string& str);

@@ -19,25 +19,20 @@
 
 #include "badguy/badguy.hpp"
 
-class SpiderMite : public BadGuy
+class SpiderMite final : public BadGuy
 {
 public:
   SpiderMite(const ReaderMapping& reader);
-  SpiderMite(const Vector& pos);
 
-  void initialize();
-  void active_update(float elapsed_time);
-  void collision_solid(const CollisionHit& hit);
+  virtual void initialize() override;
+  virtual void active_update(float dt_sec) override;
+  virtual void collision_solid(const CollisionHit& hit) override;
 
-  void freeze();
-  void unfreeze();
-  bool is_freezable() const;
-  std::string get_class() const {
-    return "spidermite";
-  }
-  std::string get_display_name() const {
-    return _("Spider mite");
-  }
+  virtual void freeze() override;
+  virtual void unfreeze() override;
+  virtual bool is_freezable() const override;
+  virtual std::string get_class() const override { return "spidermite"; }
+  virtual std::string get_display_name() const override { return _("Spider mite"); }
 
 protected:
   enum SpiderMiteMode {
@@ -46,11 +41,15 @@ protected:
   };
 
 protected:
-  bool collision_squished(GameObject& object);
+  virtual bool collision_squished(GameObject& object) override;
 
 private:
   SpiderMiteMode mode;
   Timer timer;
+
+private:
+  SpiderMite(const SpiderMite&) = delete;
+  SpiderMite& operator=(const SpiderMite&) = delete;
 };
 
 #endif

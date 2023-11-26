@@ -17,6 +17,8 @@
 #ifndef HEADER_SUPERTUX_UTIL_FILE_SYSTEM_HPP
 #define HEADER_SUPERTUX_UTIL_FILE_SYSTEM_HPP
 
+#include <string>
+
 namespace FileSystem {
 
 /** Returns true if the given path is a directory */
@@ -25,36 +27,37 @@ bool is_directory(const std::string& path);
 /** Return true if the given file exists */
 bool exists(const std::string& path);
 
-/**
- *  Create the given directory
- */
+/** Create the given directory */
 void mkdir(const std::string& directory);
 
-/**
- * returns the path of the directory the file is in
- */
+/** returns the path of the directory the file is in */
 std::string dirname(const std::string& filename);
 
-/**
- * returns the name of the file
- */
+/** returns the name of the file */
 std::string basename(const std::string& filename);
 
-/**
- * remove everything starting from and including the last dot
- */
+/** Return a path to 'filename' that is relative to 'basedir', e.g.
+    reldir("/levels/juser/level1.stl", "/levels") -> "juser/level1.stl" */
+std::string relpath(const std::string& filename, const std::string& basedir);
+
+/** remove everything starting from and including the last dot */
 std::string strip_extension(const std::string& filename);
 
-/**
- * normalize filename so that "blup/bla/blo/../../bar" will become
- * "blup/bar"
- */
+/** normalize filename so that "blup/bla/blo/../../bar" will become
+    "blup/bar" */
 std::string normalize(const std::string& filename);
 
-/**
- * join two filenames join("foo", "bar") -> "foo/bar"
- */
+/** join two filenames join("foo", "bar") -> "foo/bar" */
 std::string join(const std::string& lhs, const std::string& rhs);
+
+/** Remove a file
+    @return true when successfully removed, false otherwise */
+ bool remove(const std::string& path);
+
+/** Opens a file path or an address outside of SuperTux
+ * @param path path or URL to open
+ */
+ void open_path(const std::string& path);
 
 } // namespace FileSystem
 

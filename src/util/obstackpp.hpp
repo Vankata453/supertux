@@ -14,21 +14,33 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADER_SUPERTUX_OBSTACK_OBSTACKPP_HPP
-#define HEADER_SUPERTUX_OBSTACK_OBSTACKPP_HPP
+#ifndef HEADER_SUPERTUX_UTIL_OBSTACKPP_HPP
+#define HEADER_SUPERTUX_UTIL_OBSTACKPP_HPP
 
 #include <obstack.h>
 
 inline void*
 operator new (size_t bytes, struct obstack& obst)
 {
-  return obstack_alloc(&obst, bytes);
+  return obstack_alloc(&obst, static_cast<int>(bytes));
 }
 
 inline void*
 operator new[] (size_t bytes, struct obstack& obst)
 {
-  return obstack_alloc(&obst, bytes);
+  return obstack_alloc(&obst, static_cast<int>(bytes));
+}
+
+inline void
+operator delete (void* obj, struct obstack& obst)
+{
+  obstack_free(&obst, static_cast<char*>(obj));
+}
+
+inline void
+operator delete[] (void* obj, struct obstack& obst)
+{
+  obstack_free(&obst, static_cast<char*>(obj));
 }
 
 static inline void* obstack_chunk_alloc(size_t size)
@@ -38,7 +50,7 @@ static inline void* obstack_chunk_alloc(size_t size)
 
 static inline void obstack_chunk_free(void* data)
 {
-  char* ptr = static_cast<char*> (data);
+  char* ptr = static_cast<char*>(data);
   delete[] ptr;
 }
 

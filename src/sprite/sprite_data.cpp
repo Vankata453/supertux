@@ -20,8 +20,13 @@
 #include <stdexcept>
 #include <sstream>
 
+#include "util/file_system.hpp"
 #include "util/log.hpp"
+#include "util/reader_collection.hpp"
+#include "util/reader_document.hpp"
 #include "util/reader_mapping.hpp"
+#include "util/reader_object.hpp"
+#include "video/surface.hpp"
 
 SpriteData::Action::Action() :
   name(),
@@ -29,57 +34,50 @@ SpriteData::Action::Action() :
   y_offset(0),
   hitbox_w(0),
   hitbox_h(0),
-  z_order(0),
   fps(10),
+  loops(-1),
+  has_custom_loops(false),
   surfaces()
 {
 }
 
-SpriteData::Action::~Action()
-{
-}
-
-SpriteData::SpriteData(const ReaderMapping& lisp, const std::string& basedir) :
+SpriteData::SpriteData(const ReaderMapping& mapping) :
   actions(),
   name()
 {
-  auto iter = lisp.get_iter();
-  while(iter.next()) {
-    if(iter.get_key() == "name") {
+  auto iter = mapping.get_iter();
+  while (iter.next()) {
+    if (iter.get_key() == "name") {
       iter.get(name);
-    } else if(iter.get_key() == "action") {
-      parse_action(iter.as_mapping(), basedir);
+    } else if (iter.get_key() == "action") {
+      parse_action(iter.as_mapping());
     } else {
       log_warning << "Unknown sprite field: " << iter.get_key() << std::endl;
     }
   }
-  if(actions.empty())
+  if (actions.empty())
     throw std::runtime_error("Error: Sprite without actions.");
 }
 
-SpriteData::~SpriteData()
-{
-}
-
 void
-SpriteData::parse_action(const ReaderMapping& lisp, const std::string& basedir)
+SpriteData::parse_action(const ReaderMapping& mapping)
 {
-  auto action = std::unique_ptr<Action>(new Action);
+  auto action = std::make_unique<Action>();
 
-  if(!lisp.get("name", action->name)) {
-    if(!actions.empty())
+  if (!mapping.get("name", action->name)) {
+    if (!actions.empty())
       throw std::runtime_error(
         "If there are more than one action, they need names!");
   }
 
   std::vector<float> hitbox;
-  if (lisp.get("hitbox", hitbox)) {
-    switch(hitbox.size()) {
+  if (mapping.get("hitbox", hitbox)) {
+    switch (hitbox.size())
+    {
       case 4:
         action->hitbox_h = hitbox[3];
         action->hitbox_w = hitbox[2];
-
-        //fall-through
+        BOOST_FALLTHROUGH;
       case 2:
         action->y_offset = hitbox[1];
         action->x_offset = hitbox[0];
@@ -89,13 +87,17 @@ SpriteData::parse_action(const ReaderMapping& lisp, const std::string& basedir)
         throw std::runtime_error("hitbox should specify 2/4 coordinates");
     }
   }
-  lisp.get("z-order", action->z_order);
-  lisp.get("fps", action->fps);
+  mapping.get("fps", action->fps);
+  if (mapping.get("loops", action->loops))
+  {
+    action->has_custom_loops = true;
+  }
 
   std::string mirror_action;
-  if (lisp.get("mirror-action", mirror_action)) {
+  std::string clone_action;
+  if (mapping.get("mirror-action", mirror_action)) {
     const auto act_tmp = get_action(mirror_action);
-    if(act_tmp == NULL) {
+    if (act_tmp == nullptr) {
       std::ostringstream msg;
       msg << "Could not mirror action. Action not found: \"" << mirror_action << "\"\n"
           << "Mirror actions must be defined after the real one!";
@@ -103,34 +105,77 @@ SpriteData::parse_action(const ReaderMapping& lisp, const std::string& basedir)
     } else {
       float max_w = 0;
       float max_h = 0;
-      for(const auto& surf : act_tmp->surfaces) {
-        auto surface = surf->clone();
-        surface->hflip();
-        max_w = std::max(max_w, (float) surface->get_width());
-        max_h = std::max(max_h, (float) surface->get_height());
+      for (const auto& surf : act_tmp->surfaces) {
+        auto surface = surf->clone(HORIZONTAL_FLIP);
+        max_w = std::max(max_w, static_cast<float>(surface->get_width()));
+        max_h = std::max(max_h, static_cast<float>(surface->get_height()));
         action->surfaces.push_back(surface);
       }
       if (action->hitbox_w < 1) action->hitbox_w = max_w - action->x_offset;
       if (action->hitbox_h < 1) action->hitbox_h = max_h - action->y_offset;
     }
-  } else { // Load images
-    std::vector<std::string> images;
-    if(!lisp.get("images", images)) {
-      std::stringstream msg;
-      msg << "Sprite '" << name << "' contains no images in action '"
-          << action->name << "'.";
+  } else if (mapping.get("clone-action", clone_action)) {
+    const auto* act_tmp = get_action(clone_action);
+    if (act_tmp == nullptr) {
+      std::ostringstream msg;
+      msg << "Could not clone action. Action not found: \"" << clone_action << "\"\n"
+          << "Mirror actions must be defined after the real one!";
       throw std::runtime_error(msg.str());
     } else {
+      // copy everything except the name
+      const std::string oldname = action->name;
+      *action = *act_tmp;
+      action->name = oldname;
+    }
+  } else { // Load images
+    boost::optional<ReaderCollection> surfaces_collection;
+    std::vector<std::string> images;
+    if (mapping.get("images", images))
+    {
       float max_w = 0;
       float max_h = 0;
-      for(const auto& image : images) {
-        auto surface = Surface::create(basedir + image);
-        max_w = std::max(max_w, (float) surface->get_width());
-        max_h = std::max(max_h, (float) surface->get_height());
+      for (const auto& image : images) {
+        auto surface = Surface::from_file(FileSystem::join(mapping.get_doc().get_directory(), image));
+        max_w = std::max(max_w, static_cast<float>(surface->get_width()));
+        max_h = std::max(max_h, static_cast<float>(surface->get_height()));
         action->surfaces.push_back(surface);
       }
       if (action->hitbox_w < 1) action->hitbox_w = max_w - action->x_offset;
       if (action->hitbox_h < 1) action->hitbox_h = max_h - action->y_offset;
+    }
+    else if (mapping.get("surfaces", surfaces_collection))
+    {
+      for (const auto& i : surfaces_collection->get_objects())
+      {
+        if (i.get_name() == "surface")
+        {
+          action->surfaces.push_back(Surface::from_reader(i.get_mapping()));
+        }
+        else
+        {
+          std::stringstream msg;
+          msg << "Sprite '" << name << "' unknown tag in 'surfaces' << " << i.get_name();
+          throw std::runtime_error(msg.str());
+        }
+      }
+
+      // calculate hitbox
+      float max_w = 0;
+      float max_h = 0;
+      for (const auto& surface : action->surfaces)
+      {
+        max_w = std::max(max_w, static_cast<float>(surface->get_width()));
+        max_h = std::max(max_h, static_cast<float>(surface->get_height()));
+      }
+      if (action->hitbox_w < 1) action->hitbox_w = max_w - action->x_offset;
+      if (action->hitbox_h < 1) action->hitbox_h = max_h - action->y_offset;
+    }
+    else
+    {
+      std::stringstream msg;
+      msg << "Sprite '" << name << "' contains no images in action '"
+          << action->name << "'.";
+      throw std::runtime_error(msg.str());
     }
   }
   actions[action->name] = std::move(action);
@@ -140,7 +185,7 @@ const SpriteData::Action*
 SpriteData::get_action(const std::string& act) const
 {
   Actions::const_iterator i = actions.find(act);
-  if(i == actions.end()) {
+  if (i == actions.end()) {
     return nullptr;
   }
   return i->second.get();

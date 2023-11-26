@@ -19,20 +19,21 @@
 #include <math.h>
 
 #include "audio/sound_manager.hpp"
-#include "math/random_generator.hpp"
-#include "object/camera.hpp"
+#include "math/random.hpp"
 #include "object/electrifier.hpp"
 #include "object/player.hpp"
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
-#include "util/reader_mapping.hpp"
 
-#define  LIFETIME 5
-#define  MOVETIME 0.75
-#define  BASE_SPEED 200
-#define  RAND_SPEED 150
+namespace {
+
+const float LIFETIME = 5.0f;
+const float MOVETIME = 0.75f;
+const int BASE_SPEED = 200;
+const int RAND_SPEED = 150;
+
+} // namespace
 
 Kugelblitz::Kugelblitz(const ReaderMapping& reader) :
   BadGuy(reader, "images/creatures/kugelblitz/kugelblitz.sprite"),
@@ -42,15 +43,14 @@ Kugelblitz::Kugelblitz(const ReaderMapping& reader) :
   movement_timer(),
   lifetime(),
   direction(),
-  light(0.0f,0.0f,0.0f),
   lightsprite(SpriteManager::current()->create("images/objects/lightmap_light/lightmap_light.sprite"))
 {
-  start_position.x = bbox.p1.x;
-  sprite->set_action("falling");
-  physic.enable_gravity(false);
-  countMe = false;
+  m_start_position.x = m_col.m_bbox.get_left();
+  m_sprite->set_action("falling");
+  m_physic.enable_gravity(false);
+  m_countMe = false;
 
-  lightsprite->set_blend(Blend(GL_SRC_ALPHA, GL_ONE));
+  lightsprite->set_blend(Blend::ADD);
   lightsprite->set_color(Color(0.2f, 0.1f, 0.0f));
 
   SoundManager::current()->preload("sounds/lightning.wav");
@@ -59,8 +59,8 @@ Kugelblitz::Kugelblitz(const ReaderMapping& reader) :
 void
 Kugelblitz::initialize()
 {
-  physic.set_velocity_y(300);
-  physic.set_velocity_x(-20); //fall a little to the left
+  m_physic.set_velocity_y(300);
+  m_physic.set_velocity_x(-20); //fall a little to the left
   direction = 1;
   dying = false;
 }
@@ -74,15 +74,15 @@ Kugelblitz::collision_solid(const CollisionHit& chit)
 HitResponse
 Kugelblitz::collision_player(Player& player, const CollisionHit& )
 {
-  if(player.is_invincible()) {
+  if (player.is_invincible()) {
     explode();
     return ABORT_MOVE;
   }
   // hit from above?
-  if(player.get_movement().y - get_movement().y > 0 && player.get_bbox().p2.y <
-     (bbox.p1.y + bbox.p2.y) / 2) {
+  if (player.get_movement().y - get_movement().y > 0 && player.get_bbox().get_bottom() <
+     (m_col.m_bbox.get_top() + m_col.m_bbox.get_bottom()) / 2) {
     // if it's not is it possible to squish us, then this will hurt
-    if(!collision_squished(player))
+    if (!collision_squished(player))
       player.kill(false);
     explode();
     return FORCE_MOVE;
@@ -105,18 +105,18 @@ HitResponse
 Kugelblitz::hit(const CollisionHit& hit_)
 {
   // hit floor?
-  if(hit_.bottom) {
+  if (hit_.bottom) {
     if (!groundhit_pos_set)
     {
       pos_groundhit = get_pos();
       groundhit_pos_set = true;
     }
-    sprite->set_action("flying");
-    physic.set_velocity_y(0);
+    m_sprite->set_action("flying");
+    m_physic.set_velocity_y(0);
     //Set random initial speed and direction
     direction = gameRandom.rand(2)? 1: -1;
     int speed = (BASE_SPEED + (gameRandom.rand(RAND_SPEED))) * direction;
-    physic.set_velocity_x(speed);
+    m_physic.set_velocity_x(static_cast<float>(speed));
     movement_timer.start(MOVETIME);
     lifetime.start(LIFETIME);
 
@@ -126,7 +126,7 @@ Kugelblitz::hit(const CollisionHit& hit_)
 }
 
 void
-Kugelblitz::active_update(float elapsed_time)
+Kugelblitz::active_update(float dt_sec)
 {
   if (lifetime.check()) {
     explode();
@@ -136,34 +136,24 @@ Kugelblitz::active_update(float elapsed_time)
       if (movement_timer.check()) {
         if (direction == 1) direction = -1; else direction = 1;
         int speed = (BASE_SPEED + (gameRandom.rand(RAND_SPEED))) * direction;
-        physic.set_velocity_x(speed);
+        m_physic.set_velocity_x(static_cast<float>(speed));
         movement_timer.start(MOVETIME);
       }
     }
 
     if (is_in_water()) {
-      Sector::current()->add_object( std::make_shared<Electrifier>(75,1421,1.5));
-      Sector::current()->add_object( std::make_shared<Electrifier>(76,1422,1.5));
+      Sector::get().add<Electrifier>(TileChangeMap({ {75, 1421}, {76, 1422} }), 1.5);
       explode();
     }
   }
-  BadGuy::active_update(elapsed_time);
+  BadGuy::active_update(dt_sec);
 }
 
 void
 Kugelblitz::draw(DrawingContext& context)
 {
-  sprite->draw(context, get_pos(), layer);
-
-  //Only draw light in dark areas
-  context.get_light( bbox.get_middle(), &light );
-  if (light.red + light.green < 2.0){
-    context.push_target();
-    context.set_target(DrawingContext::LIGHTMAP);
-    sprite->draw(context, get_pos(), layer);
-    lightsprite->draw(context, bbox.get_middle(), 0);
-    context.pop_target();
-  }
+  m_sprite->draw(context.color(), get_pos(), m_layer);
+  lightsprite->draw(context.light(), m_col.m_bbox.get_middle(), 0);
 }
 
 void
@@ -176,8 +166,8 @@ void
 Kugelblitz::explode()
 {
   if (!dying) {
-    SoundManager::current()->play("sounds/lightning.wav", bbox.p1);
-    sprite->set_action("pop");
+    SoundManager::current()->play("sounds/lightning.wav", m_col.m_bbox.p1());
+    m_sprite->set_action("pop");
     lifetime.start(0.2f);
     dying = true;
   }
@@ -193,23 +183,23 @@ Kugelblitz::try_activate()
 
   auto player_ = get_nearest_player();
   if (!player_) return;
-  Vector dist = player_->get_bbox().get_middle() - bbox.get_middle();
+  Vector dist = player_->get_bbox().get_middle() - m_col.m_bbox.get_middle();
   if ((fabsf(dist.x) <= X_OFFSCREEN_DISTANCE) && (fabsf(dist.y) <= Y_OFFSCREEN_DISTANCE)) {
     set_state(STATE_ACTIVE);
-    if (!is_initialized) {
+    if (!m_is_initialized) {
 
       // if starting direction was set to AUTO, this is our chance to re-orient the badguy
-      if (start_dir == AUTO) {
+      if (m_start_dir == Direction::AUTO) {
         Player* player__ = get_nearest_player();
-        if (player__ && (player__->get_bbox().p1.x > bbox.p2.x)) {
-          dir = RIGHT;
+        if (player__ && (player__->get_bbox().get_left() > m_col.m_bbox.get_right())) {
+          m_dir = Direction::RIGHT;
         } else {
-          dir = LEFT;
+          m_dir = Direction::LEFT;
         }
       }
 
       initialize();
-      is_initialized = true;
+      m_is_initialized = true;
     }
     activate();
   }

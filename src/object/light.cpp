@@ -15,15 +15,15 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "object/light.hpp"
+
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
 
 Light::Light(const Vector& center, const Color& color_) :
   position(center),
   color(color_),
-  sprite()
+  sprite(SpriteManager::current()->create("images/objects/lightmap_light/lightmap_light.sprite"))
 {
-  sprite = SpriteManager::current()->create("images/objects/lightmap_light/lightmap_light.sprite");
 }
 
 Light::~Light()
@@ -38,14 +38,9 @@ Light::update(float )
 void
 Light::draw(DrawingContext& context)
 {
-  context.push_target();
-  context.set_target(DrawingContext::LIGHTMAP);
-
   sprite->set_color(color);
-  sprite->set_blend(Blend(GL_SRC_ALPHA, GL_ONE));
-  sprite->draw(context, position, 0);
-
-  context.pop_target();
+  sprite->set_blend(Blend::ADD);
+  sprite->draw(context.light(), position, 0);
 }
 
 /* EOF */

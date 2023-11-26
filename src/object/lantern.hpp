@@ -19,45 +19,32 @@
 
 #include "object/rock.hpp"
 
-/**
- * Lantern. A portable Light Source.
- */
-class Lantern : public Rock
+/** Lantern. A portable Light Source. */
+class Lantern final : public Rock
 {
 public:
   Lantern(const Vector& pos);
   Lantern(const ReaderMapping& reader);
-  void draw(DrawingContext& context);
-  ~Lantern();
 
-  HitResponse collision(GameObject& other, const CollisionHit& hit);
+  virtual void draw(DrawingContext& context) override;
 
-  void grab(MovingObject& object, const Vector& pos, Direction dir);
-  void ungrab(MovingObject& object, Direction dir);
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
 
-  /**
-   * returns true if lamp is currently open
-   */
+  virtual void grab(MovingObject& object, const Vector& pos, Direction dir) override;
+  virtual void ungrab(MovingObject& object, Direction dir) override;
+
+  virtual std::string get_class() const override { return "lantern"; }
+  virtual std::string get_display_name() const override { return _("Lantern"); }
+
+  virtual ObjectSettings get_settings() override;
+  virtual void after_editor_set() override;
+
+  /** returns true if lamp is currently open */
   bool is_open() const;
 
-  /**
-   * returns the lamp's color
-   */
-  Color get_color() const {
-    return lightcolor;
-  }
-
-  void add_color(Color c);
-
-  std::string get_class() const {
-    return "lantern";
-  }
-  std::string get_display_name() const {
-    return _("Lantern");
-  }
-
-  virtual ObjectSettings get_settings();
-  virtual void after_editor_set();
+  /** returns the lamp's color */
+  Color get_color() const { return lightcolor; }
+  void add_color(const Color& c);
 
 private:
   Color lightcolor;
@@ -65,8 +52,8 @@ private:
   void updateColor();
 
 private:
-  Lantern(const Lantern&);
-  Lantern& operator=(const Lantern&);
+  Lantern(const Lantern&) = delete;
+  Lantern& operator=(const Lantern&) = delete;
 };
 
 #endif

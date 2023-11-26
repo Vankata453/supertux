@@ -19,25 +19,21 @@
 
 #include "badguy/walking_badguy.hpp"
 
-class SSpiky : public WalkingBadguy
+class SSpiky final : public WalkingBadguy
 {
 public:
   SSpiky(const ReaderMapping& reader);
 
-  void initialize();
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit);
-  void active_update(float elapsed_time);
+  virtual void initialize() override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit) override;
+  virtual void active_update(float dt_sec) override;
 
-  void freeze();
-  bool is_freezable() const;
-  bool is_flammable() const;
-  std::string get_class() const {
-    return "sspiky";
-  }
-  std::string get_display_name() const {
-    return _("Sleeping spiky");
-  }
+  virtual void freeze() override;
+  virtual bool is_freezable() const override;
+  virtual bool is_flammable() const override;
+  virtual std::string get_class() const override { return "sspiky"; }
+  virtual std::string get_display_name() const override { return _("Sleeping spiky"); }
 
 protected:
   enum SSpikyState {
@@ -46,6 +42,10 @@ protected:
     SSPIKY_WALKING
   };
   SSpikyState state;
+
+private:
+  SSpiky(const SSpiky&) = delete;
+  SSpiky& operator=(const SSpiky&) = delete;
 };
 
 #endif

@@ -14,14 +14,17 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "scripting/level.hpp"
+
 #include "supertux/flip_level_transformer.hpp"
 #include "supertux/game_session.hpp"
 
 namespace scripting {
+
 void
 Level_finish(bool win)
 {
-  if(GameSession::current() == NULL)
+  if (GameSession::current() == nullptr)
     return;
 
   GameSession::current()->finish(win);
@@ -30,7 +33,7 @@ Level_finish(bool win)
 void
 Level_spawn(const std::string& sector, const std::string& spawnpoint)
 {
-  if(GameSession::current() == NULL)
+  if (GameSession::current() == nullptr)
     return;
 
   GameSession::current()->respawn(sector, spawnpoint);
@@ -46,7 +49,7 @@ Level_flip_vertically()
 void
 Level_toggle_pause()
 {
-  if(GameSession::current() == NULL)
+  if (GameSession::current() == nullptr)
     return;
   GameSession::current()->toggle_pause();
 }
@@ -54,10 +57,10 @@ Level_toggle_pause()
 void
 Level_edit(bool edit_mode)
 {
-  if(GameSession::current() == NULL) return;
+  if (GameSession::current() == nullptr) return;
   GameSession::current()->set_editmode(edit_mode);
 }
 
-}
+} // namespace scripting
 
 /* EOF */

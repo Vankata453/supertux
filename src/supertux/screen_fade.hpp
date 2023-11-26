@@ -27,8 +27,7 @@ class DrawingContext;
 class ScreenFade
 {
 public:
-  virtual ~ScreenFade()
-  {}
+  virtual ~ScreenFade() {}
 
   /** returns true if the effect is completed */
   virtual bool done() const = 0;
@@ -40,7 +39,7 @@ public:
 
   /** gets called for once (per logical) frame. ScreenFades should do
       their state updates and logic here */
-  virtual void update(float elapsed_time) = 0;
+  virtual void update(float dt_sec) = 0;
 };
 
 #endif

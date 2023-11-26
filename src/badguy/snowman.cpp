@@ -23,7 +23,7 @@
 #include "supertux/sector.hpp"
 
 Snowman::Snowman(const ReaderMapping& reader) :
-  WalkingBadguy(reader, "images/creatures/snowman/snowman.sprite", "walk-left", "walk-right")
+  WalkingBadguy(reader, "images/creatures/snowman/snowman.sprite", "left", "right")
 {
   walk_speed = 40;
   SoundManager::current()->preload("sounds/pop.ogg");
@@ -39,23 +39,22 @@ Snowman::loose_head()
   snowball_pos.y += 1;
 
   /* Create death animation for the (now headless) snowman. */
-  set_action (dir == LEFT ? "headless-left" : "headless-right", /* loops = */ -1);
+  set_action (m_dir == Direction::LEFT ? "headless-left" : "headless-right", /* loops = */ -1);
   set_pos (get_pos () + Vector (-4.0, 19.0)); /* difference in the sprite offsets */
-  physic.set_velocity_y(0);
-  physic.set_acceleration_y(0);
-  physic.enable_gravity(true);
+  m_physic.set_velocity_y(0);
+  m_physic.set_acceleration_y(0);
+  m_physic.enable_gravity(true);
   set_state (STATE_FALLING);
-  countMe = false;
+  m_countMe = false;
 
   /* Create a new snowball where the snowman's head was */
-  auto snowball = std::make_shared<SnowBall>(snowball_pos, dir, dead_script);
-  Sector::current()->add_object(snowball);
+  Sector::get().add<SnowBall>(snowball_pos, m_dir, m_dead_script);
 }
 
 HitResponse
 Snowman::collision_bullet(Bullet& bullet, const CollisionHit& hit)
 {
-  if(bullet.get_type() == FIRE_BONUS) {
+  if (bullet.get_type() == FIRE_BONUS) {
     // fire bullets destroy snowman's body
     Vector snowball_pos = get_pos();
     // Hard-coded values from sprites
@@ -63,8 +62,7 @@ Snowman::collision_bullet(Bullet& bullet, const CollisionHit& hit)
     snowball_pos.y += 1;
 
     /* Create a new snowball where the snowman's head was */
-    auto snowball = std::make_shared<SnowBall>(snowball_pos, dir, dead_script);
-    Sector::current()->add_object(snowball);
+    Sector::get().add<SnowBall>(snowball_pos, m_dir, m_dead_script);
 
     SoundManager::current()->play("sounds/pop.ogg", get_pos()); // this could be a different sound
     bullet.remove_me();
@@ -83,7 +81,7 @@ bool
 Snowman::collision_squished(GameObject& object)
 {
   auto player = dynamic_cast<Player*>(&object);
-  if(player && (player->does_buttjump || player->is_invincible())) {
+  if (player && (player->m_does_buttjump || player->is_invincible())) {
     player->bounce(*this);
     kill_fall();
     return true;

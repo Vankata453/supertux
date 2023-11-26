@@ -21,7 +21,7 @@
 
 class World;
 
-class EditorLevelsetMenu : public Menu
+class EditorLevelsetMenu final : public Menu
 {
 private:
 public:
@@ -29,23 +29,20 @@ public:
   EditorLevelsetMenu(World* world_);
   ~EditorLevelsetMenu();
 
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
 
 private:
-  enum MenuIDs {
-    MNID_EDITWORLDMAP,
-    MNID_NEWWORLDMAP
-  };
-
   void initialize();
-  void create_worldmap();
 
   World* world;
 
-  EditorLevelsetMenu(const EditorLevelsetMenu&);
-  EditorLevelsetMenu& operator=(const EditorLevelsetMenu&);
+  int levelset_type;
+
+private:
+  EditorLevelsetMenu(const EditorLevelsetMenu&) = delete;
+  EditorLevelsetMenu& operator=(const EditorLevelsetMenu&) = delete;
 };
 
-#endif //HEADER_SUPERTUX_SUPERTUX_MENU_EDITOR_LEVELSET_MENU_HPP
+#endif
 
 /* EOF */

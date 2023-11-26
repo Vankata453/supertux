@@ -19,6 +19,8 @@
 
 #include <cstdint>
 
+#include <boost/optional.hpp>
+
 #include "util/reader_iterator.hpp"
 
 namespace sexp {
@@ -31,41 +33,65 @@ class ReaderCollection;
 class ReaderMapping final
 {
 public:
-  ReaderMapping();
+  static bool s_translations_enabled;
 
+public:
   // sx should point to (section (name value)...)
-  ReaderMapping(const ReaderDocument* doc, const sexp::Value* sx);
-
-  static bool translations_enabled;
+  ReaderMapping(const ReaderDocument& doc, const sexp::Value& sx);
 
   ReaderIterator get_iter() const;
 
-  bool get(const char* key, bool& value) const;
-  bool get(const char* key, int& value) const;
-  bool get(const char* key, uint32_t& value) const;
-  bool get(const char* key, float& value) const;
-  bool get(const char* key, std::string& value) const;
+  bool get(const char* key, bool& value, const boost::optional<bool>& default_value = boost::none) const;
+  bool get(const char* key, int& value, const boost::optional<int>& default_value = boost::none) const;
+  bool get(const char* key, uint32_t& value, const boost::optional<uint32_t>& default_value = boost::none) const;
+  bool get(const char* key, float& value, const boost::optional<float>& default_value = boost::none) const;
+  bool get(const char* key, std::string& value, const boost::optional<const char*>& default_value = boost::none) const;
 
+  bool get(const char* key, std::vector<bool>& value) const;
   bool get(const char* key, std::vector<int>& value) const;
   bool get(const char* key, std::vector<float>& value) const;
   bool get(const char* key, std::vector<std::string>& value) const;
   bool get(const char* key, std::vector<unsigned int>& value) const;
 
-  bool get(const char* key, ReaderMapping&) const;
-  bool get(const char* key, ReaderCollection&) const;
+  bool get(const char* key, boost::optional<ReaderMapping>&) const;
+  bool get(const char* key, boost::optional<ReaderCollection>&) const;
 
-  const sexp::Value& get_sexp() const { return *m_sx; }
+  bool get(const char* key, sexp::Value& value) const;
 
-  const ReaderDocument* get_doc() const { return m_doc; }
+  /** Read a custom data format, such an as enum. The data is stored
+      as string and converted to the custom type using the supplied
+      `from_string` convert function. Example:
+
+      mapping.get_custom("style", value, Style_from_string, Style::DEFAULT); */
+  template<typename C, typename F>
+  bool get_custom(const char* key, C& value, F from_string, boost::optional<decltype(C())> default_value = boost::none) const
+  {
+    std::string text;
+    if (!get(key, text))
+    {
+      if (default_value) {
+        value = *default_value;
+      }
+      return false;
+    }
+    else
+    {
+      value = from_string(text);
+      return true;
+    }
+  }
+
+  const sexp::Value& get_sexp() const { return m_sx; }
+  const ReaderDocument& get_doc() const { return m_doc; }
 
 private:
   /** Returns pointer to (key value) */
   const sexp::Value* get_item(const char* key) const;
 
 private:
-  const ReaderDocument* m_doc;
-  const sexp::Value* m_sx;
-  std::vector<sexp::Value> const* m_arr;
+  const ReaderDocument& m_doc;
+  const sexp::Value& m_sx;
+  const std::vector<sexp::Value>& m_arr;
 };
 
 #endif

@@ -18,7 +18,6 @@
 #ifndef HEADER_SUPERTUX_ADDON_ADDON_MANAGER_HPP
 #define HEADER_SUPERTUX_ADDON_ADDON_MANAGER_HPP
 
-#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -26,7 +25,6 @@
 #include "addon/downloader.hpp"
 #include "supertux/gameconfig.hpp"
 #include "util/currenton.hpp"
-#include "util/reader_fwd.hpp"
 
 class Addon;
 using TransferStatusPtr = std::shared_ptr<TransferStatus>;
@@ -34,7 +32,7 @@ using TransferStatusPtr = std::shared_ptr<TransferStatus>;
 typedef std::string AddonId;
 
 /** Checks for, installs and removes Add-ons */
-class AddonManager : public Currenton<AddonManager>
+class AddonManager final : public Currenton<AddonManager>
 {
 public:
   using AddonList = std::vector<std::unique_ptr<Addon> >;
@@ -75,11 +73,13 @@ public:
   void enable_addon(const AddonId& addon_id);
   void disable_addon(const AddonId& addon_id);
 
+  bool is_old_enabled_addon(const std::unique_ptr<Addon>& addon) const;
   bool is_old_addon_enabled() const;
   void disable_old_addons();
   void mount_old_addons();
   void unmount_old_addons();
   bool is_from_old_addon(const std::string& filename) const;
+  bool is_addon_installed(const std::string& id) const;
 
   void update();
   void check_for_langpack_updates();

@@ -19,7 +19,7 @@
 
 #include "video/color.hpp"
 
-class ColorScheme
+class ColorScheme final
 {
 public:
   class Menu
@@ -30,6 +30,15 @@ public:
     static Color inactive_color;
     static Color label_color;
     static Color field_color;
+  };
+
+  class Text
+  {
+  public:
+    static Color small_color;
+    static Color heading_color;
+    static Color reference_color;
+    static Color normal_color;
   };
 };
 

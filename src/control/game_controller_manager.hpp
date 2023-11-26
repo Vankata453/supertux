@@ -20,13 +20,15 @@
 #include <vector>
 #include <array>
 
-#include "SDL.h"
-
 #include "control/controller.hpp"
 
 class InputManager;
+struct SDL_ControllerAxisEvent;
+struct SDL_ControllerButtonEvent;
+struct _SDL_GameController;
+typedef struct _SDL_GameController SDL_GameController;
 
-class GameControllerManager
+class GameControllerManager final
 {
 private:
   InputManager* m_parent;

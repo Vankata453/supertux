@@ -22,31 +22,32 @@
 
 #include "util/reader.hpp"
 
-#include <fstream>
 #include <physfs.h>
-#include <sexp/io.hpp>
-#include <sexp/parser.hpp>
-#include <sexp/util.hpp>
 
+#include "editor/editor.hpp"
 #include "util/gettext.hpp"
 #include "util/reader_mapping.hpp"
-#include "video/drawing_request.hpp"
+#include "video/drawing_context.hpp"
 
 int reader_get_layer(const ReaderMapping& reader, int def)
 {
   int tmp = 0;
   bool status;
 
+  // 'z-pos' is the canonical name
   status = reader.get("z-pos", tmp);
 
+  // 'layer' is the old name kept for backward compatibility
   if (!status)
     status = reader.get("layer", tmp);
 
   if (!status)
     tmp = def;
 
-  if (tmp > (LAYER_GUI - 100))
-    tmp = LAYER_GUI - 100;
+  if (!Editor::is_active()) {
+    if (tmp > (LAYER_GUI - 100))
+      tmp = LAYER_GUI - 100;
+  }
 
   return (tmp);
 }
@@ -56,7 +57,7 @@ namespace {
 std::string dirname(const std::string& filename)
 {
   std::string::size_type p = filename.find_last_of('/');
-  if(p == std::string::npos) {
+  if (p == std::string::npos) {
     return {};
   } else {
     return filename.substr(0, p);

@@ -16,14 +16,18 @@
 
 #include "supertux/moving_object.hpp"
 
-#include "editor/resizer.hpp"
+#include "editor/resize_marker.hpp"
 #include "supertux/sector.hpp"
+#include "util/writer.hpp"
 
 MovingObject::MovingObject() :
-  bbox(),
-  movement(),
-  group(COLGROUP_MOVING),
-  dest()
+  m_col(COLGROUP_MOVING, *this)
+{
+}
+
+MovingObject::MovingObject(const ReaderMapping& reader) :
+  GameObject(reader),
+  m_col(COLGROUP_MOVING, *this)
 {
 }
 
@@ -31,36 +35,32 @@ MovingObject::~MovingObject()
 {
 }
 
-void
-MovingObject::save(Writer& writer) {
-  GameObject::save(writer);
-  writer.write("x", bbox.p1.x);
-  writer.write("y", bbox.p1.y);
+ObjectSettings
+MovingObject::get_settings()
+{
+  ObjectSettings result = GameObject::get_settings();
+
+  if (has_variable_size()) {
+    result.add_rectf(_("Region"), &m_col.m_bbox, "region", OPTION_HIDDEN);
+  }
+
+  result.add_float(_("X"), &m_col.m_bbox.get_left(), "x", {}, OPTION_HIDDEN);
+  result.add_float(_("Y"), &m_col.m_bbox.get_top(), "y", {}, OPTION_HIDDEN);
+
+  return result;
 }
 
 void
-MovingObject::edit_bbox() {
-  if (!is_valid()) {
-    return;
-  }
-
-  GameObjectPtr marker1, marker2, marker3, marker4, marker5, marker6, marker7, marker8;
-  marker1 = std::make_shared<Resizer>(&bbox, Resizer::LEFT_UP, Resizer::LEFT_UP);
-  marker2 = std::make_shared<Resizer>(&bbox, Resizer::LEFT_UP, Resizer::NONE);
-  marker3 = std::make_shared<Resizer>(&bbox, Resizer::LEFT_UP, Resizer::RIGHT_DOWN);
-  marker4 = std::make_shared<Resizer>(&bbox, Resizer::NONE, Resizer::LEFT_UP);
-  marker5 = std::make_shared<Resizer>(&bbox, Resizer::NONE, Resizer::RIGHT_DOWN);
-  marker6 = std::make_shared<Resizer>(&bbox, Resizer::RIGHT_DOWN, Resizer::LEFT_UP);
-  marker7 = std::make_shared<Resizer>(&bbox, Resizer::RIGHT_DOWN, Resizer::NONE);
-  marker8 = std::make_shared<Resizer>(&bbox, Resizer::RIGHT_DOWN, Resizer::RIGHT_DOWN);
-  Sector::current()->add_object(marker1);
-  Sector::current()->add_object(marker2);
-  Sector::current()->add_object(marker3);
-  Sector::current()->add_object(marker4);
-  Sector::current()->add_object(marker5);
-  Sector::current()->add_object(marker6);
-  Sector::current()->add_object(marker7);
-  Sector::current()->add_object(marker8);
+MovingObject::editor_select()
+{
+  Sector::get().add<ResizeMarker>(&m_col.m_bbox, ResizeMarker::Side::LEFT_UP, ResizeMarker::Side::LEFT_UP);
+  Sector::get().add<ResizeMarker>(&m_col.m_bbox, ResizeMarker::Side::LEFT_UP, ResizeMarker::Side::NONE);
+  Sector::get().add<ResizeMarker>(&m_col.m_bbox, ResizeMarker::Side::LEFT_UP, ResizeMarker::Side::RIGHT_DOWN);
+  Sector::get().add<ResizeMarker>(&m_col.m_bbox, ResizeMarker::Side::NONE, ResizeMarker::Side::LEFT_UP);
+  Sector::get().add<ResizeMarker>(&m_col.m_bbox, ResizeMarker::Side::NONE, ResizeMarker::Side::RIGHT_DOWN);
+  Sector::get().add<ResizeMarker>(&m_col.m_bbox, ResizeMarker::Side::RIGHT_DOWN, ResizeMarker::Side::LEFT_UP);
+  Sector::get().add<ResizeMarker>(&m_col.m_bbox, ResizeMarker::Side::RIGHT_DOWN, ResizeMarker::Side::NONE);
+  Sector::get().add<ResizeMarker>(&m_col.m_bbox, ResizeMarker::Side::RIGHT_DOWN, ResizeMarker::Side::RIGHT_DOWN);
 }
 
 /* EOF */

@@ -17,211 +17,116 @@
 #ifndef HEADER_SUPERTUX_VIDEO_DRAWING_CONTEXT_HPP
 #define HEADER_SUPERTUX_VIDEO_DRAWING_CONTEXT_HPP
 
-#include <memory>
 #include <string>
 #include <vector>
-#include <stdint.h>
 #include <obstack.h>
+#include <boost/optional.hpp>
 
+#include "math/rect.hpp"
 #include "math/rectf.hpp"
 #include "math/vector.hpp"
+#include "video/canvas.hpp"
 #include "video/color.hpp"
+#include "video/drawing_context.hpp"
+#include "video/drawing_transform.hpp"
 #include "video/font.hpp"
 #include "video/font_ptr.hpp"
-#include "video/texture.hpp"
 
-struct DrawingRequest;
-class Surface;
-class Texture;
 class VideoSystem;
+struct DrawingRequest;
+struct obstack;
 
-// some constants for predefined layer values
-enum {
-  // Image/gradient backgrounds (should cover entire screen)
-  LAYER_BACKGROUND0 = -300,
-  // Particle backgrounds
-  LAYER_BACKGROUND1 = -200,
-  // Tilemap backgrounds
-  LAYER_BACKGROUNDTILES = -100,
-  // Solid tilemaps
-  LAYER_TILES = 0,
-  // Ordinary objects
-  LAYER_OBJECTS = 50,
-  // Objects that pass through walls
-  LAYER_FLOATINGOBJECTS = 150,
-  //
-  LAYER_FOREGROUNDTILES = 200,
-  //
-  LAYER_FOREGROUND0 = 300,
-  //
-  LAYER_FOREGROUND1 = 400,
-  // Hitpoints, time, coins, etc.
-  LAYER_HUD = 500,
-  // Menus, mouse, console etc.
-  LAYER_GUI         = 600
-};
-
-enum GradientDirection { VERTICAL, HORIZONTAL, VERTICAL_SECTOR, HORIZONTAL_SECTOR };
-
-class Blend
+/** This class provides functions for drawing things on screen. It
+    also maintains a stack of transforms that are applied to
+    graphics. */
+class DrawingContext final
 {
 public:
-  GLenum sfactor;
-  GLenum dfactor;
-
-  Blend()
-    : sfactor(GL_SRC_ALPHA), dfactor(GL_ONE_MINUS_SRC_ALPHA)
-  {}
-
-  Blend(GLenum s, GLenum d)
-    : sfactor(s), dfactor(d)
-  {}
-};
-
-enum Target {
-  NORMAL, LIGHTMAP
-};
-
-/**
- * This class provides functions for drawing things on screen. It also
- * maintains a stack of transforms that are applied to graphics.
- */
-class DrawingContext
-{
-public:
-  DrawingContext(VideoSystem& video_system);
+  DrawingContext(VideoSystem& video_system, obstack& obst, bool overlay);
   ~DrawingContext();
 
-  /// Adds a drawing request for a surface into the request list.
-  void draw_surface(SurfacePtr surface, const Vector& position,
-                    int layer);
-  /// Adds a drawing request for a surface into the request list.
-  void draw_surface(SurfacePtr surface, const Vector& position,
-                    float angle, const Color& color, const Blend& blend,
-                    int layer);
-  /// Adds a drawing request for part of a surface.
-  void draw_surface_part(SurfacePtr surface,
-                         const Rectf& srcrect, const Rectf& dstrect,
-                         int layer);
-  /// Draws a text.
-  void draw_text(FontPtr font, const std::string& text,
-                 const Vector& position, FontAlignment alignment, int layer, Color color = Color(1.0,1.0,1.0));
-
-  /// Draws text on screen center (feed Vector.x with a 0).
-  /// This is the same as draw_text() with a SCREEN_WIDTH/2 position and
-  /// alignment set to LEFT_ALIGN
-  void draw_center_text(FontPtr font, const std::string& text,
-                        const Vector& position, int layer, Color color = Color(1.0,1.0,1.0));
-  /// Draws a color gradient onto the whole screen */
-  void draw_gradient(const Color& from, const Color& to, int layer, const GradientDirection& direction, const Rectf& region);
-  /// Fills a rectangle.
-  void draw_filled_rect(const Vector& topleft, const Vector& size,
-                        const Color& color, int layer);
-  void draw_filled_rect(const Rectf& rect, const Color& color, int layer);
-  void draw_filled_rect(const Rectf& rect, const Color& color, float radius, int layer);
-
-  void draw_inverse_ellipse(const Vector& pos, const Vector& size, const Color& color, int layer);
-
-  void draw_line(const Vector& pos1, const Vector& pos2, const Color& color, int layer);
-  void draw_triangle(const Vector& pos1, const Vector& pos2, const Vector& pos3, const Color& color, int layer);
-
-  /// Returns the visible area in world coordinates
+  /** Returns the visible area in world coordinates */
   Rectf get_cliprect() const;
 
-  /// Processes all pending drawing requests and flushes the list.
-  void do_drawing();
+  Canvas& color() { return m_colormap_canvas; }
+  Canvas& light() { assert(!m_overlay); return m_lightmap_canvas; }
+  Canvas& get_canvas(DrawingTarget target) {
+    switch (target)
+    {
+      case DrawingTarget::LIGHTMAP:
+        return light();
 
-  const Vector& get_translation() const
-  {  return transform.translation;  }
+      default:
+        return color();
+    }
+  }
 
-  void set_translation(const Vector& newtranslation)
-  {  transform.translation = newtranslation;  }
+  void set_ambient_color(Color ambient_color);
+  Color get_ambient_color() const { return m_ambient_color; }
 
   void push_transform();
   void pop_transform();
+  DrawingTransform& transform();
+  const DrawingTransform& transform() const;
 
-  /// Apply that effect in the next draws (effects are listed on surface.h).
-  void set_drawing_effect(DrawingEffect effect);
-  /// return currently applied drawing effect
-  DrawingEffect get_drawing_effect() const;
-  /// apply that alpha in the next draws (1.0 means fully opaque) */
+  const Vector& get_translation() const
+  {  return transform().translation;  }
+
+  void set_translation(const Vector& newtranslation)
+  {  transform().translation = newtranslation;  }
+
+  /** Apply that flip in the next draws (flips are listed on surface.h). */
+  void set_flip(Flip flip);
+  Flip get_flip() const;
+
+  /** apply that alpha in the next draws (1.0 means fully opaque) */
   void set_alpha(float alpha);
-  /// return currently set alpha
   float get_alpha() const;
 
-  /// on next update, set color to lightmap's color at position
-  void get_light(const Vector& position, Color* color );
-
-  typedef ::Target Target;
-  static const Target NORMAL = ::NORMAL;
-  static const Target LIGHTMAP = ::LIGHTMAP;
-  void push_target();
-  void pop_target();
-  void set_target(Target target);
-
-  void set_ambient_color( Color new_color );
-
-  /**
-   * requests that a screenshot be taken after the next frame has been rendered
-   */
-  void take_screenshot();
-
-private:
-  typedef std::vector<DrawingRequest*> DrawingRequests;
-
-private:
-  void handle_drawing_requests(DrawingRequests& requests);
-
-private:
-  class Transform
+  void clear()
   {
-  public:
-    Vector translation;
-    DrawingEffect drawing_effect;
-    float alpha;
+    m_lightmap_canvas.clear();
+    m_colormap_canvas.clear();
+  }
 
-    Transform() :
-      translation(),
-      drawing_effect(NO_EFFECT),
-      alpha(1.0f)
-    { }
+  void set_viewport(const Rect& viewport)
+  {
+    m_viewport = viewport;
+  }
 
-    Vector apply(const Vector& v) const
-    {
-      return v - translation;
-    }
-  };
+  const Rect& get_viewport() const { return m_viewport; }
 
-  void clear_drawing_requests(DrawingRequests& requests);
+  int get_width() const { return m_viewport.get_width(); }
+  int get_height() const { return m_viewport.get_height(); }
 
-private:
-  VideoSystem& video_system;
+  bool use_lightmap() const
+  {
+    return !m_overlay && m_ambient_color != Color::WHITE;
+  }
 
-  /// the transform stack
-  std::vector<Transform> transformstack;
-  /// the currently active transform
-  Transform transform;
-
-  std::vector<Blend> blend_stack;
-  Blend blend_mode;
-
-  DrawingRequests drawing_requests;
-  DrawingRequests lightmap_requests;
-
-  DrawingRequests* requests;
-  Color ambient_color;
-
-  Target target;
-  std::vector<Target> target_stack;
-
-  /* obstack holding the memory of the drawing requests */
-  struct obstack obst;
-
-  bool screenshot_requested; /**< true if a screenshot should be taken after the next frame has been rendered */
+  bool is_overlay() const { return m_overlay; }
 
 private:
-  DrawingContext(const DrawingContext&);
-  DrawingContext& operator=(const DrawingContext&);
+  VideoSystem& m_video_system;
+
+  /** obstack holds the memory of all the drawing requests, it is
+      shared with the Canvas */
+  obstack& m_obst;
+
+  /** A context marked as overlay will not have it's light section
+      rendered. */
+  bool m_overlay;
+
+  Rect m_viewport;
+  Color m_ambient_color;
+  std::vector<DrawingTransform> m_transform_stack;
+
+  Canvas m_colormap_canvas;
+  Canvas m_lightmap_canvas;
+
+private:
+  DrawingContext(const DrawingContext&) = delete;
+  DrawingContext& operator=(const DrawingContext&) = delete;
 };
 
 #endif

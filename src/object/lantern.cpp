@@ -21,25 +21,25 @@
 #include "audio/sound_manager.hpp"
 #include "badguy/treewillowisp.hpp"
 #include "badguy/willowisp.hpp"
+#include "editor/editor.hpp"
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
-#include "supertux/object_factory.hpp"
 #include "util/reader_mapping.hpp"
 
 Lantern::Lantern(const ReaderMapping& reader) :
   Rock(reader, "images/objects/lantern/lantern.sprite"),
   lightcolor(1.0f, 1.0f, 1.0f),
-  lightsprite()
+  lightsprite(SpriteManager::current()->create("images/objects/lightmap_light/lightmap_light.sprite"))
 {
-  //get color from lisp
   std::vector<float> vColor;
   if (reader.get("color", vColor)) {
     lightcolor = Color(vColor);
   } else {
-    lightcolor = Color(0, 0, 0);
+    if (!Editor::is_active()) {
+      lightcolor = Color(0, 0, 0);
+    }
   }
-  lightsprite = SpriteManager::current()->create("images/objects/lightmap_light/lightmap_light.sprite");
-  lightsprite->set_blend(Blend(GL_SRC_ALPHA, GL_ONE));
+  lightsprite->set_blend(Blend::ADD);
   updateColor();
   SoundManager::current()->preload("sounds/willocatch.wav");
 }
@@ -49,38 +49,39 @@ Lantern::Lantern(const Vector& pos) :
   lightcolor(0.0f, 0.0f, 0.0f),
   lightsprite(SpriteManager::current()->create("images/objects/lightmap_light/lightmap_light.sprite"))
 {
-  lightsprite->set_blend(Blend(GL_SRC_ALPHA, GL_ONE));
+  lightsprite->set_blend(Blend::ADD);
   updateColor();
   SoundManager::current()->preload("sounds/willocatch.wav");
 }
 
 ObjectSettings
-Lantern::get_settings() {
+Lantern::get_settings()
+{
   ObjectSettings result = Rock::get_settings();
-  result.options.push_back( ObjectOption(MN_COLOR, _("Colour"), &lightcolor, "color"));
+
+  result.add_color(_("Color"), &lightcolor, "color", Color::WHITE);
+
+  result.reorder({"color", "name", "x", "y"});
 
   return result;
 }
 
 void
-Lantern::after_editor_set() {
-  updateColor();
-}
-
-Lantern::~Lantern()
+Lantern::after_editor_set()
 {
+  updateColor();
 }
 
 void
 Lantern::updateColor(){
   lightsprite->set_color(lightcolor);
   //Turn lantern off if light is black
-  if(lightcolor.red == 0 && lightcolor.green == 0 && lightcolor.blue == 0){
-    sprite->set_action("off");
-    sprite->set_color(Color(1.0f, 1.0f, 1.0f));
+  if (lightcolor.red == 0 && lightcolor.green == 0 && lightcolor.blue == 0){
+    m_sprite->set_action("off");
+    m_sprite->set_color(Color(1.0f, 1.0f, 1.0f));
   } else {
-    sprite->set_action("normal");
-    sprite->set_color(lightcolor);
+    m_sprite->set_action("normal");
+    m_sprite->set_color(lightcolor);
   }
 }
 
@@ -89,12 +90,7 @@ Lantern::draw(DrawingContext& context){
   //Draw the Sprite.
   MovingSprite::draw(context);
   //Let there be light.
-  context.push_target();
-  context.set_target(DrawingContext::LIGHTMAP);
-
-  lightsprite->draw(context, bbox.get_middle(), 0);
-
-  context.pop_target();
+  lightsprite->draw(context.light(), m_col.m_bbox.get_middle(), 0);
 }
 
 HitResponse Lantern::collision(GameObject& other, const CollisionHit& hit) {
@@ -126,7 +122,7 @@ Lantern::grab(MovingObject& object, const Vector& pos, Direction dir)
 
   // if lantern is not lit, draw it as opened
   if (is_open()) {
-    sprite->set_action("off-open");
+    m_sprite->set_action("off-open");
   }
 
 }
@@ -136,7 +132,7 @@ Lantern::ungrab(MovingObject& object, Direction dir)
 {
   // if lantern is not lit, it was drawn as opened while grabbed. Now draw it as closed again
   if (is_open()) {
-    sprite->set_action("off");
+    m_sprite->set_action("off");
   }
 
   Rock::ungrab(object, dir);
@@ -149,7 +145,8 @@ Lantern::is_open() const
 }
 
 void
-Lantern::add_color(Color c) {
+Lantern::add_color(const Color& c)
+{
   lightcolor.red   = std::min(1.0f, lightcolor.red   + c.red);
   lightcolor.green = std::min(1.0f, lightcolor.green + c.green);
   lightcolor.blue  = std::min(1.0f, lightcolor.blue  + c.blue);

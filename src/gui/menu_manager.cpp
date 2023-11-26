@@ -16,22 +16,17 @@
 
 #include "gui/menu_manager.hpp"
 
-#include <assert.h>
-
 #include "control/input_manager.hpp"
 #include "gui/dialog.hpp"
 #include "gui/menu.hpp"
 #include "gui/mousecursor.hpp"
-#include "math/sizef.hpp"
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
 #include "supertux/menu/menu_storage.hpp"
-#include "supertux/timer.hpp"
-#include "util/gettext.hpp"
 #include "util/log.hpp"
 #include "video/drawing_context.hpp"
 
-MenuManager* MenuManager::s_instance = 0;
+MenuManager* MenuManager::s_instance = nullptr;
 
 MenuManager&
 MenuManager::instance()
@@ -52,7 +47,7 @@ Rectf menu2rect(const Menu& menu)
 
 } // namespace
 
-class MenuTransition
+class MenuTransition final
 {
 private:
   Rectf m_from_rect;
@@ -78,7 +73,7 @@ public:
     m_from_rect = from_rect;
     m_to_rect = to_rect;
 
-    m_effect_start_time = real_time;
+    m_effect_start_time = g_real_time;
     m_effect_progress = 0.0f;
 
     m_is_active = true;
@@ -99,7 +94,7 @@ public:
     }
     if (m_is_active)
     {
-      m_effect_progress = (real_time - m_effect_start_time) * 6.0f;
+      m_effect_progress = (g_real_time - m_effect_start_time) * 6.0f;
 
       if (m_effect_progress > 1.0f)
       {
@@ -116,24 +111,24 @@ public:
     Rectf rect = m_to_rect;
     if (m_is_active)
     {
-      rect.p1.x = (m_to_rect.p1.x * p) + (m_from_rect.p1.x * (1.0f - p));
-      rect.p1.y = (m_to_rect.p1.y * p) + (m_from_rect.p1.y * (1.0f - p));
-      rect.p2.x = (m_to_rect.p2.x * p) + (m_from_rect.p2.x * (1.0f - p));
-      rect.p2.y = (m_to_rect.p2.y * p) + (m_from_rect.p2.y * (1.0f - p));
+      rect = Rectf((m_to_rect.get_left() * p) + (m_from_rect.get_left() * (1.0f - p)),
+                   (m_to_rect.get_top() * p) + (m_from_rect.get_top() * (1.0f - p)),
+                   (m_to_rect.get_right() * p) + (m_from_rect.get_right() * (1.0f - p)),
+                   (m_to_rect.get_bottom() * p) + (m_from_rect.get_bottom() * (1.0f - p)));
     }
 
     // draw menu background rectangles
-    context.draw_filled_rect(Rectf(rect.p1.x - 4, rect.p1.y - 10-4,
-                                   rect.p2.x + 4, rect.p2.y + 10 + 4),
-                             Color(0.2f, 0.3f, 0.4f, 0.8f),
-                             20.0f,
-                             LAYER_GUI-10);
+    context.color().draw_filled_rect(Rectf(rect.get_left() - 4, rect.get_top() - 10-4,
+                                             rect.get_right() + 4, rect.get_bottom() + 10 + 4),
+                                       Color(0.2f, 0.3f, 0.4f, 0.8f),
+                                       20.0f,
+                                       LAYER_GUI-10);
 
-    context.draw_filled_rect(Rectf(rect.p1.x, rect.p1.y - 10,
-                                   rect.p2.x, rect.p2.y + 10),
-                             Color(0.6f, 0.7f, 0.8f, 0.5f),
-                             16.0f,
-                             LAYER_GUI-10);
+    context.color().draw_filled_rect(Rectf(rect.get_left(), rect.get_top() - 10,
+                                             rect.get_right(), rect.get_bottom() + 10),
+                                       Color(0.6f, 0.7f, 0.8f, 0.5f),
+                                       16.0f,
+                                       LAYER_GUI-10);
   }
 
   bool is_active() const
@@ -160,22 +155,22 @@ MenuManager::~MenuManager()
 void
 MenuManager::refresh()
 {
-  for(const auto& menu : m_menu_stack)
+  for (const auto& menu : m_menu_stack)
   {
     menu->refresh();
   }
 }
 
 void
-MenuManager::process_input()
+MenuManager::process_input(const Controller& controller)
 {
   if (m_dialog && !m_dialog->is_passive())
   {
-    m_dialog->process_input(*InputManager::current()->get_controller());
+    m_dialog->process_input(controller);
   }
   else if (current_menu())
   {
-    current_menu()->process_input();
+    current_menu()->process_input(controller);
   }
 }
 
@@ -229,7 +224,7 @@ MenuManager::draw(DrawingContext& context)
     }
   }
 
-  if (current_menu() && MouseCursor::current())
+  if ((m_dialog || current_menu()) && MouseCursor::current())
   {
     MouseCursor::current()->draw(context);
   }
@@ -315,7 +310,7 @@ MenuManager::clear_menu_stack()
 void
 MenuManager::on_window_resize()
 {
-  for(const auto& menu : m_menu_stack)
+  for (const auto& menu : m_menu_stack)
   {
     menu->on_window_resize();
   }

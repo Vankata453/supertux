@@ -17,39 +17,44 @@
 
 #include "object/weak_block.hpp"
 
+#include <math.h>
+
 #include "audio/sound_manager.hpp"
 #include "badguy/badguy.hpp"
-#include "math/random_generator.hpp"
+#include "math/random.hpp"
 #include "object/bullet.hpp"
 #include "object/explosion.hpp"
-#include "supertux/object_factory.hpp"
+#include "supertux/globals.hpp"
 #include "supertux/sector.hpp"
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
+#include "util/log.hpp"
 #include "util/reader_mapping.hpp"
 
-#include <math.h>
-
-WeakBlock::WeakBlock(const ReaderMapping& lisp)
-: MovingSprite(lisp, "images/objects/weak_block/strawbox.sprite", LAYER_TILES, COLGROUP_STATIC), state(STATE_NORMAL),
+WeakBlock::WeakBlock(const ReaderMapping& mapping) :
+  MovingSprite(mapping, "images/objects/weak_block/strawbox.sprite", LAYER_TILES, COLGROUP_STATIC), state(STATE_NORMAL),
   linked(true),
-  light(0.0f,0.0f,0.0f),
   lightsprite(SpriteManager::current()->create("images/objects/lightmap_light/lightmap_light-small.sprite"))
 {
-  sprite->set_action("normal");
+  m_sprite->set_action("normal");
   //Check if this weakblock destroys adjacent weakblocks
-  if(lisp.get("linked", linked)){
-    if(! linked){
-      sprite_name = "images/objects/weak_block/meltbox.sprite";
-      sprite = SpriteManager::current()->create(sprite_name);
-      sprite->set_action("normal");
+  if (mapping.get("linked", linked)){
+    if (! linked){
+      m_default_sprite_name = "images/objects/weak_block/meltbox.sprite";
+      m_sprite_name = m_default_sprite_name;
+      m_sprite = SpriteManager::current()->create(m_sprite_name);
+      m_sprite->set_action("normal");
     }
   }
-  if(sprite_name == "images/objects/weak_block/strawbox.sprite") {
-    lightsprite->set_blend(Blend(GL_SRC_ALPHA, GL_ONE));
-    lightsprite->set_color(Color(0.3f, 0.2f, 0.1f));
-  } else if(sprite_name == "images/objects/weak_block/meltbox.sprite")
+
+  lightsprite->set_blend(Blend::ADD);
+  lightsprite->set_color(Color(0.3f, 0.2f, 0.1f));
+
+  if (m_sprite_name == "images/objects/weak_block/strawbox.sprite") {
+    SoundManager::current()->preload("sounds/fire.ogg"); // TODO: use own sound?
+  } else if (m_sprite_name == "images/objects/weak_block/meltbox.sprite") {
     SoundManager::current()->preload("sounds/sizzle.ogg");
+  }
 }
 
 HitResponse
@@ -59,7 +64,7 @@ WeakBlock::collision_bullet(Bullet& bullet, const CollisionHit& hit)
 
     case STATE_NORMAL:
       //Ensure only fire destroys weakblock
-      if(bullet.get_type() == FIRE_BONUS) {
+      if (bullet.get_type() == FIRE_BONUS) {
         startBurning();
         bullet.remove_me();
       }
@@ -97,10 +102,10 @@ WeakBlock::collision(GameObject& other, const CollisionHit& hit)
         break;
 
       case STATE_BURNING:
-        if(sprite_name != "images/objects/weak_block/strawbox.sprite")
+        if (m_sprite_name != "images/objects/weak_block/strawbox.sprite")
           break;
 
-        if(auto badguy = dynamic_cast<BadGuy*> (&other)) {
+        if (auto badguy = dynamic_cast<BadGuy*> (&other)) {
           badguy->ignite();
         }
         break;
@@ -126,25 +131,27 @@ WeakBlock::update(float )
       case STATE_BURNING:
         // cause burn light to flicker randomly
         if (linked) {
-          if(gameRandom.rand(10) >= 7) {
-            lightsprite->set_color(Color(0.2f + gameRandom.rand(20)/100.0f, 0.1f + gameRandom.rand(20)/100.0f, 0.1f));
+          if (gameRandom.rand(10) >= 7) {
+            lightsprite->set_color(Color(0.2f + gameRandom.randf(20.0f) / 100.0f,
+                                         0.1f + gameRandom.randf(20.0f)/100.0f,
+                                         0.1f));
           } else
             lightsprite->set_color(Color(0.3f, 0.2f, 0.1f));
         }
 
-        if (sprite->animation_done()) {
+        if (m_sprite->animation_done()) {
           state = STATE_DISINTEGRATING;
-          sprite->set_action("disintegrating", 1);
+          m_sprite->set_action("disintegrating", 1);
           spreadHit();
           set_group(COLGROUP_DISABLED);
           lightsprite = SpriteManager::current()->create("images/objects/lightmap_light/lightmap_light-tiny.sprite");
-          lightsprite->set_blend(Blend(GL_SRC_ALPHA, GL_ONE));
+          lightsprite->set_blend(Blend::ADD);
           lightsprite->set_color(Color(0.3f, 0.2f, 0.1f));
         }
         break;
 
       case STATE_DISINTEGRATING:
-        if (sprite->animation_done()) {
+        if (m_sprite->animation_done()) {
           remove_me();
           return;
         }
@@ -157,17 +164,11 @@ void
 WeakBlock::draw(DrawingContext& context)
 {
   //Draw the Sprite just in front of other objects
-  sprite->draw(context, get_pos(), LAYER_OBJECTS + 10);
-  //Draw the light if burning and dark
-  if(linked && (state != STATE_NORMAL)){
-    context.get_light( bbox.get_middle(), &light );
-    if (light.red + light.green + light.blue < 3.0){
-      context.push_target();
-      context.set_target(DrawingContext::LIGHTMAP);
-      sprite->draw(context, get_pos(), LAYER_OBJECTS + 10);
-      lightsprite->draw(context, bbox.get_middle(), 0);
-      context.pop_target();
-    }
+  m_sprite->draw(context.color(), get_pos(), LAYER_OBJECTS + 10);
+
+  if (linked && (state != STATE_NORMAL))
+  {
+    lightsprite->draw(context.light(), m_col.m_bbox.get_middle(), 0);
   }
 }
 
@@ -176,38 +177,40 @@ WeakBlock::startBurning()
 {
   if (state != STATE_NORMAL) return;
   state = STATE_BURNING;
-  sprite->set_action("burning", 1);
-  if(sprite_name == "images/objects/weak_block/meltbox.sprite")
+  m_sprite->set_action("burning", 1);
+  if (m_sprite_name == "images/objects/weak_block/meltbox.sprite") {
     SoundManager::current()->play("sounds/sizzle.ogg");
+  } else if (m_sprite_name == "images/objects/weak_block/strawbox.sprite") {
+    SoundManager::current()->play("sounds/fire.ogg");
+  }
 }
 
 void
 WeakBlock::spreadHit()
 {
   //Destroy adjacent weakblocks if applicable
-  if(linked) {
-    auto sector = Sector::current();
-    if (!sector) {
-      log_debug << "no current sector" << std::endl;
-      return;
-    }
-    for(const auto& i : sector->gameobjects) {
-      auto wb = dynamic_cast<WeakBlock*>(i.get());
-      if (!wb) continue;
-      if (wb == this) continue;
-      if (wb->state != STATE_NORMAL) continue;
-      float dx = fabsf(wb->get_pos().x - bbox.p1.x);
-      float dy = fabsf(wb->get_pos().y - bbox.p1.y);
-      if ((dx <= 32.5) && (dy <= 32.5)) wb->startBurning();
+  if (linked) {
+    for (auto& wb : Sector::get().get_objects_by_type<WeakBlock>()) {
+      if (&wb != this && wb.state == STATE_NORMAL)
+      {
+        const float dx = fabsf(wb.get_pos().x - m_col.m_bbox.get_left());
+        const float dy = fabsf(wb.get_pos().y - m_col.m_bbox.get_top());
+        if ((dx <= 32.5f) && (dy <= 32.5f)) {
+          wb.startBurning();
+        }
+      }
     }
   }
 }
 
 ObjectSettings
-WeakBlock::get_settings() {
+WeakBlock::get_settings()
+{
   ObjectSettings result = MovingSprite::get_settings();
-  result.options.push_back( ObjectOption(MN_TOGGLE, _("Linked"), &linked,
-                                         "linked"));
+
+  result.add_bool(_("Linked"), &linked, "linked", true);
+
+  result.reorder({"linked", "sprite", "x", "y"});
 
   return result;
 }

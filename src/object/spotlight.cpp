@@ -18,37 +18,33 @@
 
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
-#include "supertux/object_factory.hpp"
 #include "util/reader_mapping.hpp"
 
-Spotlight::Spotlight(const ReaderMapping& lisp) :
+Spotlight::Spotlight(const ReaderMapping& mapping) :
   angle(),
-  center(),
-  base(),
-  lights(),
-  light(),
-  lightcone(),
-  color(1.0f, 1.0f, 1.0f)
+  center(SpriteManager::current()->create("images/objects/spotlight/spotlight_center.sprite")),
+  base(SpriteManager::current()->create("images/objects/spotlight/spotlight_base.sprite")),
+  lights(SpriteManager::current()->create("images/objects/spotlight/spotlight_lights.sprite")),
+  light(SpriteManager::current()->create("images/objects/spotlight/light.sprite")),
+  lightcone(SpriteManager::current()->create("images/objects/spotlight/lightcone.sprite")),
+  color(1.0f, 1.0f, 1.0f),
+  speed(50.0f),
+  counter_clockwise()
 {
-  group = COLGROUP_DISABLED;
+  m_col.m_group = COLGROUP_DISABLED;
 
-  if (!lisp.get("x", bbox.p1.x)) bbox.p1.x = 0;
-  if (!lisp.get("y", bbox.p1.y)) bbox.p1.y = 0;
-  bbox.set_size(32, 32);
+  mapping.get("x", m_col.m_bbox.get_left(), 0.0f);
+  mapping.get("y", m_col.m_bbox.get_top(), 0.0f);
+  m_col.m_bbox.set_size(32, 32);
 
-  if (!lisp.get("angle", angle)) angle = 0.0f;
+  mapping.get("angle", angle, 0.0f);
+  mapping.get("speed", speed, 50.0f);
+  mapping.get("counter-clockwise", counter_clockwise, false);
 
   std::vector<float> vColor;
-  if( lisp.get( "color", vColor ) ){
+  if ( mapping.get( "color", vColor ) ){
     color = Color( vColor );
   }
-
-  center    = SpriteManager::current()->create("images/objects/spotlight/spotlight_center.sprite");
-  base      = SpriteManager::current()->create("images/objects/spotlight/spotlight_base.sprite");
-  lights    = SpriteManager::current()->create("images/objects/spotlight/spotlight_lights.sprite");
-  lightcone = SpriteManager::current()->create("images/objects/spotlight/lightcone.sprite");
-  light     = SpriteManager::current()->create("images/objects/spotlight/light.sprite");
-
 }
 
 Spotlight::~Spotlight()
@@ -56,50 +52,54 @@ Spotlight::~Spotlight()
 }
 
 ObjectSettings
-Spotlight::get_settings() {
+Spotlight::get_settings()
+{
   ObjectSettings result = MovingObject::get_settings();
-  result.options.push_back( ObjectOption(MN_NUMFIELD, "x-pos", &bbox.p1.x, "x", false));
-  result.options.push_back( ObjectOption(MN_NUMFIELD, "y-pos", &bbox.p1.y, "y", false));
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Angle"), &angle, "angle"));
-  result.options.push_back( ObjectOption(MN_COLOR, _("Colour"), &color, "color"));
+
+  result.add_float(_("Angle"), &angle, "angle");
+  result.add_color(_("Color"), &color, "color", Color::WHITE);
+  result.add_float(_("Speed"), &speed, "speed", 50.0f);
+  result.add_bool(_("Counter-clockwise"), &counter_clockwise, "counter-clockwise", false);
+
+  result.reorder({"angle", "color", "x", "y"});
 
   return result;
 }
 
 void
-Spotlight::update(float delta)
+Spotlight::update(float dt_sec)
 {
-  angle += delta * 50.0f;
+  if (counter_clockwise)
+  {
+    angle -= dt_sec * speed;
+  }
+  else
+  {
+    angle += dt_sec * speed;
+  }
 }
 
 void
 Spotlight::draw(DrawingContext& context)
 {
-  context.push_target();
-  context.set_target(DrawingContext::LIGHTMAP);
-
   light->set_color(color);
-  light->set_blend(Blend(GL_SRC_ALPHA, GL_ONE));
+  light->set_blend(Blend::ADD);
   light->set_angle(angle);
-  light->draw(context, bbox.p1, 0);
+  light->draw(context.light(), m_col.m_bbox.p1(), 0);
 
   //lightcone->set_angle(angle);
-  //lightcone->draw(context, position, 0);
-
-  context.set_target(DrawingContext::NORMAL);
+  //lightcone->draw(context.color(), position, 0);
 
   lights->set_angle(angle);
-  lights->draw(context, bbox.p1, 0);
+  lights->draw(context.color(), m_col.m_bbox.p1(), 0);
 
   base->set_angle(angle);
-  base->draw(context, bbox.p1, 0);
+  base->draw(context.color(), m_col.m_bbox.p1(), 0);
 
-  center->draw(context, bbox.p1, 0);
+  center->draw(context.color(), m_col.m_bbox.p1(), 0);
 
   lightcone->set_angle(angle);
-  lightcone->draw(context, bbox.p1, LAYER_FOREGROUND1 + 10);
-
-  context.pop_target();
+  lightcone->draw(context.color(), m_col.m_bbox.p1(), LAYER_FOREGROUND1 + 10);
 }
 
 HitResponse

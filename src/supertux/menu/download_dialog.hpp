@@ -17,13 +17,12 @@
 #ifndef HEADER_SUPERTUX_SUPERTUX_MENU_DOWNLOAD_DIALOG_HPP
 #define HEADER_SUPERTUX_SUPERTUX_MENU_DOWNLOAD_DIALOG_HPP
 
-#include "addon/addon_manager.hpp"
 #include "gui/dialog.hpp"
 
 class TransferStatus;
 using TransferStatusPtr = std::shared_ptr<TransferStatus>;
 
-class DownloadDialog : public Dialog
+class DownloadDialog final : public Dialog
 {
 private:
   TransferStatusPtr m_status;

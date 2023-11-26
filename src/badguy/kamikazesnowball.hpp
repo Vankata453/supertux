@@ -19,42 +19,44 @@
 
 #include "badguy/badguy.hpp"
 
+/** Kamikaze Snowball will fly in one direction until he hits something.
+    On impact he is destroyed, trying to kill what he hit or hit him. */
 class KamikazeSnowball : public BadGuy
 {
 public:
   KamikazeSnowball(const ReaderMapping& reader);
-  KamikazeSnowball(const Vector& pos, Direction d);
 
-  void initialize();
-  void collision_solid(const CollisionHit& hit);
-  virtual std::string get_class() const {
-    return "kamikazesnowball";
-  }
-  virtual std::string get_display_name() const {
-    return _("Kamikaze snowball");
-  }
-
-  void after_editor_set();
+  virtual void initialize() override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual std::string get_class() const override { return "kamikazesnowball"; }
+  virtual std::string get_display_name() const override { return _("Kamikaze snowball"); }
 
 protected:
-  bool collision_squished(GameObject& object);
-  HitResponse collision_player(Player& player, const CollisionHit& hit);
+  virtual bool collision_squished(GameObject& object) override;
+  virtual HitResponse collision_player(Player& player, const CollisionHit& hit) override;
   void kill_collision();
+
+private:
+  KamikazeSnowball(const KamikazeSnowball&) = delete;
+  KamikazeSnowball& operator=(const KamikazeSnowball&) = delete;
 };
 
-class LeafShot : public KamikazeSnowball
+class LeafShot final : public KamikazeSnowball
 {
-  public:
-    LeafShot(const ReaderMapping& reader);
+public:
+  LeafShot(const ReaderMapping& reader);
 
-    void initialize();
-    bool is_freezable() const;
-    std::string get_class() const {
-      return "leafshot";
-    }
-    std::string get_display_name() const {
-      return _("Leaf Shot");
-    }
+  virtual void initialize() override;
+  virtual bool is_freezable() const override;
+  virtual std::string get_class() const override { return "leafshot"; }
+  virtual std::string get_display_name() const override { return _("Leaf Shot"); }
+
+protected:
+  virtual bool collision_squished(GameObject& object) override;
+
+private:
+  LeafShot(const LeafShot&) = delete;
+  LeafShot& operator=(const LeafShot&) = delete;
 };
 
 #endif

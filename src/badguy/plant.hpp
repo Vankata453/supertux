@@ -19,22 +19,18 @@
 
 #include "badguy/badguy.hpp"
 
-class Plant : public BadGuy
+class Plant final : public BadGuy
 {
 public:
   Plant(const ReaderMapping& reader);
 
-  void initialize();
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit);
-  void active_update(float elapsed_time);
-  void ignite();
-  std::string get_class() const {
-    return "plant";
-  }
-  std::string get_display_name() const {
-    return _("Plant");
-  }
+  virtual void initialize() override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit) override;
+  virtual void active_update(float dt_sec) override;
+  virtual void ignite() override;
+  virtual std::string get_class() const override { return "plant"; }
+  virtual std::string get_display_name() const override { return _("Plant"); }
 
 protected:
   enum PlantState {
@@ -46,6 +42,10 @@ protected:
 private:
   Timer timer;
   PlantState state;
+
+private:
+  Plant(const Plant&) = delete;
+  Plant& operator=(const Plant&) = delete;
 };
 
 #endif

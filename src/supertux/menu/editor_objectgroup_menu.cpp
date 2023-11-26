@@ -16,32 +16,24 @@
 
 #include "supertux/menu/editor_objectgroup_menu.hpp"
 
-#include <sstream>
-
-#include "audio/sound_manager.hpp"
 #include "editor/editor.hpp"
 #include "editor/object_group.hpp"
-#include "editor/object_input.hpp"
 #include "gui/menu_item.hpp"
-#include "supertux/game_manager.hpp"
-#include "supertux/globals.hpp"
+#include "gui/menu_manager.hpp"
 #include "supertux/level.hpp"
-#include "supertux/screen_fade.hpp"
-#include "supertux/screen_manager.hpp"
-#include "util/file_system.hpp"
 #include "util/gettext.hpp"
 
 EditorObjectgroupMenu::EditorObjectgroupMenu()
 {
-  bool worldmap = Editor::current()->get_worldmap_mode();
+  bool worldmap = Editor::current()->get_level()->is_worldmap();
 
   add_label(_("Objects"));
   add_hl();
 
   int id = 0;
-  for(auto& og : Editor::current()->tileselect.object_input->groups) {
-    if (worldmap == og.for_worldmap) {
-      add_entry(id, og.name);
+  for (auto& og : Editor::current()->get_objectgroups()) {
+    if (worldmap == og.is_worldmap()) {
+      add_entry(id, og.get_name());
     }
     id++;
   }
@@ -52,19 +44,19 @@ EditorObjectgroupMenu::EditorObjectgroupMenu()
 
 EditorObjectgroupMenu::~EditorObjectgroupMenu()
 {
-  Editor::current()->reactivate_request = true;
+  auto editor = Editor::current();
+  if (editor == nullptr) {
+    return;
+  }
+  editor->m_reactivate_request = true;
 }
 
 void
-EditorObjectgroupMenu::menu_action(MenuItem* item)
+EditorObjectgroupMenu::menu_action(MenuItem& item)
 {
-  if (item->id >= 0)
+  if (item.get_id() >= 0)
   {
-    auto tileselect = &(Editor::current()->tileselect);
-    tileselect->active_objectgroup = item->id;
-    tileselect->input_type = EditorInputGui::IP_OBJECT;
-    tileselect->reset_pos();
-    tileselect->update_mouse_icon();
+    Editor::current()->select_objectgroup(item.get_id());
   }
   MenuManager::instance().clear_menu_stack();
 }

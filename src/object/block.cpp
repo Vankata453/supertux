@@ -21,72 +21,72 @@
 #include "audio/sound_manager.hpp"
 #include "badguy/badguy.hpp"
 #include "badguy/bomb.hpp"
-#include "object/broken_brick.hpp"
+#include "math/random.hpp"
 #include "object/coin.hpp"
-#include "object/flower.hpp"
 #include "object/growup.hpp"
 #include "object/player.hpp"
-#include "object/portable.hpp"
+#include "object/sprite_particle.hpp"
+#include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
 #include "supertux/constants.hpp"
 #include "supertux/sector.hpp"
 #include "util/reader_mapping.hpp"
+#include "util/writer.hpp"
 
 static const float BOUNCY_BRICK_MAX_OFFSET = 8;
 static const float BOUNCY_BRICK_SPEED = 90;
 static const float BUMP_ROTATION_ANGLE = 10;
 
 Block::Block(SpritePtr newsprite) :
-  sprite(newsprite),
+  sprite(std::move(newsprite)),
   sprite_name(),
+  default_sprite_name(),
   bouncing(false),
   breaking(false),
   bounce_dir(0),
   bounce_offset(0),
   original_y(-1)
 {
-  bbox.set_size(32, 32.1f);
+  m_col.m_bbox.set_size(32, 32.1f);
   set_group(COLGROUP_STATIC);
   SoundManager::current()->preload("sounds/upgrade.wav");
   SoundManager::current()->preload("sounds/brick.wav");
 }
 
-Block::Block(const ReaderMapping& lisp, const std::string& sprite_file) :
+Block::Block(const ReaderMapping& mapping, const std::string& sprite_file) :
   sprite(),
   sprite_name(),
+  default_sprite_name(),
   bouncing(false),
   breaking(false),
   bounce_dir(0),
   bounce_offset(0),
   original_y(-1)
 {
-  lisp.get("x", bbox.p1.x);
-  lisp.get("y", bbox.p1.y);
+  mapping.get("x", m_col.m_bbox.get_left());
+  mapping.get("y", m_col.m_bbox.get_top());
 
   std::string sf;
-  lisp.get("sprite", sf);
+  mapping.get("sprite", sf);
   if (sf.empty() || !PHYSFS_exists(sf.c_str())) {
     sf = sprite_file;
   }
   sprite = SpriteManager::current()->create(sf);
   sprite_name = sf;
+  default_sprite_name = sprite_name;
 
-  bbox.set_size(32, 32.1f);
+  m_col.m_bbox.set_size(32, 32.1f);
   set_group(COLGROUP_STATIC);
   SoundManager::current()->preload("sounds/upgrade.wav");
   SoundManager::current()->preload("sounds/brick.wav");
-}
-
-Block::~Block()
-{
 }
 
 HitResponse
 Block::collision(GameObject& other, const CollisionHit& )
 {
   auto player = dynamic_cast<Player*> (&other);
-  if(player) {
-    if(player->get_bbox().get_top() > bbox.get_bottom() - SHIFT_DELTA) {
+  if (player) {
+    if (player->get_bbox().get_top() > m_col.m_bbox.get_bottom() - SHIFT_DELTA) {
       hit(*player);
     }
   }
@@ -98,26 +98,26 @@ Block::collision(GameObject& other, const CollisionHit& )
   auto portable = dynamic_cast<Portable*> (&other);
   auto moving_object = dynamic_cast<MovingObject*> (&other);
   auto bomb = dynamic_cast<Bomb*> (&other);
-  bool is_portable = ((portable != 0) && portable->is_portable());
-  bool is_bomb = (bomb != 0); // bombs need to explode, although they are considered portable
-  bool hit_mo_from_below = ((moving_object == 0) || (moving_object->get_bbox().get_bottom() < (bbox.get_top() + SHIFT_DELTA)));
-  if(bouncing && (!is_portable || is_bomb) && hit_mo_from_below) {
+  bool is_portable = ((portable != nullptr) && portable->is_portable());
+  bool is_bomb = (bomb != nullptr); // bombs need to explode, although they are considered portable
+  bool hit_mo_from_below = ((moving_object == nullptr) || (moving_object->get_bbox().get_bottom() < (m_col.m_bbox.get_top() + SHIFT_DELTA)));
+  if (bouncing && (!is_portable || is_bomb) && hit_mo_from_below) {
 
     // Badguys get killed
     auto badguy = dynamic_cast<BadGuy*> (&other);
-    if(badguy) {
+    if (badguy) {
       badguy->kill_fall();
     }
 
     // Coins get collected
     auto coin = dynamic_cast<Coin*> (&other);
-    if(coin) {
+    if (coin) {
       coin->collect();
     }
 
     //Eggs get jumped
     auto growup = dynamic_cast<GrowUp*> (&other);
-    if(growup) {
+    if (growup) {
       growup->do_jump();
     }
 
@@ -127,39 +127,39 @@ Block::collision(GameObject& other, const CollisionHit& )
 }
 
 void
-Block::update(float elapsed_time)
+Block::update(float dt_sec)
 {
-  if(!bouncing)
+  if (!bouncing)
     return;
 
   float offset = original_y - get_pos().y;
-  if(offset > BOUNCY_BRICK_MAX_OFFSET) {
+  if (offset > BOUNCY_BRICK_MAX_OFFSET) {
     bounce_dir = BOUNCY_BRICK_SPEED;
-    movement = Vector(0, bounce_dir * elapsed_time);
-    if(breaking){
+    m_col.m_movement = Vector(0, bounce_dir * dt_sec);
+    if (breaking){
       break_me();
     }
-  } else if(offset < BOUNCY_BRICK_SPEED * elapsed_time && bounce_dir > 0) {
-    movement = Vector(0, offset);
+  } else if (offset < BOUNCY_BRICK_SPEED * dt_sec && bounce_dir > 0) {
+    m_col.m_movement = Vector(0, offset);
     bounce_dir = 0;
     bouncing = false;
     sprite->set_angle(0);
   } else {
-    movement = Vector(0, bounce_dir * elapsed_time);
+    m_col.m_movement = Vector(0, bounce_dir * dt_sec);
   }
 }
 
 void
 Block::draw(DrawingContext& context)
 {
-  sprite->draw(context, get_pos(), LAYER_OBJECTS+1);
+  sprite->draw(context.color(), get_pos(), LAYER_OBJECTS+1);
 }
 
 void
 Block::start_bounce(GameObject* hitter)
 {
-  if(original_y == -1){
-    original_y = bbox.p1.y;
+  if (original_y == -1){
+    original_y = m_col.m_bbox.get_top();
   }
   bouncing = true;
   bounce_dir = -BOUNCY_BRICK_SPEED;
@@ -168,7 +168,7 @@ Block::start_bounce(GameObject* hitter)
   MovingObject* hitter_mo = dynamic_cast<MovingObject*>(hitter);
   if (hitter_mo) {
     float center_of_hitter = hitter_mo->get_bbox().get_middle().x;
-    float offset = (bbox.get_middle().x - center_of_hitter)*2 / bbox.get_width();
+    float offset = (m_col.m_bbox.get_middle().x - center_of_hitter)*2 / m_col.m_bbox.get_width();
     sprite->set_angle(BUMP_ROTATION_ANGLE*offset);
   }
 }
@@ -183,27 +183,29 @@ Block::start_break(GameObject* hitter)
 void
 Block::break_me()
 {
-  auto sector = Sector::current();
-  sector->add_object(
-    std::make_shared<BrokenBrick>(sprite->clone(), get_pos(), Vector(-100, -400)));
-  sector->add_object(
-    std::make_shared<BrokenBrick>(sprite->clone(), get_pos() + Vector(0, 16),
-                                  Vector(-150, -300)));
-  sector->add_object(
-    std::make_shared<BrokenBrick>(sprite->clone(), get_pos() + Vector(16, 0),
-                                  Vector(100, -400)));
-  sector->add_object(
-    std::make_shared<BrokenBrick>(sprite->clone(), get_pos() + Vector(16, 16),
-                                  Vector(150, -300)));
+  const auto gravity = Sector::get().get_gravity() * 100;
+  Vector pos = get_pos() + Vector(16.0f, 16.0f);
+
+  for (const char* action : {"piece1", "piece2", "piece3", "piece4", "piece5", "piece6"})
+  {
+    Vector velocity(graphicsRandom.randf(-100, 100),
+                    graphicsRandom.randf(-400, -300));
+    Sector::get().add<SpriteParticle>(sprite->clone(), action,
+                                pos, ANCHOR_MIDDLE,
+                                velocity, Vector(0, gravity),
+                                LAYER_OBJECTS + 1);
+  }
+
   remove_me();
 }
 
-ObjectSettings Block::get_settings()
+ObjectSettings
+Block::get_settings()
 {
   ObjectSettings result = MovingObject::get_settings();
-  ObjectOption spr(MN_FILE, _("Sprite"), &sprite_name, "sprite");
-  spr.select.push_back(".sprite");
-  result.options.push_back(spr);
+
+  result.add_sprite(_("Sprite"), &sprite_name, "sprite", default_sprite_name);
+
   return result;
 }
 

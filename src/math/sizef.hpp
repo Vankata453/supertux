@@ -23,7 +23,7 @@
 
 class Size;
 
-class Sizef
+class Sizef final
 {
 public:
   Sizef() :
@@ -79,6 +79,11 @@ public:
   Vector as_vector() const
   {
     return Vector(width, height);
+  }
+
+  bool is_valid() const 
+  {
+    return width > 0 && height > 0;
   }
 
 public:

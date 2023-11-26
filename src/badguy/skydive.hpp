@@ -14,44 +14,43 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADER_SUPERTUX_BADGUY_BOMBFISH_HPP
-#define HEADER_SUPERTUX_BADGUY_BOMBFISH_HPP
+#ifndef HEADER_SUPERTUX_BADGUY_SKYDIVE_HPP
+#define HEADER_SUPERTUX_BADGUY_SKYDIVE_HPP
 
 #include "badguy/badguy.hpp"
 #include "object/portable.hpp"
 
-class SkyDive : public BadGuy, public Portable
+class SkyDive final : public BadGuy, public Portable
 {
-  private:
-    bool is_grabbed;
+public:
+  SkyDive(const ReaderMapping& reader);
 
-  public:
-    SkyDive(const ReaderMapping& reader);
-    SkyDive(const Vector& pos, Direction d);
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit) override;
+  virtual void collision_tile(uint32_t tile_attributes) override;
 
-    void collision_solid(const CollisionHit& hit);
-    HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit);
+  /* Inherited from Portable */
+  virtual void grab(MovingObject& object, const Vector& pos, Direction dir) override;
+  virtual void ungrab(MovingObject& object, Direction dir) override;
+  virtual std::string get_class() const override { return "skydive"; }
+  virtual std::string get_display_name() const override { return _("Sky dive"); }
 
-    /* Inherited from Portable */
-    void grab(MovingObject& object, const Vector& pos, Direction dir);
-    void ungrab(MovingObject& object, Direction dir);
-    std::string get_class() const {
-      return "skydive";
-    }
-    std::string get_display_name() const {
-      return _("Sky dive");
-    }
+private:
+  virtual HitResponse collision_player(Player& player, const CollisionHit& hit) override;
+  virtual bool collision_squished (GameObject& obj) override;
 
-  protected:
-    HitResponse collision_player(Player& player, const CollisionHit& hit);
-    bool collision_squished (GameObject& obj);
+  virtual void active_update (float dt_sec) override;
 
-    void active_update (float elapsed_time);
+  void explode();
 
-    void explode();
+private:
+  bool is_grabbed;
+
+private:
+  SkyDive(const SkyDive&) = delete;
+  SkyDive& operator=(const SkyDive&) = delete;
 };
 
-#endif /* HEADER_SUPERTUX_BADGUY_BOMBFISH_HPP */
+#endif
 
-/* vim: set sw=2 sts=2 et fdm=marker : */
 /* EOF */

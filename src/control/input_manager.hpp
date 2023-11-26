@@ -56,7 +56,8 @@ public:
   void use_game_controller(bool v);
   bool use_game_controller() const { return m_use_game_controller; }
 
-  Controller* get_controller() const;
+  const Controller& get_controller() const;
+  Controller& get_controller();
 
 private:
   std::unique_ptr<Controller> controller;
@@ -68,8 +69,8 @@ public:
   std::unique_ptr<GameControllerManager> game_controller_manager;
 
 private:
-  InputManager(const InputManager&);
-  InputManager& operator=(const InputManager&);
+  InputManager(const InputManager&) = delete;
+  InputManager& operator=(const InputManager&) = delete;
 };
 
 #endif

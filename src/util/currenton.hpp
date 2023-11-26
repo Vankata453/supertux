@@ -16,10 +16,8 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef HEADER_WINDSTILLE_UTIL_CURRENTON_HPP
-#define HEADER_WINDSTILLE_UTIL_CURRENTON_HPP
-
-#include <assert.h>
+#ifndef HEADER_SUPERTUX_UTIL_CURRENTON_HPP
+#define HEADER_SUPERTUX_UTIL_CURRENTON_HPP
 
 /**
  *   A 'Currenton' allows access to the currently active instance of a
@@ -32,7 +30,7 @@ template<class C>
 class Currenton
 {
 private:
-  static C* s_current;
+  static Currenton<C>* s_current;
 
 protected:
   Currenton()
@@ -40,22 +38,23 @@ protected:
     // FIXME: temporarly disabled, as Sector() for the main menu,
     // doesn't get cleaned up before a real Sector() starts
     // assert(!s_current);
-    s_current = static_cast<C*>(this);
+    s_current = this;
   }
 
   virtual ~Currenton()
   {
     if (s_current == this)
     {
-      s_current = 0;
+      s_current = nullptr;
     }
   }
 
 public:
-  static C* current() { return s_current; }
+  static C* current() { return static_cast<C*>(s_current); }
 };
 
-template<class C> C* Currenton<C>::s_current = 0;
+template<class C>
+Currenton<C>* Currenton<C>::s_current = nullptr;
 
 #endif
 

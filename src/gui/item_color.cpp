@@ -16,24 +16,21 @@
 
 #include "gui/item_color.hpp"
 
-#include <stdio.h>
-
 #include "gui/menu.hpp"
 #include "gui/menu_color.hpp"
 #include "gui/menu_manager.hpp"
-#include "supertux/menu/menu_storage.hpp"
 #include "video/color.hpp"
 
-ItemColor::ItemColor(const std::string& text_, Color* color_, int _id) :
-  MenuItem(text_, _id),
+ItemColor::ItemColor(const std::string& text, Color* color_, int id) :
+  MenuItem(text, id),
   color(color_)
 {
 }
 
 void
-ItemColor::process_action(MenuAction action) {
-  if (action == MENU_ACTION_HIT) {
-    MenuManager::instance().push_menu(std::unique_ptr<Menu>(new ColorMenu(color)));
+ItemColor::process_action(const MenuAction& action) {
+  if (action == MenuAction::HIT) {
+    MenuManager::instance().push_menu(std::make_unique<ColorMenu>(color));
   }
 }
 

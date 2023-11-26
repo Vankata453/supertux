@@ -21,31 +21,30 @@
 #include "supertux/moving_object.hpp"
 #include "supertux/player_status.hpp"
 
-class Flower : public MovingObject
+class Flower final : public MovingObject
 {
+  friend class FlipLevelTransformer;
+
 public:
   Flower(BonusType type);
-  ~Flower();
-  virtual bool do_save() const {
+  virtual bool is_saveable() const override {
     return false;
   }
 
-  virtual void update(float elapsed_time);
-  virtual void draw(DrawingContext& context);
-  virtual HitResponse collision(GameObject& other, const CollisionHit& hit);
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
 
 private:
   BonusType type;
   SpritePtr sprite;
-  DrawingEffect drawing_effect;
+  Flip flip;
 
-private:
-  Flower(const Flower&);
-  Flower& operator=(const Flower&);
-  Color light;
   SpritePtr lightsprite;
 
-  friend class FlipLevelTransformer;
+private:
+  Flower(const Flower&) = delete;
+  Flower& operator=(const Flower&) = delete;
 };
 
 #endif

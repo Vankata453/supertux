@@ -17,30 +17,14 @@
 #ifndef HEADER_SUPERTUX_VIDEO_COLOR_HPP
 #define HEADER_SUPERTUX_VIDEO_COLOR_HPP
 
-#include <assert.h>
+#include <string>
 #include <vector>
 
-#include "util/log.hpp"
+#include <SDL_image.h>
 
-class Color
+class Color final
 {
 public:
-  Color();
-
-  Color(float red_, float green_, float blue_, float alpha_ = 1.0);
-
-  Color(const std::vector<float>& vals);
-
-  bool operator==(const Color& other) const;
-
-  float greyscale() const;
-
-  bool operator < (const Color& other) const;
-
-  std::vector<float> toVector();
-
-  float red, green, blue, alpha;
-
   static const Color BLACK;
   static const Color RED;
   static const Color GREEN;
@@ -49,6 +33,65 @@ public:
   static const Color MAGENTA;
   static const Color YELLOW;
   static const Color WHITE;
+
+public:
+  static Color from_rgb888(uint8_t r, uint8_t g, uint8_t b)
+  {
+    return Color(static_cast<float>(r) / 255.0f,
+                 static_cast<float>(g) / 255.0f,
+                 static_cast<float>(b) / 255.0f);
+  }
+
+  static Color from_rgba8888(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
+  {
+    return Color(static_cast<float>(r) / 255.0f,
+                 static_cast<float>(g) / 255.0f,
+                 static_cast<float>(b) / 255.0f,
+                 static_cast<float>(a) / 255.0f);
+  }
+
+public:
+  Color();
+
+  Color(float red_, float green_, float blue_, float alpha_ = 1.0);
+
+  Color(const std::vector<float>& vals);
+
+  bool operator==(const Color& other) const;
+  bool operator!=(const Color& other) const;
+
+  float greyscale() const;
+
+  bool operator < (const Color& other) const;
+
+  std::vector<float> toVector();
+
+  inline uint8_t r8() const { return static_cast<uint8_t>(255.0f * red); }
+  inline uint8_t g8() const { return static_cast<uint8_t>(255.0f * green); }
+  inline uint8_t b8() const { return static_cast<uint8_t>(255.0f * blue); }
+  inline uint8_t a8() const { return static_cast<uint8_t>(255.0f * alpha); }
+
+  inline uint32_t rgba() const
+  {
+    return ((a8() << 24) |
+            (b8() << 16) |
+            (g8() <<  8) |
+            (r8() <<  0));
+  }
+
+  /** Return a human-readable string representation for this color */
+  std::string to_string() const
+  {
+    return std::to_string(red) + " " + std::to_string(green) + " " + std::to_string(blue);
+  }
+
+  SDL_Color to_sdl_color() const
+  {
+    return { r8(), g8(), b8(), a8() };
+  }
+
+public:
+  float red, green, blue, alpha;
 };
 
 #endif

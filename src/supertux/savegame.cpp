@@ -18,12 +18,12 @@
 #include "supertux/savegame.hpp"
 
 #include <algorithm>
+#include <physfs.h>
 
-#include "physfs/ifile_streambuf.hpp"
 #include "physfs/physfs_file_system.hpp"
-#include "scripting/scripting.hpp"
-#include "scripting/serialize.hpp"
-#include "scripting/squirrel_util.hpp"
+#include "squirrel/squirrel_virtual_machine.hpp"
+#include "squirrel/serialize.hpp"
+#include "squirrel/squirrel_util.hpp"
 #include "supertux/player_status.hpp"
 #include "util/file_system.hpp"
 #include "util/log.hpp"
@@ -33,31 +33,28 @@
 #include "worldmap/worldmap.hpp"
 
 namespace {
-using scripting::get_table_entry;
-using scripting::get_or_create_table_entry;
-using scripting::get_table_keys;
 
 std::vector<LevelState> get_level_states(HSQUIRRELVM vm)
 {
   std::vector<LevelState> results;
 
   sq_pushnull(vm);
-  while(SQ_SUCCEEDED(sq_next(vm, -2)))
+  while (SQ_SUCCEEDED(sq_next(vm, -2)))
   {
     //here -1 is the value and -2 is the key
     const char* result;
-    if(SQ_FAILED(sq_getstring(vm, -2, &result)))
+    if (SQ_FAILED(sq_getstring(vm, -2, &result)))
     {
       std::ostringstream msg;
       msg << "Couldn't get string value";
-      throw scripting::SquirrelError(vm, msg.str());
+      throw SquirrelError(vm, msg.str());
     }
     else
     {
       LevelState level_state;
       level_state.filename = result;
-      scripting::get_bool(vm, "solved", level_state.solved);
-      scripting::get_bool(vm, "perfect", level_state.perfect);
+      get_bool(vm, "solved", level_state.solved);
+      get_bool(vm, "perfect", level_state.perfect);
 
       results.push_back(level_state);
     }
@@ -116,8 +113,11 @@ Savegame::Savegame(const std::string& filename) :
 {
 }
 
-Savegame::~Savegame()
+bool
+Savegame::is_title_screen() const
 {
+  // bit of a hack, TileScreen uses a dummy savegame without a filename
+  return m_filename.empty();
 }
 
 void
@@ -131,13 +131,13 @@ Savegame::load()
 
   clear_state_table();
 
-  if(!PHYSFS_exists(m_filename.c_str()))
+  if (!PHYSFS_exists(m_filename.c_str()))
   {
     log_info << m_filename << " doesn't exist, not loading state" << std::endl;
   }
   else
   {
-    if(PhysFSFileSystem::is_directory(m_filename))
+    if (PhysFSFileSystem::is_directory(m_filename))
     {
       log_info << m_filename << " is a directory, not loading state" << std::endl;
       return;
@@ -146,12 +146,12 @@ Savegame::load()
 
     try
     {
-      HSQUIRRELVM vm = scripting::global_vm;
+      HSQUIRRELVM vm = SquirrelVirtualMachine::current()->get_vm();
 
-      auto doc = ReaderDocument::parse(m_filename);
+      auto doc = ReaderDocument::from_file(m_filename);
       auto root = doc.get_root();
 
-      if(root.get_name() != "supertux-savegame")
+      if (root.get_name() != "supertux-savegame")
       {
         throw std::runtime_error("file is not a supertux-savegame file");
       }
@@ -161,23 +161,23 @@ Savegame::load()
 
         int version = 1;
         mapping.get("version", version);
-        if(version != 1)
+        if (version != 1)
         {
           throw std::runtime_error("incompatible savegame version");
         }
         else
         {
-          ReaderMapping tux;
-          if(!mapping.get("tux", tux))
+          boost::optional<ReaderMapping> tux;
+          if (!mapping.get("tux", tux))
           {
             throw std::runtime_error("No tux section in savegame");
           }
           {
-            m_player_status->read(tux);
+            m_player_status->read(*tux);
           }
 
-          ReaderMapping state;
-          if(!mapping.get("state", state))
+          boost::optional<ReaderMapping> state;
+          if (!mapping.get("state", state))
           {
             throw std::runtime_error("No state section in savegame");
           }
@@ -185,7 +185,7 @@ Savegame::load()
           {
             sq_pushroottable(vm);
             get_table_entry(vm, "state");
-            scripting::load_squirrel_table(vm, -1, state);
+            load_squirrel_table(vm, -1, *state);
             sq_pop(vm, 2);
           }
         }
@@ -201,18 +201,13 @@ Savegame::load()
 void
 Savegame::clear_state_table()
 {
-  HSQUIRRELVM vm = scripting::global_vm;
+  HSQUIRRELVM vm = SquirrelVirtualMachine::current()->get_vm();
 
   // delete existing state table, if it exists
   sq_pushroottable(vm);
   {
     // create a new empty state table
-    sq_pushstring(vm, "state", -1);
-    sq_newtable(vm);
-    if(SQ_FAILED(sq_createslot(vm, -3)))
-    {
-      throw scripting::SquirrelError(vm, "Couldn't create state table");
-    }
+    create_empty_table(vm, "state");
   }
   sq_pop(vm, 1);
 }
@@ -230,18 +225,18 @@ Savegame::save()
 
   { // make sure the savegame directory exists
     std::string dirname = FileSystem::dirname(m_filename);
-    if(!PHYSFS_exists(dirname.c_str()))
+    if (!PHYSFS_exists(dirname.c_str()))
     {
-      if(!PHYSFS_mkdir(dirname.c_str()))
+      if (!PHYSFS_mkdir(dirname.c_str()))
       {
         std::ostringstream msg;
         msg << "Couldn't create directory for savegames '"
-            << dirname << "': " <<PHYSFS_getLastError();
+            << dirname << "': " <<PHYSFS_getLastErrorCode();
         throw std::runtime_error(msg.str());
       }
     }
 
-    if(!PhysFSFileSystem::is_directory(dirname))
+    if (!PhysFSFileSystem::is_directory(dirname))
     {
       std::ostringstream msg;
       msg << "Savegame path '" << dirname << "' is not a directory";
@@ -249,7 +244,7 @@ Savegame::save()
     }
   }
 
-  HSQUIRRELVM vm = scripting::global_vm;
+  HSQUIRRELVM vm = SquirrelVirtualMachine::current()->get_vm();
 
   Writer writer(m_filename);
 
@@ -257,7 +252,7 @@ Savegame::save()
   writer.write("version", 1);
 
   using namespace worldmap;
-  if(WorldMap::current() != NULL)
+  if (WorldMap::current() != nullptr)
   {
     std::ostringstream title;
     title << WorldMap::current()->get_title();
@@ -273,13 +268,16 @@ Savegame::save()
   writer.start_list("state");
 
   sq_pushroottable(vm);
-  sq_pushstring(vm, "state", -1);
-  if(SQ_SUCCEEDED(sq_get(vm, -2)))
+  try
   {
-    scripting::save_squirrel_table(vm, -1, writer);
-    sq_pop(vm, 1);
+    get_table_entry(vm, "state"); // Push "state"
+    save_squirrel_table(vm, -1, writer);
+    sq_pop(vm, 1); // Pop "state"
   }
-  sq_pop(vm, 1);
+  catch(const std::exception&)
+  {
+  }
+  sq_pop(vm, 1); // Pop root table
   writer.end_list("state");
 
   writer.end_list("supertux-savegame");
@@ -290,8 +288,8 @@ Savegame::get_worldmaps()
 {
   std::vector<std::string> worlds;
 
-  HSQUIRRELVM vm = scripting::global_vm;
-  int oldtop = sq_gettop(vm);
+  HSQUIRRELVM vm = SquirrelVirtualMachine::current()->get_vm();
+  SQInteger oldtop = sq_gettop(vm);
 
   try
   {
@@ -315,8 +313,8 @@ Savegame::get_worldmap_state(const std::string& name)
 {
   WorldmapState result;
 
-  HSQUIRRELVM vm = scripting::global_vm;
-  int oldtop = sq_gettop(vm);
+  HSQUIRRELVM vm = SquirrelVirtualMachine::current()->get_vm();
+  SQInteger oldtop = sq_gettop(vm);
 
   try
   {
@@ -343,8 +341,8 @@ Savegame::get_levelsets()
 {
   std::vector<std::string> results;
 
-  HSQUIRRELVM vm = scripting::global_vm;
-  int oldtop = sq_gettop(vm);
+  HSQUIRRELVM vm = SquirrelVirtualMachine::current()->get_vm();
+  SQInteger oldtop = sq_gettop(vm);
 
   try
   {
@@ -368,8 +366,8 @@ Savegame::get_levelset_state(const std::string& basedir)
 {
   LevelsetState result;
 
-  HSQUIRRELVM vm = scripting::global_vm;
-  int oldtop = sq_gettop(vm);
+  HSQUIRRELVM vm = SquirrelVirtualMachine::current()->get_vm();
+  SQInteger oldtop = sq_gettop(vm);
 
   try
   {
@@ -398,8 +396,8 @@ Savegame::set_levelset_state(const std::string& basedir,
 {
   LevelsetState state = get_levelset_state(basedir);
 
-  HSQUIRRELVM vm = scripting::global_vm;
-  int oldtop = sq_gettop(vm);
+  HSQUIRRELVM vm = SquirrelVirtualMachine::current()->get_vm();
+  SQInteger oldtop = sq_gettop(vm);
 
   try
   {
@@ -411,8 +409,8 @@ Savegame::set_levelset_state(const std::string& basedir,
     get_or_create_table_entry(vm, level_filename);
 
     bool old_solved = false;
-    scripting::get_bool(vm, "solved", old_solved);
-    scripting::store_bool(vm, "solved", solved || old_solved);
+    get_bool(vm, "solved", old_solved);
+    store_bool(vm, "solved", solved || old_solved);
   }
   catch(const std::exception& err)
   {

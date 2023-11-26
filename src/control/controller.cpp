@@ -30,13 +30,14 @@ const char* Controller::controlNames[] = {
   "menu-back",
   "remove",
   "cheat-menu",
+  "debug-menu",
   "console",
   "peek-left",
   "peek-right",
   "peek-up",
   "peek-down",
   "capture-run-timer",
-  0
+  nullptr
 };
 
 Controller::Controller()
@@ -50,7 +51,7 @@ Controller::~Controller()
 void
 Controller::reset()
 {
-  for(int i = 0; i < CONTROLCOUNT; ++i) {
+  for (int i = 0; i < CONTROLCOUNT; ++i) {
     controls[i] = false;
     oldControls[i] = false;
   }
@@ -83,7 +84,7 @@ Controller::released(Control control) const
 void
 Controller::update()
 {
-  for(int i = 0; i < CONTROLCOUNT; ++i)
+  for (int i = 0; i < CONTROLCOUNT; ++i)
     oldControls[i] = controls[i];
 }
 

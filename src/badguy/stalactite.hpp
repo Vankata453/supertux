@@ -24,23 +24,20 @@ class Stalactite : public BadGuy
 public:
   Stalactite(const ReaderMapping& reader);
 
-  void active_update(float elapsed_time);
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision_player(Player& player, const CollisionHit& hit);
-  HitResponse collision_badguy(BadGuy& other, const CollisionHit& hit);
-  HitResponse collision_bullet(Bullet& bullet, const CollisionHit& );
+  virtual void active_update(float dt_sec) override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_player(Player& player, const CollisionHit& hit) override;
+  virtual HitResponse collision_badguy(BadGuy& other, const CollisionHit& hit) override;
+  virtual HitResponse collision_bullet(Bullet& bullet, const CollisionHit& ) override;
 
-  void kill_fall();
-  void draw(DrawingContext& context);
-  void deactivate();
+  virtual void kill_fall() override;
+  virtual void draw(DrawingContext& context) override;
+  virtual void deactivate() override;
+
+  virtual std::string get_class() const override { return "stalactite"; }
+  virtual std::string get_display_name() const override { return _("Stalactite"); }
 
   void squish();
-  std::string get_class() const {
-    return "stalactite";
-  }
-  std::string get_display_name() const {
-    return _("Stalactite");
-  }
 
 protected:
   enum StalactiteState {
@@ -54,6 +51,10 @@ protected:
   Timer timer;
   StalactiteState state;
   Vector shake_delta;
+
+private:
+  Stalactite(const Stalactite&) = delete;
+  Stalactite& operator=(const Stalactite&) = delete;
 };
 
 #endif

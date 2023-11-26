@@ -17,18 +17,16 @@
 #ifndef HEADER_SUPERTUX_OBJECT_COIN_EXPLODE_HPP
 #define HEADER_SUPERTUX_OBJECT_COIN_EXPLODE_HPP
 
-#include <memory>
-
 #include "math/vector.hpp"
 #include "supertux/game_object.hpp"
 
-class CoinExplode : public GameObject
+class CoinExplode final : public GameObject
 {
 public:
   CoinExplode(const Vector& pos);
-  virtual void update(float elapsed_time);
-  virtual void draw(DrawingContext& context);
-  virtual bool do_save() const {
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual bool is_saveable() const override {
     return false;
   }
 

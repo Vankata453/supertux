@@ -19,21 +19,19 @@
 
 #include "badguy/walking_badguy.hpp"
 
-class Spiky : public WalkingBadguy
+class Spiky final : public WalkingBadguy
 {
 public:
   Spiky(const ReaderMapping& reader);
 
-  bool is_freezable() const;
-  bool is_flammable() const;
-  std::string get_class() const {
-    return "spiky";
-  }
-  std::string get_display_name() const {
-    return _("Spiky");
-  }
+  virtual bool is_freezable() const override;
+  virtual bool is_flammable() const override;
+  virtual std::string get_class() const override { return "spiky"; }
+  virtual std::string get_display_name() const override { return _("Spiky"); }
 
 private:
+  Spiky(const Spiky&) = delete;
+  Spiky& operator=(const Spiky&) = delete;
 };
 
 #endif

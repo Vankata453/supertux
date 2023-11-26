@@ -19,30 +19,33 @@
 
 #include "trigger/trigger_base.hpp"
 
+class ReaderMapping;
 class Writer;
 
-class ScriptTrigger : public TriggerBase
+class ScriptTrigger final : public TriggerBase
 {
 public:
   ScriptTrigger(const ReaderMapping& reader);
   ScriptTrigger(const Vector& pos, const std::string& script);
-  ~ScriptTrigger();
-  std::string get_class() const {
-    return "scripttrigger";
-  }
 
-  virtual ObjectSettings get_settings();
-  virtual void after_editor_set();
+  virtual std::string get_class() const override { return "scripttrigger"; }
+  virtual bool has_variable_size() const override { return true; }
+
+  virtual ObjectSettings get_settings() override;
+  virtual void after_editor_set() override;
+
+  virtual void event(Player& player, EventType type) override;
+  virtual void draw(DrawingContext& context) override;
 
   void write(Writer& writer);
-  void event(Player& player, EventType type);
-  void draw(DrawingContext& context);
 
 private:
   EventType triggerevent;
   std::string script;
   Vector new_size;
   bool must_activate;
+  bool oneshot;
+  int runcount;
 };
 
 #endif

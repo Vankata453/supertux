@@ -15,13 +15,13 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADER_SUPERTUX_CONTROL_JOYSTICK_MENU_HPP
-#define HEADER_SUPERTUX_CONTROL_JOYSTICK_MENU_HPP
+#ifndef HEADER_SUPERTUX_SUPERTUX_MENU_JOYSTICK_MENU_HPP
+#define HEADER_SUPERTUX_SUPERTUX_MENU_JOYSTICK_MENU_HPP
 
 #include "control/input_manager.hpp"
 #include "gui/menu_item.hpp"
 
-class JoystickMenu : public Menu
+class JoystickMenu final : public Menu
 {
 public:
   JoystickMenu(InputManager& input_manager);
@@ -31,7 +31,7 @@ public:
   void refresh_menu_item(Controller::Control id);
 
   std::string get_button_name(int button) const;
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
 
 private:
   void recreate_menu();
@@ -42,8 +42,8 @@ private:
   bool m_auto_joystick_cfg;
 
 private:
-  JoystickMenu(const JoystickMenu&);
-  JoystickMenu& operator=(const JoystickMenu&);
+  JoystickMenu(const JoystickMenu&) = delete;
+  JoystickMenu& operator=(const JoystickMenu&) = delete;
 };
 
 #endif

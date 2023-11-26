@@ -19,38 +19,37 @@
 #include <math.h>
 
 #include "audio/sound_manager.hpp"
-#include "math/random_generator.hpp"
+#include "audio/sound_source.hpp"
+#include "math/util.hpp"
+#include "object/sprite_particle.hpp"
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
-#include "object/sprite_particle.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
-#include "util/reader_mapping.hpp"
 
 Iceflame::Iceflame(const ReaderMapping& reader) :
   Flame(reader)
 {
-  lightsprite->set_color(Color(0.00f, 0.13f, 0.18f));
-  sprite = SpriteManager::current()->create("images/creatures/flame/iceflame.sprite");
+  m_lightsprite->set_color(Color(0.00f, 0.13f, 0.18f));
+  m_sprite = SpriteManager::current()->create("images/creatures/flame/iceflame.sprite");
 }
 
 void
-Iceflame::active_update(float elapsed_time)
+Iceflame::active_update(float dt_sec)
 {
-  Flame::active_update(elapsed_time);
-  sprite->set_angle(angle * 360.0f / (2*M_PI) * 3);
+  Flame::active_update(dt_sec);
+  m_sprite->set_angle(math::degrees(angle) * 3.0f);
 }
 
 void
 Iceflame::ignite()
 {
   SoundManager::current()->play("sounds/sizzle.ogg", get_pos());
-  sprite->set_action("fade", 1);
-  Sector::current()->add_object(std::make_shared<SpriteParticle>("images/objects/particles/smoke.sprite",
-                                                                 "default",
-                                                                 bbox.get_middle(), ANCHOR_MIDDLE,
-                                                                 Vector(0, -150), Vector(0,0),
-                                                                 LAYER_BACKGROUNDTILES+2));
+  m_sprite->set_action("fade", 1);
+  Sector::get().add<SpriteParticle>("images/objects/particles/smoke.sprite",
+                                         "default",
+                                         m_col.m_bbox.get_middle(), ANCHOR_MIDDLE,
+                                         Vector(0, -150), Vector(0,0),
+                                         LAYER_BACKGROUNDTILES+2);
   set_group(COLGROUP_DISABLED);
 
   // start dead-script

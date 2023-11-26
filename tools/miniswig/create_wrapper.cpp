@@ -29,6 +29,8 @@ WrapperCreator::create_wrapper(Namespace* ns)
         << "#ifndef HEADER_SUPERTUX_SCRIPTING_WRAPPER_HPP\n" //TODO avoid hardcoding
         << "#define HEADER_SUPERTUX_SCRIPTING_WRAPPER_HPP\n"
         << "\n"
+        << "#include <squirrel.h>\n"
+        << "\n"
         << "namespace scripting {\n"
         << "\n";
 
@@ -59,9 +61,13 @@ WrapperCreator::create_wrapper(Namespace* ns)
         << " * DO NOT CHANGE\n"
         << " */\n"
         << "\n"
+        << "#include \"scripting/wrapper.hpp\"\n"
+        << "\n"
+        << "#include <assert.h>\n"
+        << "#include <limits>\n"
         << "#include <sstream>\n"
         << "\n"
-        << "#include \"scripting/squirrel_error.hpp\"\n"
+        << "#include \"squirrel/squirrel_error.hpp\"\n"
         << "#include \"scripting/wrapper.interface.hpp\"\n"
         << "\n"
         << "namespace scripting {\n"
@@ -289,13 +295,13 @@ WrapperCreator::create_function_wrapper(Class* _class, Function* function)
     // retrieve pointer to class instance
     if(_class != 0 && function->type != Function::CONSTRUCTOR) {
         out << ind << "SQUserPointer data;\n";
-        out << ind << "if(SQ_FAILED(sq_getinstanceup(vm, 1, &data, 0)) || !data) {\n";
+        out << ind << "if(SQ_FAILED(sq_getinstanceup(vm, 1, &data, nullptr)) || !data) {\n";
         out << ind << ind << "sq_throwerror(vm, _SC(\"'" << function->name << "' called without instance\"));\n";
         out << ind << ind << "return SQ_ERROR;\n";
         out << ind << "}\n";
         out << ind << "auto _this = reinterpret_cast<" << ns_prefix << _class->name << "*> (data);\n";
         out << "\n";
-        out << ind << "if (_this == NULL) {\n";
+        out << ind << "if (_this == nullptr) {\n";
         out << ind << ind << "return SQ_ERROR;\n";
         out << ind << "}\n";
         out << "\n";
@@ -471,8 +477,9 @@ WrapperCreator::push_to_stack(const Type& type, const std::string& var)
     } else if(type.atomic_type == &BasicType::BOOL) {
         out << "sq_pushbool(vm, " << var << ");\n";
     } else if(type.atomic_type == StringType::instance()) {
-        out << "sq_pushstring(vm, " << var << ".c_str(), "
-            << var << ".size());\n";
+        out << "assert(" << var << ".size() < std::numeric_limits<SQInteger>::max());\n"
+            << ind << ind << "sq_pushstring(vm, " << var << ".c_str(), static_cast<SQInteger>("
+            << var << ".size()));\n";
     } else {
         std::ostringstream msg;
         msg << "Type '" << type.atomic_type->name << "' not supported yet.";

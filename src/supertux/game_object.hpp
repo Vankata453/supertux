@@ -17,98 +17,100 @@
 #ifndef HEADER_SUPERTUX_SUPERTUX_GAME_OBJECT_HPP
 #define HEADER_SUPERTUX_SUPERTUX_GAME_OBJECT_HPP
 
-#include <memory>
+#include <algorithm>
 #include <string>
 
 #include "editor/object_settings.hpp"
+#include "supertux/game_object_component.hpp"
 #include "util/gettext.hpp"
-#include "util/writer.hpp"
+#include "util/uid.hpp"
 
 class DrawingContext;
-class GameObject;
+class GameObjectComponent;
 class ObjectRemoveListener;
+class ReaderMapping;
+class Writer;
 
 /**
- * Base class for all the things that make up Levels' Sectors.
- *
- * Each sector of a level will hold a list of active GameObject while the
- * game is played.
- *
- * This class is responsible for:
- *  - Updating and Drawing the object. This should happen in the update() and
- *    draw() functions. Both are called once per frame.
- *  - Providing a safe way to remove the object by calling the remove_me
- *    functions.
- */
+    Base class for all the things that make up Levels' Sectors.
+
+    Each sector of a level will hold a list of active GameObject while the
+    game is played.
+
+    This class is responsible for:
+    - Updating and Drawing the object. This should happen in the update() and
+      draw() functions. Both are called once per frame.
+    - Providing a safe way to remove the object by calling the remove_me
+      functions.
+*/
 class GameObject
 {
+  friend class GameObjectManager;
+
 public:
   GameObject();
-  GameObject(const GameObject& rhs);
+  GameObject(const std::string& name);
+  GameObject(const ReaderMapping& reader);
   virtual ~GameObject();
 
-  /** This function is called once per frame and allows the object to update
-   * it's state. The elapsed_time is the time since the last frame in
-   * seconds and should be the base for all timed calculations (don't use
-   * SDL_GetTicks directly as this will fail in pause mode)
-   */
-  virtual void update(float elapsed_time) = 0;
+  /** Called after all objects have been added to the Sector and the
+      Sector is fully constructed. If objects refer to other objects
+      by name, those connection can be resolved here. */
+  virtual void finish_construction() {}
 
-  /** The GameObject should draw itself onto the provided DrawingContext if this
-   * function is called.
-   */
+  UID get_uid() const { return m_uid; }
+
+  /** This function is called once per frame and allows the object to
+      update it's state. The dt_sec is the time that has passed since
+      the last frame in seconds and should be the base for all timed
+      calculations (don't use SDL_GetTicks directly as this will fail
+      in pause mode). This function is not called in the Editor. */
+  virtual void update(float dt_sec) = 0;
+
+  /** The GameObject should draw itself onto the provided
+      DrawingContext if this function is called. */
   virtual void draw(DrawingContext& context) = 0;
 
-  /** This function saves the object.
-   *  Editor will use that.
-   */
-  virtual void save(Writer& writer);
-  virtual std::string get_class() const {
-    return "game-object";
-  }
-  virtual std::string get_display_name() const {
-    return _("Unknown object");
-  }
-  virtual bool do_save() const {
-    return true;
-  }
+  /** This function saves the object. Editor will use that. */
+  void save(Writer& writer);
+  virtual std::string get_class() const { return "game-object"; }
+  virtual std::string get_display_name() const { return _("Unknown object"); }
 
+  /** If true only a single object of this type is allowed in a
+      given GameObjectManager */
+  virtual bool is_singleton() const { return false; }
+
+  /** Does this object have variable size
+      (secret area trigger, wind, etc.) */
+  virtual bool has_variable_size() const { return false; }
+
+  /** Indicates if the object will be saved. If false, the object will
+      be skipped on saving and can't be cloned in the editor. */
+  virtual bool is_saveable() const { return true; }
+
+  /** Indicates if get_settings() is implemented. If true the editor
+      will display Tip and ObjectMenu. */
+  virtual bool has_settings() const { return is_saveable(); }
   virtual ObjectSettings get_settings();
+
   virtual void after_editor_set() {}
 
   /** returns true if the object is not scheduled to be removed yet */
-  bool is_valid() const
-  {
-    return !wants_to_die;
-  }
+  bool is_valid() const { return !m_scheduled_for_removal; }
 
   /** schedules this object to be removed at the end of the frame */
-  void remove_me()
-  {
-    wants_to_die = true;
-  }
-
-  /** used by the editor to delete the object */
-  virtual void editor_delete()
-  {
-    remove_me();
-  }
+  void remove_me() { m_scheduled_for_removal = true; }
 
   /** registers a remove listener which will be called if the object
-   * gets removed/destroyed
-   */
+      gets removed/destroyed */
   void add_remove_listener(ObjectRemoveListener* listener);
 
-  /**
-   * unregisters a remove listener, so it will no longer be called if the object
-   * gets removed/destroyed
-   */
+  /** unregisters a remove listener, so it will no longer be called if
+      the object gets removed/destroyed */
   void del_remove_listener(ObjectRemoveListener* listener);
 
-  const std::string& get_name() const
-  {
-    return name;
-  }
+  void set_name(const std::string& name) { m_name = name; }
+  const std::string& get_name() const { return m_name; }
 
   virtual const std::string get_icon_path() const {
     return "images/tiles/auxiliary/notile.png";
@@ -120,30 +122,68 @@ public:
   /** continues all looping sounds */
   virtual void play_looping_sounds() {}
 
-private:
-  /** this flag indicates if the object should be removed at the end of the
-   * frame
-   */
-  bool wants_to_die;
+  template<typename T>
+  T* get_component() {
+    for(auto& component : m_components) {
+      if (T* result = dynamic_cast<T*>(component.get())) {
+        return result;
+      }
+    }
+    return nullptr;
+  }
 
-  struct RemoveListenerListEntry
-  {
-    RemoveListenerListEntry* next;
-    ObjectRemoveListener* listener;
-  };
-  RemoveListenerListEntry* remove_listeners;
+  void add_component(std::unique_ptr<GameObjectComponent> component) {
+    m_components.emplace_back(std::move(component));
+  }
+
+  void remove_component(GameObjectComponent* component) {
+    auto it = std::find_if(m_components.begin(), m_components.end(),
+                           [component](const std::unique_ptr<GameObjectComponent>& lhs){
+                             return lhs.get() == component;
+                           });
+    if (it != m_components.end()) {
+      m_components.erase(it);
+    }
+  }
+
+  /** The editor requested the deletion of the object */
+  virtual void editor_delete() { remove_me(); }
+
+  /** The user clicked on the object in the editor and selected it*/
+  virtual void editor_select() {}
+
+  /** The object got deselected */
+  virtual void editor_deselect() {}
+
+  /** Called each frame in the editor, used to keep linked objects
+      together (e.g. platform on a path) */
+  virtual void editor_update() {}
+
+private:
+  void set_uid(const UID& uid) { m_uid = uid; }
 
 protected:
-  /**
-   * a name for the gameobject, this is mostly a hint for scripts and for
-   * debugging, don't rely on names being set or being unique
-   */
-  std::string name;
+  /** a name for the gameobject, this is mostly a hint for scripts and
+      for debugging, don't rely on names being set or being unique */
+  std::string m_name;
 
 private:
-  GameObject& operator=(const GameObject&);
+  /** A unique id for the object to safely refer to it. This will be
+      set by the GameObjectManager. */
+  UID m_uid;
+
+  /** this flag indicates if the object should be removed at the end of the frame */
+  bool m_scheduled_for_removal;
+
+  std::vector<std::unique_ptr<GameObjectComponent> > m_components;
+
+  std::vector<ObjectRemoveListener*> m_remove_listeners;
+
+private:
+  GameObject(const GameObject&) = delete;
+  GameObject& operator=(const GameObject&) = delete;
 };
 
-#endif /*SUPERTUX_GAMEOBJECT_H*/
+#endif
 
 /* EOF */

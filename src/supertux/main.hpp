@@ -17,18 +17,29 @@
 #ifndef HEADER_SUPERTUX_SUPERTUX_MAIN_HPP
 #define HEADER_SUPERTUX_SUPERTUX_MAIN_HPP
 
-class Main
+#include <string>
+
+class CommandLineArguments;
+
+class Main final
 {
+public:
+  Main();
+
+  /** We call it run() instead of main() as main collides with
+      #define main SDL_main from SDL.h */
+  int run(int argc, char** argv);
+
 private:
   void init_tinygettext();
   void init_video();
 
-  void launch_game();
+  void launch_game(const CommandLineArguments& args);
+  void resave(const std::string& input_filename, const std::string& output_filename);
 
-public:
-  /** We call it run() instead of main() as main collides with
-      #define main SDL_main from SDL.h */
-  int run(int argc, char** argv);
+private:
+  Main(const Main&) = delete;
+  Main& operator=(const Main&) = delete;
 };
 
 #endif

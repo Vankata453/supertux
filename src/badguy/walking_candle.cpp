@@ -18,8 +18,6 @@
 
 #include "object/lantern.hpp"
 #include "sprite/sprite.hpp"
-#include "sprite/sprite_manager.hpp"
-#include "supertux/object_factory.hpp"
 #include "util/reader_mapping.hpp"
 
 WalkingCandle::WalkingCandle(const ReaderMapping& reader)
@@ -33,11 +31,11 @@ WalkingCandle::WalkingCandle(const ReaderMapping& reader)
   if (reader.get("color", vColor)) {
     lightcolor = Color(vColor);
   }
-  sprite->set_color(lightcolor);
-  lightsprite->set_color(lightcolor);
+  m_sprite->set_color(lightcolor);
+  m_lightsprite->set_color(lightcolor);
 
-  countMe = false;
-  glowing = true;
+  m_countMe = false;
+  m_glowing = true;
 }
 
 bool
@@ -49,25 +47,25 @@ WalkingCandle::is_freezable() const
 bool
 WalkingCandle::is_flammable() const
 {
-  return frozen;
+  return m_frozen;
 }
 
 void
 WalkingCandle::freeze() {
   BadGuy::freeze();
-  glowing = false;
+  m_glowing = false;
 }
 
 void
 WalkingCandle::unfreeze() {
   BadGuy::unfreeze();
-  glowing = true;
+  m_glowing = true;
 }
 
 HitResponse
 WalkingCandle::collision(GameObject& other, const CollisionHit& hit) {
   auto l = dynamic_cast<Lantern*>(&other);
-  if (l && !frozen) if (l->get_bbox().p2.y < bbox.p1.y) {
+  if (l && !m_frozen) if (l->get_bbox().get_bottom() < m_col.m_bbox.get_top()) {
     l->add_color(lightcolor);
     run_dead_script();
     remove_me();
@@ -77,16 +75,22 @@ WalkingCandle::collision(GameObject& other, const CollisionHit& hit) {
 }
 
 ObjectSettings
-WalkingCandle::get_settings() {
+WalkingCandle::get_settings()
+{
   ObjectSettings result = BadGuy::get_settings();
-  result.options.push_back( ObjectOption(MN_COLOR, _("Colour"), &lightcolor, "color"));
+
+  result.add_color(_("Color"), &lightcolor, "color", Color::WHITE);
+
+  result.reorder({"color", "x", "y"});
+
   return result;
 }
 
 void
-WalkingCandle::after_editor_set() {
-  sprite->set_color(lightcolor);
-  lightsprite->set_color(lightcolor);
+WalkingCandle::after_editor_set()
+{
+  m_sprite->set_color(lightcolor);
+  m_lightsprite->set_color(lightcolor);
 }
 
 /* EOF */

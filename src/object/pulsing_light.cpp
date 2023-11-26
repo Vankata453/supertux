@@ -15,9 +15,12 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "object/pulsing_light.hpp"
+
+#include <assert.h>
 #include <math.h>
 
-#include "math/random_generator.hpp"
+#include "math/random.hpp"
+#include "math/util.hpp"
 
 PulsingLight::PulsingLight(const Vector& center, float cycle_len_, float min_alpha_, float max_alpha_, const Color& color_) :
   Light(center, color_),
@@ -37,11 +40,11 @@ PulsingLight::~PulsingLight()
 }
 
 void
-PulsingLight::update(float elapsed_time)
+PulsingLight::update(float dt_sec)
 {
-  Light::update(elapsed_time);
+  Light::update(dt_sec);
 
-  t += elapsed_time;
+  t += dt_sec;
   if (t > cycle_len) t -= cycle_len;
 }
 
@@ -50,7 +53,7 @@ PulsingLight::draw(DrawingContext& context)
 {
   Color old_color = color;
 
-  color.alpha *= min_alpha + ((max_alpha - min_alpha) * cos(2 * M_PI * t / cycle_len));
+  color.alpha *= min_alpha + ((max_alpha - min_alpha) * cosf(math::TAU * t / cycle_len));
   Light::draw(context);
 
   color = old_color;

@@ -20,31 +20,35 @@
 #include "object/moving_sprite.hpp"
 #include "supertux/physic.hpp"
 
-class PowerUp : public MovingSprite
+class PowerUp final : public MovingSprite
 {
 public:
-  PowerUp(const ReaderMapping& lisp);
+  PowerUp(const ReaderMapping& mapping);
   PowerUp(const Vector& pos, const std::string& sprite_name);
 
-  virtual void update(float elapsed_time);
-  virtual void draw(DrawingContext& context);
-  virtual void collision_solid(const CollisionHit& hit);
-  virtual HitResponse collision(GameObject& other, const CollisionHit& hit);
-  std::string get_class() const {
-    return "powerup";
-  }
-  std::string get_display_name() const {
-    return _("Power up");
-  }
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
 
-  virtual ObjectSettings get_settings();
+  virtual std::string get_class() const override { return "powerup"; }
+  virtual std::string get_display_name() const override { return _("Power-up"); }
+
+  virtual ObjectSettings get_settings() override;
+
+private:
+  /** Initialize power up sprites and other defaults */
+  virtual void initialize();
 
 private:
   Physic physic;
   std::string script;
   bool no_physics;
-  Color light;
   SpritePtr lightsprite;
+
+private:
+  PowerUp(const PowerUp&) = delete;
+  PowerUp& operator=(const PowerUp&) = delete;
 };
 
 #endif

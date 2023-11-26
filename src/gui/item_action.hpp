@@ -17,20 +17,21 @@
 #ifndef HEADER_SUPERTUX_GUI_ITEM_ACTION_HPP
 #define HEADER_SUPERTUX_GUI_ITEM_ACTION_HPP
 
-#include <list>
-#include <memory>
-#include <SDL.h>
-
 #include "gui/menu_item.hpp"
 
-class ItemAction : public MenuItem
+class ItemAction final : public MenuItem
 {
-  public:
-    ItemAction(const std::string& text_, int id = -1);
+public:
+  ItemAction(const std::string& text, int id = -1, std::function<void()> callback = {});
 
-  private:
-    ItemAction(const ItemAction&);
-    ItemAction& operator=(const ItemAction&);
+  virtual void process_action(const MenuAction& action) override;
+
+private:
+  std::function<void()> m_callback;
+
+private:
+  ItemAction(const ItemAction&) = delete;
+  ItemAction& operator=(const ItemAction&) = delete;
 };
 
 #endif

@@ -18,25 +18,28 @@
 #define HEADER_SUPERTUX_WORLDMAP_SPRITE_CHANGE_HPP
 
 #include <list>
-#include <memory>
 #include <string>
 
-#include "util/reader_fwd.hpp"
 #include "math/vector.hpp"
+#include "sprite/sprite_ptr.hpp"
 #include "supertux/game_object.hpp"
 
+class ReaderMapping;
 class Sprite;
 
 namespace worldmap {
 
-class SpriteChange : public GameObject
+class SpriteChange final : public GameObject
 {
+private:
+  static std::list<SpriteChange*> s_all_sprite_changes;
+
 public:
-  SpriteChange(const ReaderMapping& lisp);
+  SpriteChange(const ReaderMapping& mapping);
   virtual ~SpriteChange();
 
-  virtual void draw(DrawingContext& context);
-  virtual void update(float elapsed_time);
+  virtual void draw(DrawingContext& context) override;
+  virtual void update(float dt_sec) override;
 
   /**
    * Activates the SpriteChange's stay action, if applicable
@@ -54,32 +57,37 @@ public:
    */
    bool show_stay_action() const;
 
-public:
-  Vector pos;
+  Vector get_pos() const { return m_pos; }
 
+private:
+  Vector m_pos;
+
+public:
   /** should tuxs sprite change when the tile has been completely entered,
       or already when the tile was just touched */
-  bool change_on_touch;
+  bool m_change_on_touch;
 
   /** sprite to change tux image to */
-  SpritePtr sprite;
-  std::string sprite_name;
+  SpritePtr m_sprite;
+  std::string m_sprite_name;
 
+private:
   /** stay action can be used for objects like boats or cars, if it is
-      != "" then this sprite will be displayed when tux left the tile
-      towards another SpriteChange object. */
-  std::string stay_action;
+      not empty then this sprite will be displayed when tux left the
+      tile towards another SpriteChange object. */
+  std::string m_stay_action;
 
   /** name of a group in which only one SpriteChange will ever have
       its stay_action displayed.  Leave empty if you don't care. */
-  std::string stay_group;
+  std::string m_stay_group;
 
 private:
   /** should the stayaction be displayed */
-  bool in_stay_action;
+  bool m_in_stay_action;
 
 private:
-  static std::list<SpriteChange*> all_sprite_changes;
+  SpriteChange(const SpriteChange&) = delete;
+  SpriteChange& operator=(const SpriteChange&) = delete;
 };
 
 } // namespace worldmap

@@ -19,24 +19,22 @@
 
 #include "badguy/flame.hpp"
 
-class Iceflame : public Flame
+class Iceflame final : public Flame
 {
 public:
   Iceflame(const ReaderMapping& reader);
-  Iceflame(const Iceflame& iceflame);
 
-  void active_update(float elapsed_time);
+  virtual void active_update(float dt_sec) override;
 
-  void ignite();
-  bool is_flammable() const;
-  bool is_freezable() const;
-  std::string get_class() const {
-    return "iceflame";
-  }
+  virtual void ignite() override;
+  virtual bool is_flammable() const override;
+  virtual bool is_freezable() const override;
+  virtual std::string get_class() const override { return "iceflame"; }
+  virtual std::string get_display_name() const override { return _("Ice flame"); }
 
-  std::string get_display_name() const {
-    return _("Ice flame");
-  }
+private:
+  Iceflame(const Iceflame&) = delete;
+  Iceflame& operator=(const Iceflame&) = delete;
 };
 
 #endif

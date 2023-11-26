@@ -22,59 +22,55 @@
 
 class Player;
 
-/**
- * This class is the base class for icecrushers that tux can stand on
- */
-class IceCrusher : public MovingSprite
+/** This class is the base class for icecrushers that tux can stand on */
+class IceCrusher final : public MovingSprite
 {
-public:
-  IceCrusher(const ReaderMapping& reader);
-  IceCrusher(const IceCrusher& icecrusher);
-
-  virtual HitResponse collision(GameObject& other, const CollisionHit& hit);
-  virtual void collision_solid(const CollisionHit& hit);
-  virtual void update(float elapsed_time);
-  virtual void draw(DrawingContext& context);
-  std::string get_class() const {
-    return "icecrusher";
-  }
-  std::string get_display_name() const {
-    return _("Ice crusher");
-  }
-
-#if 0
-  const Vector& get_speed() const
-  {
-    return speed;
-  }
-#endif
-
-protected:
+private:
   enum IceCrusherState {
     IDLE,
     CRUSHING,
     RECOVERING
   };
+
+  enum IceCrusherSize {
+    NORMAL,
+    LARGE
+  };
+
+public:
+  IceCrusher(const ReaderMapping& reader);
+
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual std::string get_class() const override { return "icecrusher"; }
+  virtual std::string get_display_name() const override { return _("Ice crusher"); }
+
+  virtual void after_editor_set() override;
+
+private:
+  bool found_victim() const;
+  void set_state(IceCrusherState state, bool force = false);
+  Vector eye_position(bool right) const;
+
+  void after_sprite_set();
+
+private:
   IceCrusherState state;
   Vector start_position;
   Physic physic;
   float cooldown_timer;
 
-  Player* get_nearest_player();
-  bool found_victim();
-  void set_state(IceCrusherState state, bool force = false);
-  Vector eye_position(bool right);
-
   SpritePtr lefteye;
   SpritePtr righteye;
   SpritePtr whites;
 
-private:
-  enum IceCrusherSize {
-    NORMAL,
-    LARGE
-  };
   IceCrusherSize ic_size;
+
+private:
+  IceCrusher(const IceCrusher&) = delete;
+  IceCrusher& operator=(const IceCrusher&) = delete;
 };
 
 #endif

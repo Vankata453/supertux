@@ -17,16 +17,11 @@
 
 #include "control/input_manager.hpp"
 
-#include <iostream>
-
 #include "control/game_controller_manager.hpp"
+#include "control/joystick_config.hpp"
 #include "control/joystick_manager.hpp"
 #include "control/keyboard_manager.hpp"
-#include "gui/menu_manager.hpp"
-#include "supertux/gameconfig.hpp"
-#include "util/gettext.hpp"
 #include "util/log.hpp"
-#include "util/writer.hpp"
 
 InputManager::InputManager(KeyboardConfig& keyboard_config,
                            JoystickConfig& joystick_config) :
@@ -42,10 +37,16 @@ InputManager::~InputManager()
 {
 }
 
-Controller*
+const Controller&
 InputManager::get_controller() const
 {
-  return controller.get();
+  return *controller;
+}
+
+Controller&
+InputManager::get_controller()
+{
+  return *controller;
 }
 
 void
@@ -69,7 +70,7 @@ InputManager::reset()
 void
 InputManager::process_event(const SDL_Event& event)
 {
-  switch(event.type) {
+  switch (event.type) {
     case SDL_TEXTINPUT:
       keyboard_manager->process_text_input_event(event.text);
       break;

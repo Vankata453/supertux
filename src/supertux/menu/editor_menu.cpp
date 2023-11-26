@@ -16,24 +16,19 @@
 
 #include "supertux/menu/editor_menu.hpp"
 
-#include "gui/menu.hpp"
+#include "editor/editor.hpp"
+#include "gui/dialog.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
-#include "editor/editor.hpp"
-#include "editor/input_center.hpp"
-#include "editor/scroller.hpp"
+#include "supertux/level.hpp"
 #include "supertux/menu/menu_storage.hpp"
-#include "supertux/menu/options_menu.hpp"
-#include "supertux/screen_manager.hpp"
-#include "supertux/world.hpp"
 #include "util/gettext.hpp"
-#include "video/color.hpp"
-#include "video/drawing_context.hpp"
+#include "video/compositor.hpp"
 
 EditorMenu::EditorMenu()
 {
-  bool worldmap = Editor::current()->get_worldmap_mode();
-  bool is_world = Editor::current()->get_world();
+  bool worldmap = Editor::current()->get_level()->is_worldmap();
+  bool is_world = Editor::current()->get_world() != nullptr;
   std::vector<std::string> snap_grid_sizes;
   snap_grid_sizes.push_back(_("1/8 tile (4px)"));
   snap_grid_sizes.push_back(_("1/4 tile (8px)"));
@@ -48,6 +43,14 @@ EditorMenu::EditorMenu()
   if (!worldmap) {
     add_entry(MNID_TESTLEVEL, _("Test the level"));
   }
+  else
+  {
+    add_entry(MNID_TESTLEVEL, _("Test the worldmap"));
+  }
+
+  add_entry(MNID_OPEN_DIR, _("Open output directory"));
+
+  add_entry(MNID_SHARE, _("Share your level"));
 
   if (is_world) {
     add_entry(MNID_LEVELSEL, _("Edit another level"));
@@ -55,11 +58,13 @@ EditorMenu::EditorMenu()
 
   add_entry(MNID_LEVELSETSEL, _("Choose another level subset"));
 
-  add_string_select(-1, _("Grid size"), &EditorInputCenter::selected_snap_grid_size, snap_grid_sizes);
+  add_string_select(-1, _("Grid size"), &EditorOverlayWidget::selected_snap_grid_size, snap_grid_sizes);
 
-  add_toggle(-1, _("Snap objects to grid (F7)"), &EditorInputCenter::snap_to_grid);
-  add_toggle(-1, _("Show grid (F8)"), &EditorInputCenter::render_grid);
-  add_toggle(-1, _("Show scroller (F9)"), &EditorScroller::rendered);
+  add_toggle(-1, _("Render lighting (F6)"), &Compositor::s_render_lighting);
+  add_toggle(-1, _("Snap objects to grid (F7)"), &EditorOverlayWidget::snap_to_grid);
+  add_toggle(-1, _("Show grid (F8)"), &EditorOverlayWidget::render_grid);
+  add_toggle(-1, _("Render background"), &EditorOverlayWidget::render_background);
+  add_toggle(-1, _("Show scroller (F9)"), &EditorScrollerWidget::rendered);
 
   add_submenu(worldmap ? _("Worldmap properties") : _("Level properties"),
               MenuStorage::EDITOR_LEVEL_MENU);
@@ -70,39 +75,72 @@ EditorMenu::EditorMenu()
 
 EditorMenu::~EditorMenu()
 {
-  Editor::current()->reactivate_request = true;
+  auto editor = Editor::current();
+  if (editor == nullptr) {
+    return;
+  }
+  editor->m_reactivate_request = true;
 }
 
 void
-EditorMenu::menu_action(MenuItem* item)
+EditorMenu::menu_action(MenuItem& item)
 {
-  switch (item->id)
+  auto editor = Editor::current();
+  switch (item.get_id())
   {
     case MNID_RETURNTOEDITOR:
       MenuManager::instance().clear_menu_stack();
       break;
 
     case MNID_SAVELEVEL:
-      MenuManager::instance().clear_menu_stack();
-      Editor::current()->save_request = true;
+    {
+      editor->check_save_prerequisites([editor]() {
+        MenuManager::instance().clear_menu_stack();
+        editor->m_save_request = true;
+      });
+    }
+      break;
+
+    case MNID_OPEN_DIR:
+      Editor::current()->open_level_directory();
       break;
 
     case MNID_TESTLEVEL:
-      MenuManager::instance().clear_menu_stack();
-      Editor::current()->test_request = true;
+    {
+      editor->check_save_prerequisites([editor]() {
+        MenuManager::instance().clear_menu_stack();
+        editor->m_test_request = true;
+      });
+    }
       break;
 
+    case MNID_SHARE:
+    {
+      auto dialog = std::make_unique<Dialog>();
+      dialog->set_text(_("We encourage you to share your levels in the SuperTux forum.\nTo find your level, click the\n\"Open output directory\" menu item.\nDo you want to go to the forum now?"));
+      dialog->add_default_button(_("Yes"), [] {
+        FileSystem::open_path("https://forum.freegamedev.net/viewforum.php?f=69");
+      });
+      dialog->add_cancel_button(_("No"));
+      MenuManager::instance().set_dialog(std::move(dialog));
+    }
+    break;
+
     case MNID_LEVELSEL:
-      MenuManager::instance().set_menu(MenuStorage::EDITOR_LEVEL_SELECT_MENU);
+      editor->check_unsaved_changes([] {
+        MenuManager::instance().set_menu(MenuStorage::EDITOR_LEVEL_SELECT_MENU);
+      });
       break;
 
     case MNID_LEVELSETSEL:
-      MenuManager::instance().set_menu(MenuStorage::EDITOR_LEVELSET_SELECT_MENU);
+      editor->check_unsaved_changes([] {
+        MenuManager::instance().set_menu(MenuStorage::EDITOR_LEVELSET_SELECT_MENU);
+      });
       break;
 
     case MNID_QUITEDITOR:
       MenuManager::instance().clear_menu_stack();
-      Editor::current()->quit_request = true;
+      Editor::current()->m_quit_request = true;
       break;
 
     default:

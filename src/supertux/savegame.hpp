@@ -63,7 +63,7 @@ public:
   std::vector<LevelState> level_states;
 };
 
-class Savegame
+class Savegame final
 {
 private:
   std::string m_filename;
@@ -71,10 +71,9 @@ private:
 
 public:
   Savegame(const std::string& filename);
-  ~Savegame();
 
   /** Returns content of (tux ...) entry */
-  PlayerStatus* get_player_status() const { return m_player_status.get(); }
+  PlayerStatus& get_player_status() const { return *m_player_status; }
 
   std::string get_title() const;
 
@@ -89,6 +88,8 @@ public:
 
   void save();
   void load();
+
+  bool is_title_screen() const;
 
 private:
   void clear_state_table();

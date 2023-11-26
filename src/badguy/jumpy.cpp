@@ -16,11 +16,10 @@
 
 #include "badguy/jumpy.hpp"
 
+#include <algorithm>
+
 #include "object/player.hpp"
 #include "sprite/sprite.hpp"
-#include "supertux/object_factory.hpp"
-
-#include <algorithm>
 
 static const float JUMPYSPEED=-600;
 static const float JUMPY_MID_TOLERANCE=4;
@@ -31,7 +30,7 @@ Jumpy::Jumpy(const ReaderMapping& reader) :
   pos_groundhit(),
   groundhit_pos_set(false)
 {
-  sprite->set_action("left-middle");
+  m_sprite->set_action("left-middle");
   // TODO create a nice sound for this...
   //SoundManager::current()->preload("sounds/skid.wav");
 }
@@ -51,58 +50,58 @@ Jumpy::collision_badguy(BadGuy& , const CollisionHit& chit)
 HitResponse
 Jumpy::hit(const CollisionHit& chit)
 {
-  if(chit.bottom) {
+  if (chit.bottom) {
     if (!groundhit_pos_set)
     {
       pos_groundhit = get_pos();
       groundhit_pos_set = true;
     }
 
-    physic.set_velocity_y((frozen || get_state() != STATE_ACTIVE) ? 0 : JUMPYSPEED);
+    m_physic.set_velocity_y((m_frozen || get_state() != STATE_ACTIVE) ? 0 : JUMPYSPEED);
     // TODO create a nice sound for this...
     //SoundManager::current()->play("sounds/skid.wav");
     update_on_ground_flag(chit);
-  } else if(chit.top) {
-    physic.set_velocity_y(0);
+  } else if (chit.top) {
+    m_physic.set_velocity_y(0);
   }
 
   return CONTINUE;
 }
 
 void
-Jumpy::active_update(float elapsed_time)
+Jumpy::active_update(float dt_sec)
 {
-  BadGuy::active_update(elapsed_time);
+  BadGuy::active_update(dt_sec);
 
-  if(frozen)
+  if (m_frozen)
     return;
 
   auto player = get_nearest_player();
   if (player)
   {
-    dir = (player->get_pos().x > get_pos().x) ? RIGHT : LEFT;
+    m_dir = (player->get_pos().x > get_pos().x) ? Direction::RIGHT : Direction::LEFT;
   }
 
   if (!groundhit_pos_set)
   {
-    sprite->set_action(dir == LEFT ? "left-middle" : "right-middle");
+    m_sprite->set_action(m_dir == Direction::LEFT ? "left-middle" : "right-middle");
     return;
   }
 
   if ( get_pos().y < (pos_groundhit.y - JUMPY_MID_TOLERANCE ) )
-    sprite->set_action(dir == LEFT ? "left-up" : "right-up");
+    m_sprite->set_action(m_dir == Direction::LEFT ? "left-up" : "right-up");
   else if ( get_pos().y >= (pos_groundhit.y - JUMPY_MID_TOLERANCE) &&
             get_pos().y < (pos_groundhit.y - JUMPY_LOW_TOLERANCE) )
-    sprite->set_action(dir == LEFT ? "left-middle" : "right-middle");
+    m_sprite->set_action(m_dir == Direction::LEFT ? "left-middle" : "right-middle");
   else
-    sprite->set_action(dir == LEFT ? "left-down" : "right-down");
+    m_sprite->set_action(m_dir == Direction::LEFT ? "left-down" : "right-down");
 }
 
 void
 Jumpy::freeze()
 {
   BadGuy::freeze();
-  physic.set_velocity_y(std::max(0.0f, physic.get_velocity_y()));
+  m_physic.set_velocity_y(std::max(0.0f, m_physic.get_velocity_y()));
 }
 
 bool

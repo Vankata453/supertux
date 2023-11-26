@@ -19,23 +19,28 @@
 
 #include "object/moving_sprite.hpp"
 #include "scripting/scripted_object.hpp"
-#include "scripting/exposed_object.hpp"
+#include "squirrel/exposed_object.hpp"
 #include "supertux/physic.hpp"
 
-class ScriptedObject : public MovingSprite,
-                       public ExposedObject<ScriptedObject, scripting::ScriptedObject>
+class ScriptedObject final :
+  public MovingSprite,
+  public ExposedObject<ScriptedObject, scripting::ScriptedObject>
 {
 public:
-  ScriptedObject(const ReaderMapping& lisp);
+  ScriptedObject(const ReaderMapping& mapping);
 
-  void update(float elapsed_time);
-  void draw(DrawingContext& context);
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
 
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision(GameObject& other, const CollisionHit& hit);
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+
+  virtual std::string get_class() const override { return "scriptedobject"; }
+  virtual std::string get_display_name() const override { return _("Scripted object"); }
+
+  virtual ObjectSettings get_settings() override;
 
   // --- scripting Interface stuff ---
-
   void set_action(const std::string& animation);
   std::string get_action() const;
 
@@ -52,24 +57,19 @@ public:
   void enable_gravity(bool f);
   bool gravity_enabled() const;
 
-  std::string get_name() const;
-  std::string get_class() const {
-    return "scriptedobject";
-  }
-  std::string get_display_name() const {
-    return _("Scripted object");
-  }
-
-  virtual ObjectSettings get_settings();
-
 private:
   Physic physic;
   bool solid;
   bool physic_enabled;
   bool visible;
+  std::string hit_script;
   bool new_vel_set;
   Vector new_vel;
   Vector new_size;
+
+private:
+  ScriptedObject(const ScriptedObject&) = delete;
+  ScriptedObject& operator=(const ScriptedObject&) = delete;
 };
 
 #endif

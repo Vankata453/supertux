@@ -17,8 +17,6 @@
 #ifndef HEADER_SUPERTUX_OBJECT_LIGHT_HPP
 #define HEADER_SUPERTUX_OBJECT_LIGHT_HPP
 
-#include <memory>
-
 #include "math/vector.hpp"
 #include "sprite/sprite_ptr.hpp"
 #include "supertux/game_object.hpp"
@@ -29,12 +27,12 @@ class Light : public GameObject
 public:
   Light(const Vector& center, const Color& color = Color(1.0, 1.0, 1.0, 1.0));
   virtual ~Light();
-  virtual bool do_save() const {
+  virtual bool is_saveable() const override {
     return false;
   }
 
-  void update(float elapsed_time);
-  void draw(DrawingContext& context);
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
 
 protected:
   Vector position;

@@ -14,13 +14,15 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "badguy/dart.hpp"
 #include "badguy/darttrap.hpp"
 
 #include "audio/sound_manager.hpp"
+#include "audio/sound_source.hpp"
+#include "badguy/dart.hpp"
+#include "editor/editor.hpp"
 #include "sprite/sprite.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
+#include "util/log.hpp"
 #include "util/reader_mapping.hpp"
 
 namespace {
@@ -29,27 +31,32 @@ const float MUZZLE_Y = 25; /**< [px] muzzle y-offset from top */
 
 DartTrap::DartTrap(const ReaderMapping& reader) :
   BadGuy(reader, "images/creatures/darttrap/darttrap.sprite", LAYER_TILES-1),
+  enabled(true),
   initial_delay(),
   fire_delay(),
   ammo(),
   state(IDLE),
   fire_timer()
 {
-  if ( !reader.get("initial-delay", initial_delay) ) initial_delay = 0;
-  if ( !reader.get("fire-delay", fire_delay)) fire_delay = 2;
-  if ( !reader.get("ammo", ammo)) ammo = -1;
-  countMe = false;
+  reader.get("enabled", enabled, true);
+  reader.get("initial-delay", initial_delay, 0.0f);
+  reader.get("fire-delay", fire_delay, 2.0f);
+  reader.get("ammo", ammo, -1);
+  m_countMe = false;
   SoundManager::current()->preload("sounds/dartfire.wav");
-  if (start_dir == AUTO) { log_warning << "Setting a DartTrap's direction to AUTO is no good idea" << std::endl; }
+  if (m_start_dir == Direction::AUTO) { log_warning << "Setting a DartTrap's direction to AUTO is no good idea" << std::endl; }
   state = IDLE;
   set_colgroup_active(COLGROUP_DISABLED);
-  if (initial_delay == 0) initial_delay = 0.1f;
+
+  if (!Editor::is_active()) {
+    if (initial_delay == 0) initial_delay = 0.1f;
+  }
 }
 
 void
 DartTrap::initialize()
 {
-  sprite->set_action(dir == LEFT ? "idle-left" : "idle-right");
+  m_sprite->set_action(m_dir == Direction::LEFT ? "idle-left" : "idle-right");
 }
 
 void
@@ -67,6 +74,9 @@ DartTrap::collision_player(Player& , const CollisionHit& )
 void
 DartTrap::active_update(float )
 {
+  if (!enabled) {
+    return;
+  }
   switch (state) {
     case IDLE:
       if ((ammo != 0) && (fire_timer.check())) {
@@ -77,7 +87,7 @@ DartTrap::active_update(float )
       break;
 
     case LOADING:
-      if (sprite->animation_done()) {
+      if (m_sprite->animation_done()) {
         fire();
       }
       break;
@@ -91,42 +101,36 @@ void
 DartTrap::load()
 {
   state = LOADING;
-  sprite->set_action(dir == LEFT ? "loading-left" : "loading-right", 1);
+  m_sprite->set_action(m_dir == Direction::LEFT ? "loading-left" : "loading-right", 1);
 }
 
 void
 DartTrap::fire()
 {
   float px = get_pos().x;
-  if (dir == RIGHT) px += 5;
+  if (m_dir == Direction::RIGHT) px += 5;
   float py = get_pos().y;
   py += MUZZLE_Y;
 
   SoundManager::current()->play("sounds/dartfire.wav", get_pos());
-  Sector::current()->add_object(std::make_shared<Dart>(Vector(px, py), dir, this));
+  Sector::get().add<Dart>(Vector(px, py), m_dir, this);
   state = IDLE;
-  sprite->set_action(dir == LEFT ? "idle-left" : "idle-right");
+  m_sprite->set_action(m_dir == Direction::LEFT ? "idle-left" : "idle-right");
 }
-
 
 ObjectSettings
-DartTrap::get_settings() {
+DartTrap::get_settings()
+{
   ObjectSettings result = BadGuy::get_settings();
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Initial delay"), &initial_delay,
-                                         "initial-delay"));
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Fire delay"), &fire_delay,
-                                         "fire-delay"));
-  result.options.push_back( ObjectOption(MN_INTFIELD, _("Ammo"), &ammo,
-                                         "ammo"));
+
+  result.add_float(_("Initial delay"), &initial_delay, "initial-delay");
+  result.add_bool(_("Enabled"), &enabled, "enabled", true);
+  result.add_float(_("Fire delay"), &fire_delay, "fire-delay");
+  result.add_int(_("Ammo"), &ammo, "ammo");
+
+  result.reorder({"initial-delay", "fire-delay", "ammo", "direction", "x", "y"});
 
   return result;
-}
-
-void
-DartTrap::after_editor_set()
-{
-  BadGuy::after_editor_set();
-  sprite->set_action(dir == LEFT ? "idle-left" : "idle-right");
 }
 
 /* EOF */

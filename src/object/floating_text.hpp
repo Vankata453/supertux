@@ -17,25 +17,23 @@
 #ifndef HEADER_SUPERTUX_OBJECT_FLOATING_TEXT_HPP
 #define HEADER_SUPERTUX_OBJECT_FLOATING_TEXT_HPP
 
-#include <memory>
-
 #include "math/vector.hpp"
 #include "supertux/game_object.hpp"
 #include "supertux/timer.hpp"
 #include "video/color.hpp"
 
-class FloatingText : public GameObject
+class FloatingText final : public GameObject
 {
   static Color text_color;
 public:
   FloatingText(const Vector& pos, const std::string& text_);
   FloatingText(const Vector& pos, int s);  // use this for score, for instance
-  virtual bool do_save() const {
+  virtual bool is_saveable() const override {
     return false;
   }
 
-  virtual void update(float elapsed_time);
-  virtual void draw(DrawingContext& context);
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
 
 private:
   Vector position;

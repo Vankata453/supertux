@@ -20,23 +20,23 @@
 #include <string>
 
 #include "trigger/trigger_base.hpp"
-#include "util/reader_mapping.hpp"
 
-class Switch : public TriggerBase
+class ReaderMapping;
+
+class Switch final : public TriggerBase
 {
 public:
   Switch(const ReaderMapping& reader);
   virtual ~Switch();
-  std::string get_class() const {
-    return "switch";
-  }
 
-  ObjectSettings get_settings();
-  void after_editor_set();
+  virtual std::string get_class() const override { return "switch"; }
 
-  virtual void update(float elapsed_time);
-  virtual void draw(DrawingContext& context);
-  virtual void event(Player& player, EventType type);
+  virtual ObjectSettings get_settings() override;
+  virtual void after_editor_set() override;
+
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual void event(Player& player, EventType type) override;
 
 private:
   enum SwitchState {
@@ -53,6 +53,10 @@ private:
   std::string off_script;
   SwitchState state;
   bool bistable;
+
+private:
+  Switch(const Switch&) = delete;
+  Switch& operator=(const Switch&) = delete;
 };
 
 #endif

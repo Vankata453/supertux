@@ -18,91 +18,134 @@
 
 #include "audio/sound_manager.hpp"
 #include "editor/editor.hpp"
-#include "math/random_generator.hpp"
+#include "math/random.hpp"
 #include "object/bullet.hpp"
 #include "object/player.hpp"
-#include "supertux/object_factory.hpp"
+#include "sprite/sprite.hpp"
+#include "supertux/game_object_factory.hpp"
 #include "supertux/sector.hpp"
 #include "util/reader_mapping.hpp"
 
-#include <stdexcept>
+Dispenser::DispenserType
+Dispenser::DispenserType_from_string(const std::string& type_string)
+{
+  if (type_string == "dropper") {
+    return DispenserType::DROPPER;
+  } else if (type_string == "rocketlauncher") {
+    return DispenserType::ROCKETLAUNCHER;
+  } else if (type_string == "cannon") {
+    return DispenserType::CANNON;
+  } else if (type_string == "point") {
+    return DispenserType::POINT;
+  } else {
+    throw std::exception();
+  }
+}
+
+std::string
+Dispenser::DispenserType_to_string(DispenserType type)
+{
+  switch (type)
+  {
+    case DispenserType::DROPPER:
+      return "dropper";
+    case DispenserType::ROCKETLAUNCHER:
+      return "rocketlauncher";
+    case DispenserType::CANNON:
+      return "cannon";
+    case DispenserType::POINT:
+      return "point";
+    default:
+      return "unknown";
+  }
+}
 
 Dispenser::Dispenser(const ReaderMapping& reader) :
   BadGuy(reader, "images/creatures/dispenser/dispenser.sprite"),
-  colgroup_active(COLGROUP_MOVING_STATIC),
-  cycle(),
-  badguys(),
-  next_badguy(),
-  dispense_timer(),
-  autotarget(),
-  swivel(),
-  broken(),
-  random(),
-  type(),
-  type_str()
+  ExposedObject<Dispenser, scripting::Dispenser>(this),
+  m_cycle(),
+  m_badguys(),
+  m_next_badguy(0),
+  m_dispense_timer(),
+  m_autotarget(false),
+  m_swivel(false),
+  m_broken(false),
+  m_random(),
+  m_type(),
+  m_type_str(),
+  m_limit_dispensed_badguys(),
+  m_max_concurrent_badguys(),
+  m_current_badguys()
 {
   set_colgroup_active(COLGROUP_MOVING_STATIC);
   SoundManager::current()->preload("sounds/squish.wav");
-  if ( !reader.get("cycle", cycle)) cycle = 5;
-  if ( !reader.get("badguy", badguys)) badguys.clear();
-  if ( !reader.get("random", random)) random = false;
+  reader.get("cycle", m_cycle, 5.0f);
+  if ( !reader.get("badguy", m_badguys)) m_badguys.clear();
+  reader.get("random", m_random, false);
   std::string type_s = "dropper"; //default
-  if ( !reader.get("type", type_s)) type_s = "";
-  if (type_s == "dropper") {
-    type = DT_DROPPER;
-  } else if (type_s == "rocketlauncher") {
-    type = DT_ROCKETLAUNCHER;
-  } else if (type_s == "cannon") {
-    type = DT_CANNON;
-  } else if (type_s == "point") {
-    type = DT_POINT;
-  } else {
-    if(type_s.empty()) {
-      log_warning << "No dispenser type set, setting to dropper." << std::endl;
-    }
-    else {
-      log_warning << "Unknown type of dispenser:" << type_s << ", setting to dropper." << std::endl;
-    }
-    type = DT_DROPPER;
+  reader.get("type", type_s, "");
+  try
+  {
+    m_type = DispenserType_from_string(type_s);
   }
-  type_str = get_type_string();
-  next_badguy = 0;
-  autotarget = false;
-  swivel = false;
-  broken = false;
+  catch(std::exception&)
+  {
+    if (!Editor::is_active())
+    {
+      if (type_s.empty()) {
+        log_warning << "No dispenser type set, setting to dropper." << std::endl;
+      }
+      else {
+        log_warning << "Unknown type of dispenser:" << type_s << ", setting to dropper." << std::endl;
+      }
+    }
+    m_type = DispenserType::DROPPER;
+  }
+
+  m_type_str = DispenserType_to_string(m_type);
+
+  reader.get("limit-dispensed-badguys", m_limit_dispensed_badguys, false);
+  reader.get("max-concurrent-badguys", m_max_concurrent_badguys, 0);
 
 //  if (badguys.size() <= 0)
 //    throw std::runtime_error("No badguys in dispenser.");
 
-  switch (type) {
-    case DT_DROPPER:
-      sprite->set_action("dropper");
+  switch (m_type)
+  {
+    case DispenserType::DROPPER:
+      m_sprite->set_action("dropper");
       break;
-    case DT_ROCKETLAUNCHER:
-      sprite->set_action(dir == LEFT ? "working-left" : "working-right");
+
+    case DispenserType::ROCKETLAUNCHER:
+      m_sprite->set_action(m_dir == Direction::LEFT ? "working-left" : "working-right");
       set_colgroup_active(COLGROUP_MOVING); //if this were COLGROUP_MOVING_STATIC MrRocket would explode on launch.
 
-      if (start_dir == AUTO) {
-        autotarget = true;
+      if (m_start_dir == Direction::AUTO) {
+        m_autotarget = true;
       }
       break;
-    case DT_CANNON:
-      sprite->set_action("working");
+
+    case DispenserType::CANNON:
+      m_sprite->set_action("working");
       break;
-    case DT_POINT:
-      sprite->set_action("invisible");
+
+    case DispenserType::POINT:
+      m_sprite->set_action("invisible");
       set_colgroup_active(COLGROUP_DISABLED);
+      break;
+
     default:
       break;
   }
 
-  bbox.set_size(sprite->get_current_hitbox_width(), sprite->get_current_hitbox_height());
-  countMe = false;
+  m_col.m_bbox.set_size(m_sprite->get_current_hitbox_width(), m_sprite->get_current_hitbox_height());
+  m_countMe = false;
 }
 
 void
-Dispenser::draw(DrawingContext& context) {
-  if (type != DT_POINT || Editor::is_active()) {
+Dispenser::draw(DrawingContext& context)
+{
+  if (m_type != DispenserType::POINT || Editor::is_active()) {
     BadGuy::draw(context);
   }
 }
@@ -110,24 +153,24 @@ Dispenser::draw(DrawingContext& context) {
 void
 Dispenser::activate()
 {
-  if( broken ){
+  if (m_broken){
     return;
   }
-  if( autotarget && !swivel ){ // auto cannon sprite might be wrong
-    auto player = get_nearest_player();
-    if( player ){
-      dir = (player->get_pos().x > get_pos().x) ? RIGHT : LEFT;
-      sprite->set_action(dir == LEFT ? "working-left" : "working-right");
+  if (m_autotarget && !m_swivel){ // auto cannon sprite might be wrong
+    auto* player = get_nearest_player();
+    if (player) {
+      m_dir = (player->get_pos().x > get_pos().x) ? Direction::RIGHT : Direction::LEFT;
+      m_sprite->set_action(m_dir == Direction::LEFT ? "working-left" : "working-right");
     }
   }
-  dispense_timer.start(cycle, true);
+  m_dispense_timer.start(m_cycle, true);
   launch_badguy();
 }
 
 void
 Dispenser::deactivate()
 {
-  dispense_timer.stop();
+  m_dispense_timer.stop();
 }
 
 //TODO: Add launching velocity to certain badguys
@@ -136,23 +179,23 @@ Dispenser::collision_squished(GameObject& object)
 {
   //Cannon launching MrRocket can be broken by jumping on it
   //other dispensers are not that fragile.
-  if (broken || type != DT_ROCKETLAUNCHER) {
+  if (m_broken || m_type != DispenserType::ROCKETLAUNCHER) {
     return false;
   }
 
-  if (frozen) {
+  if (m_frozen) {
     unfreeze();
   }
 
-  sprite->set_action(dir == LEFT ? "broken-left" : "broken-right");
-  dispense_timer.start(0);
+  m_sprite->set_action(m_dir == Direction::LEFT ? "broken-left" : "broken-right");
+  m_dispense_timer.start(0);
   set_colgroup_active(COLGROUP_MOVING_STATIC); // Tux can stand on broken cannon.
   auto player = dynamic_cast<Player*>(&object);
   if (player){
     player->bounce(*this);
   }
   SoundManager::current()->play("sounds/squish.wav", get_pos());
-  broken = true;
+  m_broken = true;
   return true;
 }
 
@@ -160,20 +203,20 @@ HitResponse
 Dispenser::collision(GameObject& other, const CollisionHit& hit)
 {
   auto player = dynamic_cast<Player*> (&other);
-  if(player) {
+  if (player) {
     // hit from above?
-    if (player->get_bbox().p2.y < (bbox.p1.y + 16)) {
+    if (player->get_bbox().get_bottom() < (m_col.m_bbox.get_top() + 16)) {
       collision_squished(*player);
       return FORCE_MOVE;
     }
-    if(frozen && type != DT_CANNON){
+    if (m_frozen && m_type != DispenserType::CANNON){
       unfreeze();
     }
     return FORCE_MOVE;
   }
 
   auto bullet = dynamic_cast<Bullet*> (&other);
-  if(bullet){
+  if (bullet){
     return collision_bullet(*bullet, hit);
   }
 
@@ -183,21 +226,21 @@ Dispenser::collision(GameObject& other, const CollisionHit& hit)
 void
 Dispenser::active_update(float )
 {
-  if (dispense_timer.check()) {
+  if (m_dispense_timer.check()) {
     // auto always shoots in Tux's direction
-    if( autotarget ){
-      if( sprite->animation_done()) {
-        sprite->set_action(dir == LEFT ? "working-left" : "working-right");
-        swivel = false;
+    if (m_autotarget) {
+      if ( m_sprite->animation_done()) {
+        m_sprite->set_action(m_dir == Direction::LEFT ? "working-left" : "working-right");
+        m_swivel = false;
       }
 
       auto player = get_nearest_player();
-      if( player && !swivel ){
-        Direction targetdir = (player->get_pos().x > get_pos().x) ? RIGHT : LEFT;
-        if( dir != targetdir ){ // no target: swivel cannon
-          swivel = true;
-          dir = targetdir;
-          sprite->set_action(dir == LEFT ? "swivel-left" : "swivel-right", 1);
+      if (player && !m_swivel){
+        Direction targetdir = (player->get_pos().x > get_pos().x) ? Direction::RIGHT : Direction::LEFT;
+        if ( m_dir != targetdir ){ // no target: swivel cannon
+          m_swivel = true;
+          m_dir = targetdir;
+          m_sprite->set_action(m_dir == Direction::LEFT ? "swivel-left" : "swivel-right", 1);
         } else { // tux in sight: shoot
           launch_badguy();
         }
@@ -211,71 +254,76 @@ Dispenser::active_update(float )
 void
 Dispenser::launch_badguy()
 {
-  if (badguys.empty()) return;
-  if (frozen) return;
+  if (m_badguys.empty()) return;
+  if (m_frozen) return;
+  if (m_limit_dispensed_badguys &&
+      m_current_badguys >= m_max_concurrent_badguys)
+      return;
 
   //FIXME: Does is_offscreen() work right here?
   if (!is_offscreen() && !Editor::is_active()) {
-    Direction launchdir = dir;
-    if( !autotarget && start_dir == AUTO ){
+    Direction launchdir = m_dir;
+    if ( !m_autotarget && m_start_dir == Direction::AUTO ){
       Player* player = get_nearest_player();
-      if( player ){
-        launchdir = (player->get_pos().x > get_pos().x) ? RIGHT : LEFT;
+      if ( player ){
+        launchdir = (player->get_pos().x > get_pos().x) ? Direction::RIGHT : Direction::LEFT;
       }
     }
 
-    if (badguys.size() > 1) {
-      if (random) {
-        next_badguy = gameRandom.rand(badguys.size());
+    if (m_badguys.size() > 1) {
+      if (m_random) {
+        m_next_badguy = gameRandom.rand(static_cast<int>(m_badguys.size()));
       }
       else {
-        next_badguy++;
+        m_next_badguy++;
 
-        if (next_badguy >= badguys.size())
-          next_badguy = 0;
+        if (m_next_badguy >= m_badguys.size())
+          m_next_badguy = 0;
       }
     }
 
-    std::string badguy = badguys[next_badguy];
+    std::string badguy = m_badguys[m_next_badguy];
 
-    if(badguy == "random") {
+    if (badguy == "random") {
       log_warning << "random is outdated; use a list of badguys to select from." << std::endl;
       return;
     }
-    if(badguy == "goldbomb") {
+    if (badguy == "goldbomb") {
       log_warning << "goldbomb is not allowed to be dispensed" << std::endl;
       return;
     }
 
     try {
-      GameObjectPtr game_object;
-      Vector spawnpoint;
-      Rectf object_bbox;
-
       /* Need to allocate the badguy first to figure out its bounding box. */
-      game_object = ObjectFactory::instance().create(badguy, get_pos(), launchdir);
-      if (game_object == NULL)
+      auto game_object = GameObjectFactory::instance().create(badguy, get_pos(), launchdir);
+      if (game_object == nullptr)
         throw std::runtime_error("Creating " + badguy + " object failed.");
 
       auto& bad_guy = dynamic_cast<BadGuy&>(*game_object);
 
-      object_bbox = bad_guy.get_bbox();
+      Rectf object_bbox = bad_guy.get_bbox();
 
-      switch (type) {
-        case DT_DROPPER:
-          spawnpoint = get_anchor_pos (bbox, ANCHOR_BOTTOM);
-          spawnpoint.x -= 0.5 * object_bbox.get_width();
+      Vector spawnpoint;
+      switch (m_type)
+      {
+        case DispenserType::DROPPER:
+          spawnpoint = get_anchor_pos (m_col.m_bbox, ANCHOR_BOTTOM);
+          spawnpoint.x -= 0.5f * object_bbox.get_width();
           break;
-        case DT_ROCKETLAUNCHER:
-        case DT_CANNON:
+
+        case DispenserType::ROCKETLAUNCHER:
+        case DispenserType::CANNON:
           spawnpoint = get_pos(); /* top-left corner of the cannon */
-          if (launchdir == LEFT)
+          if (launchdir == Direction::LEFT)
             spawnpoint.x -= object_bbox.get_width() + 1;
           else
-            spawnpoint.x += bbox.get_width() + 1;
+            spawnpoint.x += m_col.m_bbox.get_width() + 1;
           break;
-        case DT_POINT:
-          spawnpoint = bbox.p1;
+
+        case DispenserType::POINT:
+          spawnpoint = m_col.m_bbox.p1();
+          break;
+
         default:
           break;
       }
@@ -284,9 +332,16 @@ Dispenser::launch_badguy()
       bad_guy.set_pos(spawnpoint);
 
       /* We don't want to count dispensed badguys in level stats */
-      bad_guy.countMe = false;
+      bad_guy.m_countMe = false;
 
-      Sector::current()->add_object(game_object);
+      /* Set reference to dispenser in badguy itself */
+      if (m_limit_dispensed_badguys)
+      {
+        bad_guy.set_parent_dispenser(this);
+        m_current_badguys++;
+      }
+
+      Sector::get().add_object(std::move(game_object));
     } catch(const std::exception& e) {
       log_warning << "Error dispensing badguy: " << e.what() << std::endl;
       return;
@@ -297,46 +352,48 @@ Dispenser::launch_badguy()
 void
 Dispenser::freeze()
 {
-  if (broken) {
+  if (m_broken) {
     return;
   }
 
   set_group(COLGROUP_MOVING_STATIC);
-  frozen = true;
+  m_frozen = true;
 
-    if(type == DT_ROCKETLAUNCHER && sprite->has_action("iced-left"))
+    if (m_type == DispenserType::ROCKETLAUNCHER && m_sprite->has_action("iced-left"))
     // Only swivel dispensers can use their left/right iced actions.
-    sprite->set_action(dir == LEFT ? "iced-left" : "iced-right", 1);
+    m_sprite->set_action(m_dir == Direction::LEFT ? "iced-left" : "iced-right", 1);
     // when the sprite doesn't have separate actions for left and right or isn't a rocketlauncher,
     // it tries to use an universal one.
   else
   {
-    if(type == DT_CANNON && sprite->has_action("iced"))
-      sprite->set_action("iced", 1);
+    if (m_type == DispenserType::CANNON && m_sprite->has_action("iced"))
+      m_sprite->set_action("iced", 1);
       // When is the dispenser a cannon, it uses the "iced" action.
     else
     {
-      if(sprite->has_action("dropper-iced"))
-        sprite->set_action("dropper-iced", 1);
+      if (m_sprite->has_action("dropper-iced"))
+        m_sprite->set_action("dropper-iced", 1);
         // When is the dispenser a dropper, it uses the "dropper-iced".
       else
       {
-        sprite->set_color(Color(0.60, 0.72, 0.88f));
-        sprite->stop_animation();
+        m_sprite->set_color(Color(0.6f, 0.72f, 0.88f));
+        m_sprite->stop_animation();
         // When is the dispenser something else (unprobable), or has no matching iced sprite, it shades to blue.
       }
     }
   }
-  dispense_timer.stop();
+  m_dispense_timer.stop();
 }
 
 void
 Dispenser::unfreeze()
 {
-  set_group(colgroup_active);
+  /*set_group(colgroup_active);
   frozen = false;
 
-  sprite->set_color(Color(1.00, 1.00, 1.00f));
+  sprite->set_color(Color(1.00, 1.00, 1.00f));*/
+  BadGuy::unfreeze();
+
   set_correct_action();
   activate();
 }
@@ -356,18 +413,18 @@ Dispenser::is_flammable() const
 void
 Dispenser::set_correct_action()
 {
-  switch (type) {
-    case DT_DROPPER:
-      sprite->set_action("dropper");
+  switch (m_type) {
+    case DispenserType::DROPPER:
+      m_sprite->set_action("dropper");
       break;
-    case DT_ROCKETLAUNCHER:
-      sprite->set_action(dir == LEFT ? "working-left" : "working-right");
+    case DispenserType::ROCKETLAUNCHER:
+      m_sprite->set_action(m_dir == Direction::LEFT ? "working-left" : "working-right");
       break;
-    case DT_CANNON:
-      sprite->set_action("working");
+    case DispenserType::CANNON:
+      m_sprite->set_action("working");
       break;
-    case DT_POINT:
-      sprite->set_action("invisible");
+    case DispenserType::POINT:
+      m_sprite->set_action("invisible");
       break;
     default:
       break;
@@ -378,30 +435,27 @@ ObjectSettings
 Dispenser::get_settings()
 {
   ObjectSettings result = BadGuy::get_settings();
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Interval (seconds)"), &cycle,
-                                         "cycle"));
-  result.options.push_back( ObjectOption(MN_TOGGLE, _("Random"), &random,
-                                         "random"));
-  result.options.push_back( ObjectOption(MN_BADGUYSELECT, _("Enemies"), &badguys,
-                                         "badguy"));
 
-  ObjectOption seq(MN_STRINGSELECT, _("Type"), &type);
-  seq.select.push_back(_("dropper"));
-  seq.select.push_back(_("rocket launcher"));
-  seq.select.push_back(_("cannon"));
-  seq.select.push_back(_("invisible"));
+  result.add_float(_("Interval (seconds)"), &m_cycle, "cycle");
+  result.add_bool(_("Random"), &m_random, "random", false);
+  result.add_badguy(_("Enemies"), &m_badguys, "badguy");
+  result.add_bool(_("Limit dispensed badguys"), &m_limit_dispensed_badguys,
+                  "limit-dispensed-badguys", false);
+  result.add_int(_("Max concurrent badguys"), &m_max_concurrent_badguys,
+                 "max-concurrent-badguys", 0);
+  result.add_enum(_("Type"), reinterpret_cast<int*>(&m_type),
+                  {_("dropper"), _("rocket launcher"), _("cannon"), _("invisible")},
+                  {"dropper", "rocketlauncher", "cannon", "point"},
+                  static_cast<int>(DispenserType::DROPPER), "type");
 
-  result.options.push_back( seq );
+  result.reorder({"cycle", "random", "type", "badguy", "direction", "limit-dispensed-badguys", "max-concurrent-badguys", "x", "y"});
 
-  type_str = get_type_string();
-  result.options.push_back( ObjectOption(MN_TEXTFIELD, "type", &type_str, "type", false));
   return result;
 }
 
 void
 Dispenser::after_editor_set()
 {
-  BadGuy::after_editor_set();
   set_correct_action();
 }
 

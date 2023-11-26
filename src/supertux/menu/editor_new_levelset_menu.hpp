@@ -19,24 +19,22 @@
 
 #include "gui/menu.hpp"
 
-class EditorNewLevelsetMenu;
-class World;
-
-class EditorNewLevelsetMenu : public Menu
+class EditorNewLevelsetMenu final : public Menu
 {
 public:
   EditorNewLevelsetMenu();
 
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
 
 private:
   std::string levelset_name;
   std::string levelset_desc;
 
-  EditorNewLevelsetMenu(const EditorNewLevelsetMenu&);
-  EditorNewLevelsetMenu& operator=(const EditorNewLevelsetMenu&);
+private:
+  EditorNewLevelsetMenu(const EditorNewLevelsetMenu&) = delete;
+  EditorNewLevelsetMenu& operator=(const EditorNewLevelsetMenu&) = delete;
 };
 
-#endif //HEADER_SUPERTUX_SUPERTUX_MENU_EDITOR_NEW_LEVELSET_MENU_HPP
+#endif
 
 /* EOF */

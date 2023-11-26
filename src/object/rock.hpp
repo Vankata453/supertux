@@ -19,34 +19,40 @@
 
 #include "object/moving_sprite.hpp"
 #include "object/portable.hpp"
+#include "squirrel/exposed_object.hpp"
+#include "scripting/rock.hpp"
 #include "supertux/physic.hpp"
 
 class Rock : public MovingSprite,
-             public Portable
+             public Portable,
+             public ExposedObject<Rock, scripting::Rock>
 {
 public:
   Rock(const Vector& pos, const std::string& spritename);
   Rock(const ReaderMapping& reader);
   Rock(const ReaderMapping& reader, const std::string& spritename);
 
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision(GameObject& other, const CollisionHit& hit);
-  void update(float elapsed_time);
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual void update(float dt_sec) override;
 
-  void grab(MovingObject& object, const Vector& pos, Direction dir);
-  void ungrab(MovingObject& object, Direction dir);
-  std::string get_class() const {
-    return "rock";
-  }
-  std::string get_display_name() const {
-    return _("Rock");
-  }
+  virtual void grab(MovingObject& object, const Vector& pos, Direction dir) override;
+  virtual void ungrab(MovingObject& object, Direction dir) override;
+  virtual std::string get_class() const override { return "rock"; }
+  virtual std::string get_display_name() const override { return _("Rock"); }
+  virtual ObjectSettings get_settings() override;
 
 protected:
   Physic physic;
   bool on_ground;
   bool grabbed;
   Vector last_movement;
+  std::string on_grab_script;
+  std::string on_ungrab_script;
+
+private:
+  Rock(const Rock&) = delete;
+  Rock& operator=(const Rock&) = delete;
 };
 
 #endif

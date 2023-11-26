@@ -17,15 +17,19 @@
 #ifndef HEADER_SUPERTUX_OBJECT_FIREWORKS_HPP
 #define HEADER_SUPERTUX_OBJECT_FIREWORKS_HPP
 
-class Fireworks : public GameObject
+#include "supertux/game_object.hpp"
+#include "supertux/timer.hpp"
+
+class DrawingContext;
+
+class Fireworks final : public GameObject
 {
 public:
   Fireworks();
-  ~Fireworks();
 
-  virtual void update(float elapsed_time);
-  virtual void draw(DrawingContext& context);
-  virtual bool do_save() const {
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual bool is_saveable() const override {
     return false;
   }
 

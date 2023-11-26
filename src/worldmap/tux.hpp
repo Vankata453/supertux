@@ -18,9 +18,12 @@
 #ifndef HEADER_SUPERTUX_WORLDMAP_TUX_HPP
 #define HEADER_SUPERTUX_WORLDMAP_TUX_HPP
 
+#include "sprite/sprite_ptr.hpp"
+#include "supertux/game_object.hpp"
+#include "supertux/player_status.hpp"
 #include "worldmap/worldmap.hpp"
 
-class Sprite;
+class Controller;
 
 namespace worldmap {
 
@@ -28,58 +31,60 @@ class SpecialTile;
 class SpriteChange;
 class WorldMap;
 
-class Tux : public GameObject
+class Tux final : public GameObject
 {
 public:
-  Direction back_direction;
-private:
-  WorldMap* worldmap;
-  SpritePtr sprite;
-  Controller* controller;
+  Tux(WorldMap* worldmap);
 
-  Direction input_direction;
-  Direction direction;
-  Vector tile_pos;
-  /** Length by which tux is away from its current tile, length is in
-      input_direction direction */
-  float offset;
-  bool  moving;
-
-  bool ghost_mode;
-
-private:
-  void stop();
-  std::string get_action_prefix_for_bonus(const BonusType& bonus) const;
-  bool canWalk(int tile_data, Direction dir) const; /**< check if we can leave a tile (with given "tile_data") in direction "dir" */
-  void updateInputDirection(); /**< if controller was pressed, update input_direction */
-  void tryStartWalking(); /**< try starting to walk in input_direction */
-  void tryContinueWalking(float elapsed_time); /**< try to continue walking in current direction */
-
-  void ChangeSprite(SpriteChange* sc); /**< Uses the given sprite change */
-
-public:
-  Tux(WorldMap* worldmap_);
-  ~Tux();
+  virtual void draw(DrawingContext& context) override;
+  virtual void update(float dt_sec) override;
+  virtual bool is_singleton() const override { return true; }
 
   void setup(); /**< called prior to first update */
-  void draw(DrawingContext& context);
-  void update(float elapsed_time);
 
   void set_direction(Direction dir);
 
   void set_ghost_mode(bool enabled);
   bool get_ghost_mode() const;
 
-  bool is_moving() const { return moving; }
+  bool is_moving() const { return m_moving; }
   Vector get_pos() const;
-  Vector get_tile_pos() const { return tile_pos; }
-  void  set_tile_pos(const Vector& p) { tile_pos = p; }
+  Vector get_tile_pos() const { return m_tile_pos; }
+  void  set_tile_pos(const Vector& p) { m_tile_pos = p; }
 
   void process_special_tile(SpecialTile* special_tile);
 
 private:
-  Tux(const Tux&);
-  Tux& operator=(const Tux&);
+  void stop();
+  std::string get_action_prefix_for_bonus(const BonusType& bonus) const;
+  bool can_walk(int tile_data, Direction dir) const; /**< check if we can leave a tile (with given "tile_data") in direction "dir" */
+  void update_input_direction(); /**< if controller was pressed, update input_direction */
+  void try_start_walking(); /**< try starting to walk in input_direction */
+  void try_continue_walking(float dt_sec); /**< try to continue walking in current direction */
+
+  void change_sprite(SpriteChange* sc); /**< Uses the given sprite change */
+
+public:
+  Direction m_back_direction;
+
+private:
+  WorldMap* m_worldmap;
+  SpritePtr m_sprite;
+  Controller& m_controller;
+
+  Direction m_input_direction;
+  Direction m_direction;
+  Vector m_tile_pos;
+  /** Length by which tux is away from its current tile, length is in
+      input_direction direction */
+  float m_offset;
+  bool m_moving;
+
+  bool m_ghost_mode;
+
+private:
+  Tux(const Tux&) = delete;
+  Tux& operator=(const Tux&) = delete;
 };
 
 } // namespace worldmap

@@ -21,10 +21,11 @@
 #include <SDL.h>
 
 #include "control/controller.hpp"
-#include "util/reader_fwd.hpp"
-#include "util/writer.hpp"
 
-class JoystickConfig
+class ReaderMapping;
+class Writer;
+
+class JoystickConfig final
 {
 public:
   typedef Uint8 JoyId;
@@ -56,7 +57,7 @@ public:
   void bind_joyaxis(JoyId joy_id, int axis, Controller::Control c);
   void bind_joyhat(JoyId joy_id, int dir, Controller::Control c);
 
-  void read(const ReaderMapping& joystick_lisp);
+  void read(const ReaderMapping& joystick_mapping);
   void write(Writer& writer);
 
 private:

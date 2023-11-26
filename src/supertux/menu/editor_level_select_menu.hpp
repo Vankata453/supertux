@@ -22,7 +22,7 @@
 class Levelset;
 class World;
 
-class EditorLevelSelectMenu : public Menu
+class EditorLevelSelectMenu final : public Menu
 {
 private:
   std::unique_ptr<Levelset> m_levelset;
@@ -32,16 +32,19 @@ public:
   EditorLevelSelectMenu(std::unique_ptr<World> world);
   ~EditorLevelSelectMenu();
 
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
 
 private:
   void initialize();
   void create_level();
+  void create_worldmap();
+  void create_item(bool worldmap);
 
-  EditorLevelSelectMenu(const EditorLevelSelectMenu&);
-  EditorLevelSelectMenu& operator=(const EditorLevelSelectMenu&);
+private:
+  EditorLevelSelectMenu(const EditorLevelSelectMenu&) = delete;
+  EditorLevelSelectMenu& operator=(const EditorLevelSelectMenu&) = delete;
 };
 
-#endif // HEADER_SUPERTUX_SUPERTUX_MENU_EDITOR_LEVEL_SELECT_MENU_HPP
+#endif
 
 /* EOF */

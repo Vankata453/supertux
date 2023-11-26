@@ -18,25 +18,26 @@
 #define HEADER_SUPERTUX_PHYSFS_OFILE_STREAMBUF_HPP
 
 #include <streambuf>
-#include <physfs.h>
 
-class OFileStreambuf : public std::streambuf
+struct PHYSFS_File;
+
+class OFileStreambuf final : public std::streambuf
 {
 public:
   OFileStreambuf(const std::string& filename);
   ~OFileStreambuf();
 
 protected:
-  virtual int overflow(int c);
-  virtual int sync();
+  virtual int overflow(int c) override;
+  virtual int sync() override;
 
 private:
-  PHYSFS_file* file;
+  PHYSFS_File* file;
   char buf[1024];
 
 private:
-  OFileStreambuf(const OFileStreambuf&);
-  OFileStreambuf& operator=(const OFileStreambuf&);
+  OFileStreambuf(const OFileStreambuf&) = delete;
+  OFileStreambuf& operator=(const OFileStreambuf&) = delete;
 };
 
 #endif

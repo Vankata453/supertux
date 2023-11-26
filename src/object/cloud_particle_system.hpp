@@ -14,17 +14,15 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADER_SUPERTUX_OBJECT_CLOUD_PARTICLE_SYTEM_HPP
-#define HEADER_SUPERTUX_OBJECT_CLOUD_PARTICLE_SYTEM_HPP
-
-#include <memory>
+#ifndef HEADER_SUPERTUX_OBJECT_CLOUD_PARTICLE_SYSTEM_HPP
+#define HEADER_SUPERTUX_OBJECT_CLOUD_PARTICLE_SYSTEM_HPP
 
 #include "object/particlesystem.hpp"
 #include "video/surface_ptr.hpp"
 
 class ReaderMapping;
 
-class CloudParticleSystem : public ParticleSystem
+class CloudParticleSystem final : public ParticleSystem
 {
 public:
   CloudParticleSystem();
@@ -32,18 +30,12 @@ public:
   virtual ~CloudParticleSystem();
 
   void init();
-  virtual void update(float elapsed_time);
+  virtual void update(float dt_sec) override;
 
-  std::string type() const
-  { return "CloudParticleSystem"; }
-  std::string get_class() const {
-    return "particles-clouds";
-  }
-  std::string get_display_name() const {
-    return _("Cloud particles");
-  }
+  virtual std::string get_class() const override { return "particles-clouds"; }
+  virtual std::string get_display_name() const override { return _("Cloud particles"); }
 
-  virtual const std::string get_icon_path() const {
+  virtual const std::string get_icon_path() const override {
     return "images/engine/editor/clouds.png";
   }
 
@@ -61,8 +53,8 @@ private:
   SurfacePtr cloudimage;
 
 private:
-  CloudParticleSystem(const CloudParticleSystem&);
-  CloudParticleSystem& operator=(const CloudParticleSystem&);
+  CloudParticleSystem(const CloudParticleSystem&) = delete;
+  CloudParticleSystem& operator=(const CloudParticleSystem&) = delete;
 };
 
 #endif

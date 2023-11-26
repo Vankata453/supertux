@@ -16,21 +16,10 @@
 
 #include "supertux/menu/world_set_menu.hpp"
 
-#include "audio/sound_manager.hpp"
-#include "gui/dialog.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
-#include "supertux/fadeout.hpp"
 #include "supertux/game_manager.hpp"
-#include "supertux/globals.hpp"
-#include "supertux/menu/addon_menu.hpp"
-#include "supertux/menu/contrib_menu.hpp"
 #include "supertux/menu/menu_storage.hpp"
-#include "supertux/menu/options_menu.hpp"
-#include "supertux/screen_fade.hpp"
-#include "supertux/screen_manager.hpp"
-#include "supertux/textscroller.hpp"
-#include "supertux/title_screen.hpp"
 #include "supertux/world.hpp"
 #include "util/gettext.hpp"
 
@@ -44,19 +33,21 @@ WorldSetMenu::WorldSetMenu()
    add_back(_("Back"));
 }
 
-void WorldSetMenu::menu_action(MenuItem* item)
+void WorldSetMenu::menu_action(MenuItem& item)
 {
-  switch(item->id)
+  switch (item.get_id())
   {
     case WORLDSET_STORY:
     {
       std::unique_ptr<World> world = World::load("levels/world1");
-      GameManager::current()->start_worldmap(std::move(world));
+      GameManager::current()->start_worldmap(*world);
       break;
     }
-    
+
     case WORLDSET_CONTRIB:
-	    MenuManager::instance().push_menu(MenuStorage::CONTRIB_MENU);    
+	    MenuManager::instance().push_menu(MenuStorage::CONTRIB_MENU);
 	    break;
   }
 }
+
+/* EOF */

@@ -28,24 +28,22 @@
 #include "util/log.hpp"
 
 SoundManager::SoundManager() :
-  device(0),
-  context(0),
+  device(alcOpenDevice(nullptr)),
+  context(alcCreateContext(device, /* attributes = */ nullptr)),
   sound_enabled(false),
+  sound_volume(0),
   buffers(),
   sources(),
   update_list(),
   music_source(),
   music_enabled(false),
+  music_volume(0),
   current_music()
 {
   try {
-    device = alcOpenDevice(0);
-    if (device == NULL) {
+    if (device == nullptr) {
       throw std::runtime_error("Couldn't open audio device.");
     }
-
-    int attributes[] = { 0 };
-    context = alcCreateContext(device, attributes);
     check_alc_error("Couldn't create audio context: ");
     alcMakeContextCurrent(context);
     check_alc_error("Couldn't select audio context: ");
@@ -56,13 +54,13 @@ SoundManager::SoundManager() :
 
     set_listener_orientation(Vector(0.0f, 0.0f), Vector(0.0f, -1.0f));
   } catch(std::exception& e) {
-    if(context != NULL) {
+    if (context != nullptr) {
       alcDestroyContext(context);
-      context = NULL;
+      context = nullptr;
     }
-    if(device != NULL) {
+    if (device != nullptr) {
       alcCloseDevice(device);
-      device = NULL;
+      device = nullptr;
     }
     log_warning << "Couldn't initialize audio device: " << e.what() << std::endl;
     print_openal_version();
@@ -74,17 +72,17 @@ SoundManager::~SoundManager()
   music_source.reset();
   sources.clear();
 
-  for(const auto& buffer : buffers) {
+  for (const auto& buffer : buffers) {
     alDeleteBuffers(1, &buffer.second);
   }
 
-  if(context != NULL) {
+  if (context != nullptr) {
     alcDestroyContext(context);
-    context = NULL;
+    context = nullptr;
   }
-  if(device != NULL) {
+  if (device != nullptr) {
     alcCloseDevice(device);
-    device = NULL;
+    device = nullptr;
   }
 }
 
@@ -97,6 +95,12 @@ SoundManager::load_file_into_buffer(SoundFile& file)
   check_al_error("Couldn't create audio buffer: ");
   std::unique_ptr<char[]> samples(new char[file.size]);
   file.read(samples.get(), file.size);
+  log_debug << "buffer: " << buffer << "\n"
+            << "format: " << format << "\n"
+            << "samples: " << samples.get() << "\n"
+            << "file size: " << static_cast<ALsizei>(file.size) << "\n"
+            << "file rate: " << static_cast<ALsizei>(file.rate) << "\n";
+
   alBufferData(buffer, format, samples.get(),
                static_cast<ALsizei>(file.size),
                static_cast<ALsizei>(file.rate));
@@ -110,23 +114,24 @@ SoundManager::intern_create_sound_source(const std::string& filename)
 {
   assert(sound_enabled);
 
-  std::unique_ptr<OpenALSoundSource> source(new OpenALSoundSource);
+  auto source = std::make_unique<OpenALSoundSource>();
+  source->set_volume(static_cast<float>(sound_volume) / 100.0f);
 
   ALuint buffer;
 
   // reuse an existing static sound buffer
   SoundBuffers::iterator i = buffers.find(filename);
-  if(i != buffers.end()) {
+  if (i != buffers.end()) {
     buffer = i->second;
   } else {
     // Load sound file
     std::unique_ptr<SoundFile> file(load_sound_file(filename));
 
-    if(file->size < 100000) {
+    if (file->size < 100000) {
       buffer = load_file_into_buffer(*file);
       buffers.insert(std::make_pair(filename, buffer));
     } else {
-      std::unique_ptr<StreamSoundSource> source_(new StreamSoundSource);
+      auto source_ = std::make_unique<StreamSoundSource>();
       source_->set_sound_file(std::move(file));
       return std::move(source_);
     }
@@ -141,7 +146,7 @@ SoundManager::intern_create_sound_source(const std::string& filename)
 std::unique_ptr<SoundSource>
 SoundManager::create_sound_source(const std::string& filename)
 {
-  if(!sound_enabled)
+  if (!sound_enabled)
     return create_dummy_sound_source();
 
   try {
@@ -155,17 +160,17 @@ SoundManager::create_sound_source(const std::string& filename)
 void
 SoundManager::preload(const std::string& filename)
 {
-  if(!sound_enabled)
+  if (!sound_enabled)
     return;
 
   SoundBuffers::iterator i = buffers.find(filename);
   // already loaded?
-  if(i != buffers.end())
+  if (i != buffers.end())
     return;
   try {
     std::unique_ptr<SoundFile> file (load_sound_file(filename));
     // only keep small files
-    if(file->size >= 100000)
+    if (file->size >= 100000)
       return;
 
     ALuint buffer = load_file_into_buffer(*file);
@@ -178,13 +183,13 @@ SoundManager::preload(const std::string& filename)
 void
 SoundManager::play(const std::string& filename, const Vector& pos)
 {
-  if(!sound_enabled)
+  if (!sound_enabled)
     return;
 
   try {
     std::unique_ptr<OpenALSoundSource> source(intern_create_sound_source(filename));
 
-    if(pos.x < 0 || pos.y < 0) {
+    if (pos.x < 0 || pos.y < 0) {
       source->set_relative(true);
     } else {
       source->set_position(pos);
@@ -222,8 +227,8 @@ SoundManager::remove_from_update(StreamSoundSource* sss)
   if (sss)
   {
     StreamSoundSources::iterator i = update_list.begin();
-    while( i != update_list.end() ){
-      if( *i == sss ){
+    while ( i != update_list.end() ){
+      if ( *i == sss ){
         i = update_list.erase(i);
       } else {
         ++i;
@@ -235,7 +240,7 @@ SoundManager::remove_from_update(StreamSoundSource* sss)
 void
 SoundManager::enable_sound(bool enable)
 {
-  if(device == NULL)
+  if (device == nullptr)
     return;
 
   sound_enabled = enable;
@@ -244,14 +249,14 @@ SoundManager::enable_sound(bool enable)
 void
 SoundManager::enable_music(bool enable)
 {
-  if(device == NULL)
+  if (device == nullptr)
     return;
 
   music_enabled = enable;
-  if(music_enabled) {
+  if (music_enabled) {
     play_music(current_music);
   } else {
-    if(music_source) {
+    if (music_source) {
       music_source.reset();
     }
   }
@@ -260,8 +265,8 @@ SoundManager::enable_music(bool enable)
 void
 SoundManager::stop_music(float fadetime)
 {
-  if(fadetime > 0) {
-    if(music_source
+  if (fadetime > 0) {
+    if (music_source
        && music_source->get_fade_state() != StreamSoundSource::FadingOff)
       music_source->set_fading(StreamSoundSource::FadingOff, fadetime);
   } else {
@@ -271,35 +276,43 @@ SoundManager::stop_music(float fadetime)
 }
 
 void
+SoundManager::set_music_volume(int volume)
+{
+  music_volume = volume;
+  if (music_source != nullptr) music_source->set_volume(static_cast<float>(volume) / 100.0f);
+}
+
+void
 SoundManager::play_music(const std::string& filename, bool fade)
 {
-  if(filename == current_music && music_source != NULL)
+  if (filename == current_music && music_source != nullptr)
   {
-    if(music_source->paused())
+    if (music_source->paused())
     {
       music_source->resume();
     }
-    else if(!music_source->playing())
+    else if (!music_source->playing())
     {
       music_source->play();
     }
     return;
   }
   current_music = filename;
-  if(!music_enabled)
+  if (!music_enabled)
     return;
 
-  if(filename.empty()) {
+  if (filename.empty()) {
     music_source.reset();
     return;
   }
 
   try {
-    std::unique_ptr<StreamSoundSource> newmusic (new StreamSoundSource());
+    auto newmusic = std::make_unique<StreamSoundSource>();
     newmusic->set_sound_file(load_sound_file(filename));
     newmusic->set_looping(true);
     newmusic->set_relative(true);
-    if(fade)
+    newmusic->set_volume(static_cast<float>(music_volume) / 100.0f);
+    if (fade)
       newmusic->set_fading(StreamSoundSource::FadingOn, .5f);
     newmusic->play();
 
@@ -314,11 +327,11 @@ SoundManager::play_music(const std::string& filename, bool fade)
 void
 SoundManager::pause_music(float fadetime)
 {
-  if(music_source == NULL)
+  if (music_source == nullptr)
     return;
 
-  if(fadetime > 0) {
-    if(music_source
+  if (fadetime > 0) {
+    if (music_source
        && music_source->get_fade_state() != StreamSoundSource::FadingPause)
       music_source->set_fading(StreamSoundSource::FadingPause, fadetime);
   } else {
@@ -329,8 +342,8 @@ SoundManager::pause_music(float fadetime)
 void
 SoundManager::pause_sounds()
 {
-  for(auto& source : sources) {
-    if(source->playing()) {
+  for (auto& source : sources) {
+    if (source->playing()) {
       source->pause();
     }
   }
@@ -339,8 +352,8 @@ SoundManager::pause_sounds()
 void
 SoundManager::resume_sounds()
 {
-  for(auto& source : sources) {
-    if(source->paused()) {
+  for (auto& source : sources) {
+    if (source->paused()) {
       source->resume();
     }
   }
@@ -349,19 +362,28 @@ SoundManager::resume_sounds()
 void
 SoundManager::stop_sounds()
 {
-  for(auto& source : sources) {
+  for (auto& source : sources) {
     source->stop();
+  }
+}
+
+void
+SoundManager::set_sound_volume(int volume)
+{
+  sound_volume = volume;
+  for (auto& source : sources) {
+    source->set_volume(static_cast<float>(volume) / 100.0f);
   }
 }
 
 void
 SoundManager::resume_music(float fadetime)
 {
-  if(music_source == NULL)
+  if (music_source == nullptr)
     return;
 
-  if(fadetime > 0) {
-    if(music_source
+  if (fadetime > 0) {
+    if (music_source
        && music_source->get_fade_state() != StreamSoundSource::FadingResume)
       music_source->set_fading(StreamSoundSource::FadingResume, fadetime);
   } else {
@@ -375,7 +397,7 @@ SoundManager::set_listener_position(const Vector& pos)
   static Uint32 lastticks = SDL_GetTicks();
 
   Uint32 current_ticks = SDL_GetTicks();
-  if(current_ticks - lastticks < 300)
+  if (current_ticks - lastticks < 300)
     return;
   lastticks = current_ticks;
 
@@ -401,24 +423,24 @@ SoundManager::update()
   static Uint32 lasttime = SDL_GetTicks();
   Uint32 now = SDL_GetTicks();
 
-  if(now - lasttime < 300)
+  if (now - lasttime < 300)
     return;
   lasttime = now;
 
   // update and check for finished sound sources
-  for(SoundSources::iterator i = sources.begin(); i != sources.end(); ) {
+  for (SoundSources::iterator i = sources.begin(); i != sources.end(); ) {
     auto& source = *i;
 
     source->update();
 
-    if(!source->playing()) {
+    if (!source->playing()) {
       i = sources.erase(i);
     } else {
       ++i;
     }
   }
   // check streaming sounds
-  if(music_source) {
+  if (music_source) {
     music_source->update();
   }
 
@@ -430,7 +452,7 @@ SoundManager::update()
 
   //run update() for stream_sound_source
   StreamSoundSources::iterator s = update_list.begin();
-  while( s != update_list.end() ){
+  while ( s != update_list.end() ){
     (*s)->update();
     ++s;
   }
@@ -439,18 +461,18 @@ SoundManager::update()
 ALenum
 SoundManager::get_sample_format(const SoundFile& file)
 {
-  if(file.channels == 2) {
-    if(file.bits_per_sample == 16) {
+  if (file.channels == 2) {
+    if (file.bits_per_sample == 16) {
       return AL_FORMAT_STEREO16;
-    } else if(file.bits_per_sample == 8) {
+    } else if (file.bits_per_sample == 8) {
       return AL_FORMAT_STEREO8;
     } else {
       throw std::runtime_error("Only 16 and 8 bit samples supported");
     }
-  } else if(file.channels == 1) {
-    if(file.bits_per_sample == 16) {
+  } else if (file.channels == 1) {
+    if (file.bits_per_sample == 16) {
       return AL_FORMAT_MONO16;
-    } else if(file.bits_per_sample == 8) {
+    } else if (file.bits_per_sample == 8) {
       return AL_FORMAT_MONO8;
     } else {
       throw std::runtime_error("Only 16 and 8 bit samples supported");
@@ -473,7 +495,7 @@ void
 SoundManager::check_alc_error(const char* message) const
 {
   int err = alcGetError(device);
-  if(err != ALC_NO_ERROR) {
+  if (err != ALC_NO_ERROR) {
     std::stringstream msg;
     msg << message << alcGetString(device, err);
     throw std::runtime_error(msg.str());
@@ -484,7 +506,7 @@ void
 SoundManager::check_al_error(const char* message)
 {
   int err = alGetError();
-  if(err != AL_NO_ERROR) {
+  if (err != AL_NO_ERROR) {
     std::stringstream msg;
     msg << message << alGetString(err);
     throw std::runtime_error(msg.str());

@@ -18,19 +18,20 @@
 #define HEADER_SUPERTUX_OBJECT_SKULL_TILE_HPP
 
 #include "object/moving_sprite.hpp"
+#include "supertux/physic.hpp"
+#include "supertux/timer.hpp"
 
 /** A tile that starts falling down if tux stands to long on it */
-class SkullTile : public MovingSprite
+class SkullTile final : public MovingSprite
 {
 public:
-  SkullTile(const ReaderMapping& lisp);
-  std::string get_class() const {
-    return "skulltile";
-  }
+  SkullTile(const ReaderMapping& mapping);
 
-  HitResponse collision(GameObject& other, const CollisionHit& hit);
-  void update(float elapsed_time);
-  void draw(DrawingContext& context);
+  virtual std::string get_class() const override { return "skulltile"; }
+
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
 
 private:
   Physic physic;

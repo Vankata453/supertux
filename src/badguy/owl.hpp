@@ -22,43 +22,36 @@
 
 class Portable;
 
-class Owl : public BadGuy
+class Owl final : public BadGuy
 {
 public:
   Owl(const ReaderMapping& reader);
-  Owl(const Vector& pos, Direction d);
-  virtual void save(Writer& writer);
 
-  void initialize();
-  void collision_solid(const CollisionHit& hit);
-  void kill_fall();
+  virtual void initialize() override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual void kill_fall() override;
 
-  void freeze();
-  void unfreeze();
-  bool is_freezable() const;
-  void ignite();
-  std::string get_class() const {
-    return "owl";
-  }
-  std::string get_display_name() const {
-    return _("Owl");
-  }
-
-  void after_editor_set();
+  virtual void freeze() override;
+  virtual void unfreeze() override;
+  virtual bool is_freezable() const override;
+  virtual void ignite() override;
+  virtual std::string get_class() const override { return "owl"; }
+  virtual std::string get_display_name() const override { return _("Owl"); }
+  virtual ObjectSettings get_settings() override;
 
 protected:
   bool is_above_player() const;
-  void active_update (float elapsed_time);
-  bool collision_squished(GameObject& object);
+  virtual void active_update (float dt_sec) override;
+  virtual bool collision_squished(GameObject& object) override;
 
   std::string carried_obj_name;
   Portable *carried_object;
 
 private:
-  Owl(const Owl&);
-  Owl& operator=(const Owl&);
+  Owl(const Owl&) = delete;
+  Owl& operator=(const Owl&) = delete;
 };
 
-#endif /* HEADER_SUPERTUX_BADGUY_OWL_HPP */
+#endif
 
 /* EOF */

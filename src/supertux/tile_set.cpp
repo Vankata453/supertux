@@ -18,85 +18,38 @@
 
 #include "editor/editor.hpp"
 #include "supertux/resources.hpp"
+#include "supertux/tile.hpp"
 #include "supertux/tile_set_parser.hpp"
+#include "util/gettext.hpp"
+#include "util/log.hpp"
 #include "video/drawing_context.hpp"
 #include "video/surface.hpp"
 
 Tilegroup::Tilegroup() :
+  developers_group(),
   name(),
   tiles()
 {
-  tiles.clear();
 }
 
-Tilegroup::~Tilegroup() {
-
-}
-
-/*
-  tiles(),
-  tiles_loaded(false),
-  tilegroups()
+std::unique_ptr<TileSet>
+TileSet::from_file(const std::string& filename)
 {
-  tiles.resize(1, 0);
-  tiles[0] = new Tile();
-  tilegroups.clear();
-}
+  auto tileset = std::make_unique<TileSet>();
 
-TileSet::TileSet(const std::string& filename) :
-  tiles(),
-  tiles_loaded(true),
-  tilegroups()
-*/
-TileSet::TileSet() :
-  m_tiles(1),
-  notile_surface(Surface::create("images/tiles/auxiliary/notile.png")),
-  tilegroups()
-{
-  m_tiles[0] = std::unique_ptr<Tile>(new Tile);
-  tilegroups.clear();
-}
-
-TileSet::TileSet(const std::string& filename) :
-  TileSet()
-{
-  TileSetParser parser(*this, filename);
+  TileSetParser parser(*tileset, filename);
   parser.parse();
 
-  if (0)
-  { // enable this if you want to see a list of free tiles
-    log_info << "Last Tile ID is " << m_tiles.size()-1 << std::endl;
-    int last = -1;
-    for(int i = 0; i < int(m_tiles.size()); ++i)
-    {
-      if (m_tiles[i] == 0 && last == -1)
-      {
-        last = i;
-      }
-      else if (m_tiles[i] && last != -1)
-      {
-        log_info << "Free Tile IDs (" << i - last << "): " << last << " - " << i-1 << std::endl;
-        last = -1;
-      }
-    }
-  }
+  tileset->print_debug_info(filename);
 
-  if (0)
-  { // enable this to dump the (large) list of tiles to log_debug
-    // Two dumps are identical iff the tilesets specify identical tiles
-    log_debug << "Tileset in " << filename << std::endl;
-    for(int i = 0; i < int(m_tiles.size()); ++i)
-    {
-      if(m_tiles[i] != 0)
-      {
-        m_tiles[i]->print_debug(i);
-      }
-    }
-  }
+  return tileset;
 }
 
-TileSet::~TileSet()
+TileSet::TileSet() :
+  m_tiles(1),
+  m_tilegroups()
 {
+  m_tiles[0] = std::make_unique<Tile>();
 }
 
 void
@@ -106,51 +59,93 @@ TileSet::add_tile(int id, std::unique_ptr<Tile> tile)
     m_tiles.resize(id + 1);
   }
 
-  if (m_tiles[id] != 0) {
+  if (m_tiles[id]) {
     log_warning << "Tile with ID " << id << " redefined" << std::endl;
   } else {
     m_tiles[id] = std::move(tile);
   }
 }
 
-const Tile*
+const Tile&
 TileSet::get(const uint32_t id) const
 {
   if (id >= m_tiles.size()) {
 //    log_warning << "Invalid tile: " << id << std::endl;
-    return m_tiles[0].get();
+    return *m_tiles[0];
   } else {
     assert(id < m_tiles.size());
     Tile* tile = m_tiles[id].get();
-    if(tile) {
-      tile->load_images();
-      return tile;
+    if (tile) {
+      return *tile;
     } else {
 //      log_warning << "Invalid tile: " << id << std::endl;
-      return m_tiles[0].get();
+      return *m_tiles[0];
     }
   }
 }
 
 void
-TileSet::draw_tile(DrawingContext& context, uint32_t id, const Vector& pos,
-                   int z_pos, Color color) const
+TileSet::add_unassigned_tilegroup()
 {
-  if (id == 0) return;
-  Tile* tile;
-  if (id >= m_tiles.size()) {
-    tile = NULL;
-  } else {
-    tile = m_tiles[id].get();
+  Tilegroup unassigned_group;
+
+  unassigned_group.name = _("Others");
+  unassigned_group.developers_group = true;
+
+  for (auto tile = 0; tile < static_cast<int>(m_tiles.size()); tile++)
+  {
+    bool found = false;
+    for (const auto& group : m_tilegroups)
+    {
+      for (const auto& tile_in_group : group.tiles)
+      {
+        if (tile_in_group == tile)
+        {
+          found = true;
+        }
+      }
+    }
+
+    // Weed out all the tiles that have an ID
+    // but no image (mostly tiles that act as
+    // spacing between other tiles).
+    if (found == false && m_tiles[tile].get())
+    {
+      unassigned_group.tiles.push_back(tile);
+    }
   }
 
-  if (tile) {
-    tile->load_images();
-    tile->draw(context, pos, z_pos, color);
-  } else if (Editor::is_active()) { // Draw a notile sign
-    context.draw_surface(notile_surface, pos, 0, color, Blend(), z_pos);
-    context.draw_text(Resources::small_font, std::to_string(id),
-                      pos + Vector(16, 16), ALIGN_CENTER, z_pos, color);
+  if (!unassigned_group.tiles.empty())
+  {
+    m_tilegroups.push_back(unassigned_group);
+  }
+}
+
+void
+TileSet::add_tilegroup(const Tilegroup& tilegroup)
+{
+  m_tilegroups.push_back(tilegroup);
+}
+
+void
+TileSet::print_debug_info(const std::string& filename)
+{
+  if (false)
+  { // enable this if you want to see a list of free tiles
+    log_info << "Last Tile ID is " << m_tiles.size()-1 << std::endl;
+    int last = -1;
+    for (int i = 0; i < int(m_tiles.size()); ++i)
+    {
+      if (m_tiles[i] == nullptr && last == -1)
+      {
+        last = i;
+      }
+      else if (m_tiles[i] && last != -1)
+      {
+        log_info << "Free Tile IDs (" << i - last << "): " << last << " - " << i-1 << std::endl;
+        last = -1;
+      }
+    }
   }
 }
 

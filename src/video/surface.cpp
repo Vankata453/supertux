@@ -16,123 +16,149 @@
 
 #include "video/surface.hpp"
 
-#include <config.h>
+#include <sstream>
 
-#include <SDL.h>
-
+#include "util/reader_document.hpp"
+#include "util/reader_mapping.hpp"
+#include "util/string_util.hpp"
 #include "video/texture.hpp"
+#include "video/texture_manager.hpp"
 #include "video/video_system.hpp"
 
 SurfacePtr
-Surface::create(const std::string& file)
+Surface::from_reader(const ReaderMapping& mapping, const boost::optional<Rect>& rect)
 {
-  return SurfacePtr(new Surface(file));
+  TexturePtr diffuse_texture;
+  boost::optional<ReaderMapping> diffuse_texture_mapping;
+  if (mapping.get("diffuse-texture", diffuse_texture_mapping))
+  {
+    diffuse_texture = TextureManager::current()->get(*diffuse_texture_mapping, rect);
+  }
+
+  TexturePtr displacement_texture;
+  boost::optional<ReaderMapping> displacement_texture_mapping;
+  if (mapping.get("displacement-texture", displacement_texture_mapping))
+  {
+    displacement_texture = TextureManager::current()->get(*displacement_texture_mapping, rect);
+  }
+
+  Flip flip = NO_FLIP;
+  std::vector<bool> flip_v;
+  if (mapping.get("flip", flip_v))
+  {
+    flip ^= flip_v[0] ? HORIZONTAL_FLIP : NO_FLIP;
+    flip ^= flip_v[1] ? VERTICAL_FLIP : NO_FLIP;
+  }
+
+  return SurfacePtr(new Surface(diffuse_texture, displacement_texture, flip));
 }
 
 SurfacePtr
-Surface::create(const std::string& file, const Rect& rect)
+Surface::from_file(const std::string& filename, const boost::optional<Rect>& rect)
 {
-  return SurfacePtr(new Surface(file, rect));
+  if (StringUtil::has_suffix(filename, ".surface"))
+  {
+    ReaderDocument doc = ReaderDocument::from_file(filename);
+    ReaderObject object = doc.get_root();
+    if (object.get_name() != "supertux-surface")
+    {
+      std::ostringstream msg;
+      msg << filename << ": error: not a 'supertux-surface' file";
+      throw std::runtime_error(msg.str());
+    }
+    else
+    {
+      return Surface::from_reader(object.get_mapping(), rect);
+    }
+  }
+  else
+  {
+    if (rect)
+    {
+      TexturePtr texture = TextureManager::current()->get(filename, *rect);
+      return SurfacePtr(new Surface(texture, TexturePtr(), NO_FLIP));
+    }
+    else
+    {
+      TexturePtr texture = TextureManager::current()->get(filename);
+      return SurfacePtr(new Surface(texture, TexturePtr(), NO_FLIP));
+    }
+  }
 }
 
-Surface::Surface(const std::string& file) :
-  texture(TextureManager::current()->get(file)),
-  surface_data(),
-  rect(0, 0,
-      Size(texture->get_image_width(),
-           texture->get_image_height())),
-  flipx(false)
+Surface::Surface(const TexturePtr& diffuse_texture,
+                 const TexturePtr& displacement_texture,
+                 Flip flip) :
+  m_diffuse_texture(diffuse_texture),
+  m_displacement_texture(displacement_texture),
+  m_region(0, 0, m_diffuse_texture->get_image_width(), m_diffuse_texture->get_image_height()),
+  m_flip(flip)
 {
-  surface_data = VideoSystem::current()->new_surface_data(*this);
 }
 
-Surface::Surface(const std::string& file, const Rect& rect_) :
-  texture(TextureManager::current()->get(file, rect_)),
-  surface_data(),
-  rect(0, 0, Size(rect_.get_width(), rect_.get_height())),
-  flipx(false)
+Surface::Surface(const TexturePtr& diffuse_texture,
+                 const TexturePtr& displacement_texture,
+                 const Rect& region,
+                 Flip flip) :
+  m_diffuse_texture(diffuse_texture),
+  m_displacement_texture(displacement_texture),
+  m_region(region),
+  m_flip(flip)
 {
-  surface_data = VideoSystem::current()->new_surface_data(*this);
 }
 
-Surface::Surface(const Surface& rhs) :
-  texture(rhs.texture),
-  surface_data(),
-  rect(rhs.rect),
-  flipx(false)
+SurfacePtr
+Surface::from_texture(const TexturePtr& texture)
 {
-  surface_data = VideoSystem::current()->new_surface_data(*this);
+  return SurfacePtr(new Surface(texture, TexturePtr(), NO_FLIP));
 }
 
 Surface::~Surface()
 {
-  VideoSystem::current()->free_surface_data(surface_data);
 }
 
 SurfacePtr
-Surface::clone() const
+Surface::clone(Flip flip) const
 {
-  SurfacePtr surface(new Surface(*this));
+  SurfacePtr surface(new Surface(m_diffuse_texture,
+                                 m_displacement_texture,
+                                 m_region,
+                                 m_flip ^ flip));
   return surface;
 }
 
-/** flip the surface horizontally */
-void Surface::hflip()
+SurfacePtr
+Surface::region(const Rect& rect) const
 {
-  flipx = !flipx;
-}
-
-bool Surface::get_flipx() const
-{
-  return flipx;
+  SurfacePtr surface(new Surface(m_diffuse_texture,
+                                 m_displacement_texture,
+                                 rect,
+                                 m_flip));
+  return surface;
 }
 
 TexturePtr
 Surface::get_texture() const
 {
-  return texture;
+  return m_diffuse_texture;
 }
 
-SurfaceData*
-Surface::get_surface_data() const
+TexturePtr
+Surface::get_displacement_texture() const
 {
-  return surface_data;
-}
-
-int
-Surface::get_x() const
-{
-  return rect.left;
-}
-
-int
-Surface::get_y() const
-{
-  return rect.top;
+  return m_displacement_texture;
 }
 
 int
 Surface::get_width() const
 {
-  return rect.get_width();
+  return m_region.get_width();
 }
 
 int
 Surface::get_height() const
 {
-  return rect.get_height();
-}
-
-Vector
-Surface::get_position() const
-{
-  return Vector(get_x(), get_y());
-}
-
-Vector
-Surface::get_size() const
-{
-  return Vector(get_width(), get_height());
+  return m_region.get_height();
 }
 
 /* EOF */

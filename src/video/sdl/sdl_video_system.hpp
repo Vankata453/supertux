@@ -20,28 +20,46 @@
 #include <memory>
 #include <SDL.h>
 
-#include "video/video_system.hpp"
+#include "math/size.hpp"
+#include "video/sdlbase_video_system.hpp"
+#include "video/viewport.hpp"
 
+class SDLScreenRenderer;
+class SDLTextureRenderer;
 class TextureManager;
 
-class SDLVideoSystem : public VideoSystem
+class SDLVideoSystem final : public SDLBaseVideoSystem
 {
-private:
-  std::unique_ptr<Renderer> m_renderer;
-  std::unique_ptr<Lightmap> m_lightmap;
-  std::unique_ptr<TextureManager> m_texture_manager;
-
 public:
   SDLVideoSystem();
+  ~SDLVideoSystem();
 
-  Renderer& get_renderer() const override;
-  Lightmap& get_lightmap() const override;
-  TexturePtr new_texture(SDL_Surface *image) override;
-  SurfaceData* new_surface_data(const Surface& surface) override;
-  void free_surface_data(SurfaceData* surface_data) override;
+  virtual std::string get_name() const override;
 
-  void apply_config() override;
-  void resize(int w, int h) override;
+  virtual Renderer* get_back_renderer() const override { return nullptr; }
+  virtual Renderer& get_renderer() const override;
+  virtual Renderer& get_lightmap() const override;
+
+  virtual TexturePtr new_texture(const SDL_Surface& image, const Sampler& sampler) override;
+
+  virtual const Viewport& get_viewport() const override { return m_viewport; }
+  virtual void apply_config() override;
+  virtual void flip() override;
+
+  virtual void set_vsync(int mode) override;
+  virtual int get_vsync() const override;
+
+  virtual SDLSurfacePtr make_screenshot() override;
+
+private:
+  void create_window();
+
+private:
+  std::unique_ptr<SDL_Renderer, decltype(&SDL_DestroyRenderer)> m_sdl_renderer;
+  Viewport m_viewport;
+  std::unique_ptr<SDLScreenRenderer> m_renderer;
+  std::unique_ptr<SDLTextureRenderer> m_lightmap;
+  std::unique_ptr<TextureManager> m_texture_manager;
 
 private:
   SDLVideoSystem(const SDLVideoSystem&) = delete;

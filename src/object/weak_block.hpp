@@ -22,36 +22,28 @@
 
 class Bullet;
 
-
-/**
- * A block that can be destroyed by Bullet hits
- */
-class WeakBlock : public MovingSprite
+/** A block that can be destroyed by Bullet hits */
+class WeakBlock final : public MovingSprite
 {
 public:
-  WeakBlock(const ReaderMapping& lisp);
+  WeakBlock(const ReaderMapping& mapping);
 
-  HitResponse collision(GameObject& other, const CollisionHit& hit);
-  void update(float elapsed_time);
-  void draw(DrawingContext& context);
-  std::string get_class() const {
-    return "weak_block";
-  }
-  std::string get_display_name() const {
-    return _("Weak block");
-  }
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual std::string get_class() const override { return "weak_block"; }
+  virtual std::string get_display_name() const override { return _("Weak block"); }
 
-  virtual ObjectSettings get_settings();
+  virtual ObjectSettings get_settings() override;
 
-protected:
-  /**
-   * called by self when hit by a bullet
-   */
+private:
+  virtual HitResponse collision_bullet(Bullet& bullet, const CollisionHit& hit);
+
+private:
+  /** called by self when hit by a bullet */
   void startBurning();
 
-  /**
-   * pass hit to nearby WeakBlock objects
-   */
+  /** pass hit to nearby WeakBlock objects */
   void spreadHit();
 
 private:
@@ -60,14 +52,15 @@ private:
     STATE_BURNING, /**< on fire, still solid */
     STATE_DISINTEGRATING /**< crumbling to dust, no longer solid */
   };
+
+private:
   State state;
-
   bool linked;
-  virtual HitResponse collision_bullet(Bullet& bullet, const CollisionHit& hit);
-
-  Color light;
   SpritePtr lightsprite;
 
+private:
+  WeakBlock(const WeakBlock&) = delete;
+  WeakBlock& operator=(const WeakBlock&) = delete;
 };
 
 #endif

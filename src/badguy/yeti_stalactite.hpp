@@ -19,25 +19,25 @@
 
 #include "badguy/stalactite.hpp"
 
-class YetiStalactite : public Stalactite
+class YetiStalactite final : public Stalactite
 {
 public:
-  YetiStalactite(const ReaderMapping& lisp);
-  virtual ~YetiStalactite();
+  YetiStalactite(const ReaderMapping& mapping);
 
-  void active_update(float elapsed_time);
+  virtual void active_update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual void update(float dt_sec) override;
+
+  virtual bool is_flammable() const override;
+  virtual std::string get_class() const override { return "yeti_stalactite"; }
+  virtual std::string get_display_name() const override { return _("Yeti's stalactite"); }
+
   void start_shaking();
   bool is_hanging() const;
-  void update(float elapsed_time);
 
-  bool is_flammable() const;
-  std::string get_class() const {
-    return "yeti_stalactite";
-  }
-  std::string get_display_name() const {
-    return _("Yeti's stalactite");
-  }
-
+private:
+  YetiStalactite(const YetiStalactite&) = delete;
+  YetiStalactite& operator=(const YetiStalactite&) = delete;
 };
 
 #endif

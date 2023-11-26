@@ -18,22 +18,22 @@
 #define HEADER_SUPERTUX_SCRIPTING_DISPLAY_EFFECT_HPP
 
 #ifndef SCRIPTING_API
+#include "scripting/game_object.hpp"
+
 class DisplayEffect;
 #endif
 
 namespace scripting {
 
-class DisplayEffect
+class DisplayEffect final
+#ifndef SCRIPTING_API
+  : public GameObject<::DisplayEffect>
+#endif
 {
 #ifndef SCRIPTING_API
-private:
-  ::DisplayEffect* m_parent;
-
 public:
-  DisplayEffect(::DisplayEffect* parent);
-  ~DisplayEffect();
+  using GameObject::GameObject;
 
-private:
 private:
   DisplayEffect(const DisplayEffect&) = delete;
   DisplayEffect& operator=(const DisplayEffect&) = delete;
@@ -55,10 +55,10 @@ public:
 
   // fade display until just a small visible circle is left
   // (like what happens in some cartoons at the end)
-  // void shrink_fade(Vector goal, float radius, float fadetime);
+  // void shrink_fade(const Vector& goal, float radius, float fadetime);
 };
 
-}
+} // namespace scripting
 
 #endif
 

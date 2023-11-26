@@ -18,31 +18,36 @@
 #define HEADER_SUPERTUX_OBJECT_INVISIBLE_WALL_HPP
 
 #include "supertux/moving_object.hpp"
-#include "util/reader_fwd.hpp"
+
+class ReaderMapping;
 
 /** A tile that starts falling down if tux stands to long on it */
-class InvisibleWall : public MovingObject
+class InvisibleWall final : public MovingObject
 {
 public:
-  InvisibleWall(const ReaderMapping& lisp);
+  InvisibleWall(const ReaderMapping& mapping);
 
-  HitResponse collision(GameObject& other, const CollisionHit& hit);
-  void draw(DrawingContext& context);
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual void draw(DrawingContext& context) override;
 
-  std::string get_class() const {
-    return "invisible_wall";
-  }
-  std::string get_display_name() const {
-    return _("Invisible wall");
-  }
+  virtual std::string get_class() const override { return "invisible_wall"; }
+  virtual std::string get_display_name() const override { return _("Invisible wall"); }
 
-  virtual ObjectSettings get_settings();
-  virtual void after_editor_set();
+  virtual bool has_variable_size() const override { return true; }
+
+  virtual ObjectSettings get_settings() override;
+  virtual void after_editor_set() override;
 
 private:
-  void update(float elapsed_time);
+  virtual void update(float dt_sec) override;
 
-  float width, height;
+private:
+  float width;
+  float height;
+
+private:
+  InvisibleWall(const InvisibleWall&) = delete;
+  InvisibleWall& operator=(const InvisibleWall&) = delete;
 };
 
 #endif

@@ -18,50 +18,58 @@
 #define HEADER_SUPERTUX_BADGUY_SNAIL_HPP
 
 #include "badguy/walking_badguy.hpp"
+#include "object/portable.hpp"
 
-/**
- * Badguy "Snail" - a snail-like creature that can be flipped and tossed around at an angle
- */
-class Snail : public WalkingBadguy
+/** Badguy "Snail" - a snail-like creature that can be flipped and
+    tossed around at an angle */
+class Snail final :
+  public WalkingBadguy,
+  public Portable
 {
 public:
   Snail(const ReaderMapping& reader);
-  Snail(const Vector& pos, Direction d);
 
-  void initialize();
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit);
-  HitResponse collision_player(Player& player, const CollisionHit& hit);
-  bool can_break() const;
+  virtual void initialize() override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit) override;
+  virtual HitResponse collision_player(Player& player, const CollisionHit& hit) override;
+  virtual bool can_break() const override;
 
-  void active_update(float elapsed_time);
+  virtual void active_update(float dt_sec) override;
 
-  bool is_freezable() const;
-  std::string get_class() const {
-    return "snail";
-  }
-  std::string get_display_name() const {
-    return _("Snail");
-  }
+  virtual bool is_freezable() const override;
+  virtual std::string get_class() const override { return "snail"; }
+  virtual std::string get_display_name() const override { return _("Snail"); }
+
+  virtual bool is_portable() const override;
+  virtual void ungrab(MovingObject& , Direction dir_) override;
+  virtual void grab(MovingObject&, const Vector& pos, Direction dir_) override;
 
 protected:
-  bool collision_squished(GameObject& object);
+  virtual bool collision_squished(GameObject& object) override;
+
   void be_normal(); /**< switch to state STATE_NORMAL */
   void be_flat(); /**< switch to state STATE_FLAT */
   void be_kicked(); /**< switch to state STATE_KICKED_DELAY */
+  void be_grabbed();
 
 private:
   enum State {
     STATE_NORMAL, /**< walking around */
     STATE_FLAT, /**< flipped upside-down */
     STATE_KICKED_DELAY, /**< short delay before being launched */
-    STATE_KICKED /**< launched */
+    STATE_KICKED, /**< launched */
+    STATE_GRABBED /**< grabbed by tux */
   };
 
 private:
   State state;
   Timer kicked_delay_timer; /**< wait time until switching from STATE_KICKED_DELAY to STATE_KICKED */
   int   squishcount;
+
+private:
+  Snail(const Snail&) = delete;
+  Snail& operator=(const Snail&) = delete;
 };
 
 #endif

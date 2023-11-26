@@ -19,30 +19,28 @@
 
 #include "badguy/walking_badguy.hpp"
 
-/*
- * Basic badguy, patrols around a fixed position.
- */
-class Crystallo : public WalkingBadguy
+/** Basic badguy, patrols around a fixed position. */
+class Crystallo final : public WalkingBadguy
 {
 public:
   Crystallo(const ReaderMapping& reader);
-  Crystallo(const Vector& pos, Direction d);
-  ObjectSettings get_settings();
-  std::string get_class() const {
-    return "crystallo";
-  }
-  std::string get_display_name() const {
-    return _("Crystallo");
-  }
 
-  void active_update(float elapsed_time);
-  bool is_flammable() const;
+  virtual ObjectSettings get_settings() override;
+  virtual std::string get_class() const override { return "crystallo"; }
+  virtual std::string get_display_name() const override { return _("Crystallo"); }
+
+  virtual void active_update(float dt_sec) override;
+  virtual bool is_flammable() const override;
 
 protected:
-  bool collision_squished(GameObject& object);
+  virtual bool collision_squished(GameObject& object) override;
 
 private:
-  float radius;
+  float m_radius;
+
+private:
+  Crystallo(const Crystallo&) = delete;
+  Crystallo& operator=(const Crystallo&) = delete;
 };
 
 #endif

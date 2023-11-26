@@ -19,31 +19,22 @@
 
 #include "badguy/badguy.hpp"
 
-/**
- * Badguy "SkullyHop" - A Hopping Skull
- */
-class SkullyHop : public BadGuy
+/** Badguy "SkullyHop" - A Hopping Skull */
+class SkullyHop final : public BadGuy
 {
 public:
   SkullyHop(const ReaderMapping& reader);
-  SkullyHop(const Vector& pos, Direction d);
 
-  void initialize();
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit);
-  bool collision_squished(GameObject& object);
-  void active_update(float elapsed_time);
+  virtual void initialize() override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit) override;
+  virtual bool collision_squished(GameObject& object) override;
+  virtual void active_update(float dt_sec) override;
 
-  void unfreeze();
-  bool is_freezable() const;
-  std::string get_class() const {
-    return "skullyhop";
-  }
-  std::string get_display_name() const {
-    return _("Skully hop");
-  }
-
-  void after_editor_set();
+  virtual void unfreeze() override;
+  virtual bool is_freezable() const override;
+  virtual std::string get_class() const override { return "skullyhop"; }
+  virtual std::string get_display_name() const override { return _("Skully hop"); }
 
 private:
   enum SkullyHopState {
@@ -58,6 +49,10 @@ private:
 private:
   Timer recover_timer;
   SkullyHopState state;
+
+private:
+  SkullyHop(const SkullyHop&) = delete;
+  SkullyHop& operator=(const SkullyHop&) = delete;
 };
 
 #endif

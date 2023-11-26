@@ -18,19 +18,28 @@
 #define HEADER_SUPERTUX_SCRIPTING_TILEMAP_HPP
 
 #ifndef SCRIPTING_API
+#include "scripting/game_object.hpp"
+
 class TileMap;
 #endif
 
 namespace scripting {
 
-class TileMap
+class TileMap final
+#ifndef SCRIPTING_API
+  : public GameObject<::TileMap>
+#endif
 {
 public:
 #ifndef SCRIPTING_API
-  TileMap(::TileMap* tilemap);
-  ~TileMap();
+public:
+  using GameObject::GameObject;
+private:
+  TileMap(const TileMap&) = delete;
+  TileMap& operator=(const TileMap&) = delete;
 #endif
 
+public:
   /** Move tilemap until at given node, then stop */
   void goto_node(int node_no);
 
@@ -74,16 +83,14 @@ public:
    */
   float get_alpha() const;
 
-#ifndef SCRIPTING_API
-  ::TileMap* tilemap;
-
-private:
-  TileMap(const TileMap&);
-  TileMap& operator=(const TileMap&);
-#endif
+  /**
+   * Switch tilemap's real solidity to the given bool. Note that effective
+   * solidity is also influenced by the alpha of the tilemap.
+   */
+  void set_solid(bool solid); /**< true: make tilemap solid, false: disable solidity */
 };
 
-}
+} // namespace scripting
 
 #endif
 

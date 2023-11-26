@@ -18,35 +18,31 @@
 #ifndef HEADER_SUPERTUX_BADGUY_HAYWIRE_HPP
 #define HEADER_SUPERTUX_BADGUY_HAYWIRE_HPP
 
-#include "audio/sound_source.hpp"
 #include "badguy/walking_badguy.hpp"
 
-class Haywire : public WalkingBadguy
+class SoundSource;
+
+class Haywire final : public WalkingBadguy
 {
 public:
   Haywire(const ReaderMapping& reader);
-  Haywire(const Vector& pos, Direction d);
 
-  void kill_fall();
-  void ignite();
+  virtual void kill_fall() override;
+  virtual void ignite() override;
 
-  void active_update(float elapsed_time);
+  virtual void active_update(float dt_sec) override;
 
-  bool is_freezable() const;
-  void freeze();
+  virtual bool is_freezable() const override;
+  virtual void freeze() override;
 
-  void stop_looping_sounds();
-  void play_looping_sounds();
+  virtual void stop_looping_sounds() override;
+  virtual void play_looping_sounds() override;
 
-  std::string get_class() const {
-    return "haywire";
-  }
-  std::string get_display_name() const {
-    return _("Haywire");
-  }
+  virtual std::string get_class() const override { return "haywire"; }
+  virtual std::string get_display_name() const override { return _("Haywire"); }
 
 protected:
-  bool collision_squished(GameObject& object);
+  virtual bool collision_squished(GameObject& object) override;
 
 private:
   void start_exploding();
@@ -60,8 +56,12 @@ private:
 
   std::unique_ptr<SoundSource> ticking;
   std::unique_ptr<SoundSource> grunting;
+
+private:
+  Haywire(const Haywire&) = delete;
+  Haywire& operator=(const Haywire&) = delete;
 };
 
-#endif /* HEADER_SUPERTUX_BADGUY_HAYWIRE_HPP */
+#endif
 
 /* EOF */

@@ -18,7 +18,6 @@
 #define HEADER_SUPERTUX_SUPERTUX_CONSOLE_HPP
 
 #include <list>
-#include <memory>
 #include <squirrel.h>
 #include <sstream>
 #include <vector>
@@ -31,7 +30,7 @@ class Console;
 class ConsoleStreamBuffer;
 class DrawingContext;
 
-class ConsoleBuffer : public Currenton<ConsoleBuffer>
+class ConsoleBuffer final : public Currenton<ConsoleBuffer>
 {
 public:
   static std::ostream output; /**< stream of characters to output to the console. Do not forget to send std::endl or to flush the stream. */
@@ -56,7 +55,7 @@ private:
   ConsoleBuffer& operator=(const ConsoleBuffer&) = delete;
 };
 
-class Console : public Currenton<Console>
+class Console final : public Currenton<Console>
 {
 public:
   Console(ConsoleBuffer& buffer);
@@ -74,7 +73,7 @@ public:
   void move_cursor(int offset); /**< move the cursor @c offset chars to the right; Negative offset moves backward; 0xFFFF moves to the end */
 
   void draw(DrawingContext& context) const; /**< draw the console in a DrawingContext */
-  void update(float elapsed_time);
+  void update(float dt_sec);
 
   void show(); /**< display the console */
   void open(); /**< open the console for viewing for 6 seconds */
@@ -82,9 +81,6 @@ public:
   void toggle(); /**< display the console if hidden, hide otherwise */
 
   bool hasFocus() const; /**< true if characters should be sent to the console instead of their normal target */
-  FontPtr get_font() const {
-    return m_font;
-  }
 
 private:
   ConsoleBuffer& m_buffer;
@@ -121,17 +117,17 @@ private:
   bool consoleCommand(const std::string& command, const std::vector<std::string>& arguments); /**< process internal command; return false if command was unknown, true otherwise */
 
 private:
-  Console(const Console&);
-  Console & operator=(const Console&);
+  Console(const Console&) = delete;
+  Console & operator=(const Console&) = delete;
 };
 
-class ConsoleStreamBuffer : public std::stringbuf
+class ConsoleStreamBuffer final : public std::stringbuf
 {
 public:
-  int sync()
+  virtual int sync() override
   {
     int result = std::stringbuf::sync();
-    if(ConsoleBuffer::current())
+    if (ConsoleBuffer::current())
       ConsoleBuffer::current()->flush(*this);
     return result;
   }

@@ -25,27 +25,26 @@ class DrawingContext;
 class Player;
 class ReaderMapping;
 
-class Climbable : public TriggerBase
+class Climbable final : public TriggerBase
 {
   static Color text_color;
 public:
   Climbable(const ReaderMapping& reader);
   Climbable(const Rectf& area);
   ~Climbable();
-  std::string get_class() const {
-    return "climbable";
-  }
 
-  virtual ObjectSettings get_settings();
-  virtual void after_editor_set();
+  virtual std::string get_class() const override { return "climbable"; }
+  virtual std::string get_display_name() const override { return _("Climbable"); }
+  virtual bool has_variable_size() const override { return true; }
 
-  void event(Player& player, EventType type);
-  void update(float elapsed_time);
-  void draw(DrawingContext& context);
+  virtual ObjectSettings get_settings() override;
+  virtual void after_editor_set() override;
 
-  /**
-   * returns true if the player is within bounds of the Climbable
-   */
+  virtual void event(Player& player, EventType type) override;
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+
+  /** returns true if the player is within bounds of the Climbable */
   bool may_climb(Player& player) const;
 
 protected:
@@ -56,8 +55,8 @@ protected:
 private:
   Vector new_size;
 
-  Climbable(const Climbable&);
-  Climbable& operator=(const Climbable&);
+  Climbable(const Climbable&) = delete;
+  Climbable& operator=(const Climbable&) = delete;
 };
 
 #endif

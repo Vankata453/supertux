@@ -15,28 +15,28 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADER_SUPERTUX_CONTROL_KEYBOARD_MENU_HPP
-#define HEADER_SUPERTUX_CONTROL_KEYBOARD_MENU_HPP
+#ifndef HEADER_SUPERTUX_SUPERTUX_MENU_KEYBOARD_MENU_HPP
+#define HEADER_SUPERTUX_SUPERTUX_MENU_KEYBOARD_MENU_HPP
 
-#include "control/input_manager.hpp"
 #include "gui/menu_item.hpp"
 
-class KeyboardMenu : public Menu
+class InputManager;
+
+class KeyboardMenu final : public Menu
 {
 private:
   InputManager& m_input_manager;
 
 public:
   KeyboardMenu(InputManager& input_manager);
-  ~KeyboardMenu();
 
   void refresh() override;
   std::string get_key_name(SDL_Keycode key) const;
-  void menu_action(MenuItem* item) override;
+  void menu_action(MenuItem& item) override;
 
 private:
-  KeyboardMenu(const KeyboardMenu&);
-  KeyboardMenu& operator=(const KeyboardMenu&);
+  KeyboardMenu(const KeyboardMenu&) = delete;
+  KeyboardMenu& operator=(const KeyboardMenu&) = delete;
 };
 
 #endif

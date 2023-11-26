@@ -19,21 +19,20 @@
 
 #include "gui/menu_item.hpp"
 
-#include "gui/menu.hpp"
-
-class ItemBadguySelect : public MenuItem
+class ItemBadguySelect final : public MenuItem
 {
-  public:
-    ItemBadguySelect(const std::string& text_, std::vector<std::string>* badguys_, int id = -1);
+public:
+  ItemBadguySelect(const std::string& text, std::vector<std::string>* badguys_, int id = -1);
 
-    /** Processes the menu action. */
-    virtual void process_action(MenuAction action);
+  /** Processes the menu action. */
+  virtual void process_action(const MenuAction& action) override;
 
-  private:
-    std::vector<std::string>* badguys;
+private:
+  std::vector<std::string>* badguys;
 
-    ItemBadguySelect(const ItemBadguySelect&);
-    ItemBadguySelect& operator=(const ItemBadguySelect&);
+private:
+  ItemBadguySelect(const ItemBadguySelect&) = delete;
+  ItemBadguySelect& operator=(const ItemBadguySelect&) = delete;
 };
 
 #endif

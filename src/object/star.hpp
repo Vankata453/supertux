@@ -18,23 +18,24 @@
 #define HEADER_SUPERTUX_OBJECT_STAR_HPP
 
 #include "object/moving_sprite.hpp"
+#include "supertux/direction.hpp"
+#include "supertux/physic.hpp"
 
-class Star : public MovingSprite
+class Star final : public MovingSprite
 {
 public:
-  Star(const Vector& pos, Direction direction = RIGHT);
+  Star(const Vector& pos, Direction direction = Direction::RIGHT);
 
-  virtual void update(float elapsed_time);
-  virtual void draw(DrawingContext& context);
-  virtual void collision_solid(const CollisionHit& hit);
-  virtual HitResponse collision(GameObject& other, const CollisionHit& hit);
-  virtual bool do_save() const {
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual bool is_saveable() const override {
     return false;
   }
 
 private:
   Physic physic;
-  Color light;
   SpritePtr lightsprite;
 };
 

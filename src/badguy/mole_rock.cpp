@@ -16,34 +16,31 @@
 
 #include "badguy/mole_rock.hpp"
 
+#include <math.h>
+
 #include "audio/sound_manager.hpp"
 #include "sprite/sprite.hpp"
-#include "supertux/object_factory.hpp"
 
 MoleRock::MoleRock(const ReaderMapping& reader) :
   BadGuy(reader, "images/creatures/mole/mole_rock.sprite", LAYER_TILES - 2),
-  parent(0),
+  parent(nullptr),
   initial_velocity(Vector(0, -400))
 {
-  physic.enable_gravity(true);
-  countMe = false;
+  m_physic.enable_gravity(true);
+  m_countMe = false;
   SoundManager::current()->preload("sounds/darthit.wav");
   SoundManager::current()->preload("sounds/stomp.wav");
 }
 
-MoleRock::MoleRock(const Vector& pos, const Vector& velocity, const BadGuy* parent_ = 0) :
-  BadGuy(pos, LEFT, "images/creatures/mole/mole_rock.sprite", LAYER_TILES - 2),
+MoleRock::MoleRock(const Vector& pos, const Vector& velocity, const BadGuy* parent_ = nullptr) :
+  BadGuy(pos, Direction::LEFT, "images/creatures/mole/mole_rock.sprite", LAYER_TILES - 2),
   parent(parent_),
   initial_velocity(velocity)
 {
-  physic.enable_gravity(true);
-  countMe = false;
+  m_physic.enable_gravity(true);
+  m_countMe = false;
   SoundManager::current()->preload("sounds/darthit.wav");
   SoundManager::current()->preload("sounds/stomp.wav");
-}
-
-MoleRock::~MoleRock()
-{
 }
 
 bool
@@ -59,8 +56,8 @@ MoleRock::updatePointers(const GameObject* from_object, GameObject* to_object)
 void
 MoleRock::initialize()
 {
-  physic.set_velocity(initial_velocity);
-  sprite->set_action("default");
+  m_physic.set_velocity(initial_velocity);
+  m_sprite->set_action("default");
 }
 
 void
@@ -70,9 +67,9 @@ MoleRock::deactivate()
 }
 
 void
-MoleRock::active_update(float elapsed_time)
+MoleRock::active_update(float dt_sec)
 {
-  BadGuy::active_update(elapsed_time);
+  BadGuy::active_update(dt_sec);
 }
 
 void

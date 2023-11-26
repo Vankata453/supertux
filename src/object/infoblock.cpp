@@ -18,34 +18,31 @@
 
 #include <algorithm>
 
+#include "editor/editor.hpp"
 #include "object/player.hpp"
-#include "sprite/sprite.hpp"
-#include "sprite/sprite_manager.hpp"
 #include "supertux/info_box_line.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
 #include "util/reader_mapping.hpp"
 #include "video/drawing_context.hpp"
 
-InfoBlock::InfoBlock(const ReaderMapping& lisp) :
-  Block(lisp, "images/objects/bonus_block/infoblock.sprite"),
+InfoBlock::InfoBlock(const ReaderMapping& mapping) :
+  Block(mapping, "images/objects/bonus_block/infoblock.sprite"),
   message(),
   shown_pct(0),
   dest_pct(0),
   lines(),
-  lines_height()
+  lines_height(0)
 {
-  if(!lisp.get("message", message)) {
+  if (!mapping.get("message", message) && !(Editor::is_active())) {
     log_warning << "No message in InfoBlock" << std::endl;
   }
   //stopped = false;
   //ringing = new AmbientSound(get_pos(), 0.5, 300, 1, "sounds/phone.wav");
-  //Sector::current()->add_object(ringing);
+  //Sector::get().add_object(ringing);
 
   // Split text string lines into a vector
   lines = InfoBoxLine::split(message, 400);
-  lines_height = 0;
-  for(size_t i = 0; i < lines.size(); ++i) lines_height+=lines[i]->get_height();
+  for (const auto& line : lines) lines_height += line->get_height();
 }
 
 InfoBlock::~InfoBlock()
@@ -53,10 +50,13 @@ InfoBlock::~InfoBlock()
 }
 
 ObjectSettings
-InfoBlock::get_settings() {
+InfoBlock::get_settings()
+{
   ObjectSettings result = Block::get_settings();
-  result.options.push_back( ObjectOption(MN_SCRIPT, _("Message"), &message,
-                                         "message"));
+
+  result.add_translatable_text(_("Message"), &message, "message");
+
+  result.reorder({"message", "x", "y"});
 
   return result;
 }
@@ -74,15 +74,14 @@ InfoBlock::hit(Player& player)
   if (dest_pct != 1) {
 
     // first hide all other InfoBlocks' messages in same sector
-    auto parent = Sector::current();
-    if (!parent) return;
-    for (const auto& object : parent->gameobjects) {
-      auto block = dynamic_cast<InfoBlock*>(object.get());
-      if (!block) continue;
-      if (block != this) block->hide_message();
+    for (auto& block : Sector::get().get_objects_by_type<InfoBlock>())
+    {
+      if (&block != this)
+      {
+        block.hide_message();
+      }
     }
 
-    // show our message
     show_message();
 
   } else {
@@ -96,7 +95,7 @@ InfoBlock::collision(GameObject& other, const CollisionHit& hit_)
   auto player = dynamic_cast<Player*> (&other);
   if (player)
   {
-    if (player->does_buttjump)
+    if (player->m_does_buttjump)
       InfoBlock::hit(*player);
   }
   return Block::collision(other, hit_);
@@ -105,21 +104,20 @@ InfoBlock::collision(GameObject& other, const CollisionHit& hit_)
 Player*
 InfoBlock::get_nearest_player() const
 {
-  return Sector::current()->get_nearest_player (bbox);
+  return Sector::get().get_nearest_player (m_col.m_bbox);
 }
 
 void
-InfoBlock::update(float delta)
+InfoBlock::update(float dt_sec)
 {
-  Block::update(delta);
+  Block::update(dt_sec);
 
-  if (delta == 0) return;
+  if (dt_sec == 0) return;
 
   // hide message if player is too far away
   if (dest_pct > 0) {
-    auto player = get_nearest_player();
-    if (player) {
-      Vector p1 = bbox.get_middle();
+    if (auto* player = get_nearest_player()) {
+      Vector p1 = m_col.m_bbox.get_middle();
       Vector p2 = player->get_bbox().get_middle();
       Vector dist = (p2 - p1);
       float d = dist.norm();
@@ -129,8 +127,8 @@ InfoBlock::update(float delta)
 
   // handle soft fade-in and fade-out
   if (shown_pct != dest_pct) {
-    if (dest_pct > shown_pct) shown_pct = std::min(shown_pct + 2*delta, dest_pct);
-    if (dest_pct < shown_pct) shown_pct = std::max(shown_pct - 2*delta, dest_pct);
+    if (dest_pct > shown_pct) shown_pct = std::min(shown_pct + 2 * dt_sec, dest_pct);
+    if (dest_pct < shown_pct) shown_pct = std::max(shown_pct - 2 * dt_sec, dest_pct);
   }
 }
 
@@ -150,26 +148,28 @@ InfoBlock::draw(DrawingContext& context)
   float border = 8;
   float width = 400; // this is the text width only
   float height = lines_height; // this is the text height only
-  float x1 = (bbox.p1.x + bbox.p2.x)/2 - width/2;
-  float x2 = (bbox.p1.x + bbox.p2.x)/2 + width/2;
+  float x1 = (m_col.m_bbox.get_left() + m_col.m_bbox.get_right())/2 - width/2;
+  float x2 = (m_col.m_bbox.get_left() + m_col.m_bbox.get_right())/2 + width/2;
   float y1 = original_y - height;
 
-  if(x1 < 0) {
+  if (x1 < 0) {
     x1 = 0;
     x2 = width;
   }
 
-  if(x2 > Sector::current()->get_width()) {
-    x2 = Sector::current()->get_width();
+  if (x2 > Sector::get().get_width()) {
+    x2 = Sector::get().get_width();
     x1 = x2 - width;
   }
 
   // lines_height includes one ITEMS_SPACE too much, so the bottom border is reduced by 4px
-  context.draw_filled_rect(Vector(x1-border, y1-border), Vector(width+2*border, height+2*border-4), Color(0.6f, 0.7f, 0.8f, 0.5f), LAYER_GUI-50);
+  context.color().draw_filled_rect(Rectf(Vector(x1-border, y1-border),
+                                         Sizef(width+2*border, height+2*border-4)),
+                                   Color(0.6f, 0.7f, 0.8f, 0.5f), LAYER_GUI-50);
 
   float y = y1;
-  for(size_t i = 0; i < lines.size(); ++i) {
-    if(y >= y1 + height) {
+  for (size_t i = 0; i < lines.size(); ++i) {
+    if (y >= y1 + height) {
       //log_warning << "Too many lines of text in InfoBlock" << std::endl;
       //dest_pct = 0;
       //shown_pct = 0;

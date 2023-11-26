@@ -19,29 +19,28 @@
 
 #include "gui/item_textfield.hpp"
 
-class ItemScriptLine : public ItemTextField
+class ItemScriptLine final : public ItemTextField
 {
-  public:
-    ItemScriptLine(std::string* input_, int id_ = -1);
+public:
+  ItemScriptLine(std::string* input_, int id_ = -1);
 
-    /** Draws the menu item. */
-    virtual void draw(DrawingContext&, Vector pos, int menu_width, bool active);
+  /** Draws the menu item. */
+  virtual void draw(DrawingContext&, const Vector& pos, int menu_width, bool active) override;
 
-    /** Returns the minimum width of the menu item. */
-    virtual int get_width() const;
+  /** Returns the minimum width of the menu item. */
+  virtual int get_width() const override;
 
-    /** Processes the menu action. */
-    virtual void process_action(MenuAction action);
+  /** Processes the menu action. */
+  virtual void process_action(const MenuAction& action) override;
 
-    /** Calls when the user wants to remove an invalid char. */
-    virtual void invalid_remove();
+  /** Calls when the user wants to remove an invalid char. */
+  virtual void invalid_remove() override;
 
-  private:
-
-    ItemScriptLine(const ItemScriptLine&);
-    ItemScriptLine& operator=(const ItemScriptLine&);
+private:
+  ItemScriptLine(const ItemScriptLine&) = delete;
+  ItemScriptLine& operator=(const ItemScriptLine&) = delete;
 };
 
-#endif // HEADER_SUPERTUX_GUI_ITEM_SCRIPT_LINE_HPP
+#endif
 
 /* EOF */

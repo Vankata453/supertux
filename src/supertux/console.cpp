@@ -16,15 +16,16 @@
 
 #include "supertux/console.hpp"
 
-#include <assert.h>
-#include <math.h>
-
+#include "math/sizef.hpp"
 #include "physfs/ifile_stream.hpp"
-#include "scripting/scripting.hpp"
-#include "scripting/squirrel_util.hpp"
+#include "squirrel/squirrel_virtual_machine.hpp"
+#include "squirrel/squirrel_util.hpp"
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
+#include "supertux/resources.hpp"
+#include "util/log.hpp"
 #include "video/drawing_context.hpp"
+#include "video/surface.hpp"
 
 /// speed (pixels/s) the console closes
 static const float FADE_SPEED = 1;
@@ -38,8 +39,8 @@ ConsoleBuffer::ConsoleBuffer() :
 void
 ConsoleBuffer::set_console(Console* console)
 {
-  assert(!m_console);
-  assert(console);
+  assert((console && !m_console) ||
+         (m_console && !console));
 
   m_console = console;
 }
@@ -108,27 +109,28 @@ Console::Console(ConsoleBuffer& buffer) :
   m_inputBufferPosition(0),
   m_history(),
   m_history_position(m_history.end()),
-  m_background(Surface::create("images/engine/console.png")),
-  m_background2(Surface::create("images/engine/console2.png")),
-  m_vm(NULL),
+  m_background(Surface::from_file("images/engine/console.png")),
+  m_background2(Surface::from_file("images/engine/console2.png")),
+  m_vm(nullptr),
   m_vm_object(),
   m_backgroundOffset(0),
   m_height(0),
   m_alpha(1.0),
   m_offset(0),
   m_focused(false),
-  m_font(new Font(Font::FIXED, "fonts/andale12.stf", 1)),
+  m_font(Resources::console_font),
   m_stayOpen(0)
 {
-  buffer.set_console(this);
+  m_buffer.set_console(this);
 }
 
 Console::~Console()
 {
-  if (m_vm != NULL && scripting::global_vm != NULL)
+  if (m_vm != nullptr && SquirrelVirtualMachine::current() != nullptr)
   {
-    sq_release(scripting::global_vm, &m_vm_object);
+    sq_release(SquirrelVirtualMachine::current()->get_vm(), &m_vm_object);
   }
+  m_buffer.set_console(nullptr);
 }
 
 void
@@ -137,11 +139,11 @@ Console::on_buffer_change(int line_count)
   // increase console height if necessary
   if (m_stayOpen > 0 && m_height < 64)
   {
-    if(m_height < 4)
+    if (m_height < 4)
     {
       m_height = 4;
     }
-    m_height += m_font->get_height() * line_count;
+    m_height += m_font->get_height() * static_cast<float>(line_count);
   }
 
   // reset console to full opacity
@@ -151,24 +153,24 @@ Console::on_buffer_change(int line_count)
 void
 Console::ready_vm()
 {
-  if(m_vm == NULL) {
-    m_vm = scripting::global_vm;
+  if (m_vm == nullptr) {
+    m_vm = SquirrelVirtualMachine::current()->get_vm();
     HSQUIRRELVM new_vm = sq_newthread(m_vm, 16);
-    if(new_vm == NULL)
-      throw scripting::SquirrelError(m_vm, "Couldn't create new VM thread for console");
+    if (new_vm == nullptr)
+      throw SquirrelError(m_vm, "Couldn't create new VM thread for console");
 
     // store reference to thread
     sq_resetobject(&m_vm_object);
-    if(SQ_FAILED(sq_getstackobj(m_vm, -1, &m_vm_object)))
-      throw scripting::SquirrelError(m_vm, "Couldn't get vm object for console");
+    if (SQ_FAILED(sq_getstackobj(m_vm, -1, &m_vm_object)))
+      throw SquirrelError(m_vm, "Couldn't get vm object for console");
     sq_addref(m_vm, &m_vm_object);
     sq_pop(m_vm, 1);
 
     // create new roottable for thread
     sq_newtable(new_vm);
     sq_pushroottable(new_vm);
-    if(SQ_FAILED(sq_setdelegate(new_vm, -2)))
-      throw scripting::SquirrelError(new_vm, "Couldn't set console_table delegate");
+    if (SQ_FAILED(sq_setdelegate(new_vm, -2)))
+      throw SquirrelError(new_vm, "Couldn't set console_table delegate");
 
     sq_setroottable(new_vm);
 
@@ -177,7 +179,7 @@ Console::ready_vm()
     try {
       std::string filename = "scripts/console.nut";
       IFileStream stream(filename);
-      scripting::compile_and_run(m_vm, stream, filename);
+      compile_and_run(m_vm, stream, filename);
     } catch(std::exception& e) {
       log_warning << "Couldn't load console.nut: " << e.what() << std::endl;
     }
@@ -187,27 +189,25 @@ Console::ready_vm()
 void
 Console::execute_script(const std::string& command)
 {
-  using namespace scripting;
-
   ready_vm();
 
   SQInteger oldtop = sq_gettop(m_vm);
   try {
-    if(SQ_FAILED(sq_compilebuffer(m_vm, command.c_str(), command.length(),
+    if (SQ_FAILED(sq_compilebuffer(m_vm, command.c_str(), command.length(),
                                   "", SQTrue)))
       throw SquirrelError(m_vm, "Couldn't compile command");
 
     sq_pushroottable(m_vm);
-    if(SQ_FAILED(sq_call(m_vm, 1, SQTrue, SQTrue)))
+    if (SQ_FAILED(sq_call(m_vm, 1, SQTrue, SQTrue)))
       throw SquirrelError(m_vm, "Problem while executing command");
 
-    if(sq_gettype(m_vm, -1) != OT_NULL)
+    if (sq_gettype(m_vm, -1) != OT_NULL)
       m_buffer.addLines(squirrel2string(m_vm, -1));
   } catch(std::exception& e) {
     m_buffer.addLines(e.what());
   }
   SQInteger newtop = sq_gettop(m_vm);
-  if(newtop < oldtop) {
+  if (newtop < oldtop) {
     log_fatal << "Script destroyed squirrel stack..." << std::endl;
   } else {
     sq_settop(m_vm, oldtop);
@@ -233,7 +233,7 @@ Console::backspace()
 void
 Console::eraseChar()
 {
-  if (m_inputBufferPosition < (int)m_inputBuffer.length()) {
+  if (m_inputBufferPosition < static_cast<int>(m_inputBuffer.length())) {
     m_inputBuffer.erase(m_inputBufferPosition, 1);
   }
 }
@@ -270,7 +270,7 @@ Console::show_history(int offset_)
     m_inputBufferPosition = 0;
   } else {
     m_inputBuffer = *m_history_position;
-    m_inputBufferPosition = m_inputBuffer.length();
+    m_inputBufferPosition = static_cast<int>(m_inputBuffer.length());
   }
 }
 
@@ -278,10 +278,10 @@ void
 Console::move_cursor(int offset_)
 {
   if (offset_ == -65535) m_inputBufferPosition = 0;
-  if (offset_ == +65535) m_inputBufferPosition = m_inputBuffer.length();
+  if (offset_ == +65535) m_inputBufferPosition = static_cast<int>(m_inputBuffer.length());
   m_inputBufferPosition+=offset_;
   if (m_inputBufferPosition < 0) m_inputBufferPosition = 0;
-  if (m_inputBufferPosition > (int)m_inputBuffer.length()) m_inputBufferPosition = m_inputBuffer.length();
+  if (m_inputBufferPosition > static_cast<int>(m_inputBuffer.length())) m_inputBufferPosition = static_cast<int>(m_inputBuffer.length());
 }
 
 // Helper functions for Console::autocomplete
@@ -353,8 +353,8 @@ void
 Console::autocomplete()
 {
   //int autocompleteFrom = m_inputBuffer.find_last_of(" ();+", m_inputBufferPosition);
-  int autocompleteFrom = m_inputBuffer.find_last_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_->.", m_inputBufferPosition);
-  if (autocompleteFrom != (int)std::string::npos) {
+  int autocompleteFrom = static_cast<int>(m_inputBuffer.find_last_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_->.", m_inputBufferPosition));
+  if (autocompleteFrom != static_cast<int>(std::string::npos)) {
     autocompleteFrom += 1;
   } else {
     autocompleteFrom = 0;
@@ -368,13 +368,13 @@ Console::autocomplete()
 
   // append all keys of the current root table to list
   sq_pushroottable(m_vm); // push root table
-  while(true) {
+  while (true) {
     // check all keys (and their children) for matches
     sq_insert_commands(cmds, m_vm, "", prefix);
 
     // cycle through parent(delegate) table
     SQInteger oldtop = sq_gettop(m_vm);
-    if(SQ_FAILED(sq_getdelegate(m_vm, -1)) || oldtop == sq_gettop(m_vm)) {
+    if (SQ_FAILED(sq_getdelegate(m_vm, -1)) || oldtop == sq_gettop(m_vm)) {
       break;
     }
     sq_remove(m_vm, -2); // remove old table
@@ -392,7 +392,7 @@ Console::autocomplete()
     // one match: just replace input buffer with full command
     std::string replaceWith = cmds.front();
     m_inputBuffer.replace(autocompleteFrom, prefix.length(), replaceWith);
-    m_inputBufferPosition += (replaceWith.length() - prefix.length());
+    m_inputBufferPosition += static_cast<int>(replaceWith.length() - prefix.length());
   }
 
   if (cmds.size() > 1)
@@ -403,13 +403,13 @@ Console::autocomplete()
       std::string cmd = cmds.front();
       cmds.pop_front();
       m_buffer.addLines(cmd);
-      for (int n = commonPrefix.length(); n >= 1; n--) {
+      for (int n = static_cast<int>(commonPrefix.length()); n >= 1; n--) {
         if (cmd.compare(0, n, commonPrefix) != 0) commonPrefix.resize(n-1); else break;
       }
     }
     std::string replaceWith = commonPrefix;
     m_inputBuffer.replace(autocompleteFrom, prefix.length(), replaceWith);
-    m_inputBufferPosition += (replaceWith.length() - prefix.length());
+    m_inputBufferPosition += static_cast<int>(replaceWith.length() - prefix.length());
   }
 }
 
@@ -463,7 +463,7 @@ Console::hasFocus() const
 void
 Console::show()
 {
-  if(!g_config->developer_mode)
+  if (!g_config->developer_mode)
     return;
 
   m_focused = true;
@@ -474,8 +474,8 @@ Console::show()
 void
 Console::open()
 {
-  if(m_stayOpen < 2)
-    m_stayOpen += 1.5;
+  if (m_stayOpen < 2)
+    m_stayOpen += 1.5f;
 }
 
 void
@@ -500,22 +500,22 @@ Console::toggle()
 }
 
 void
-Console::update(float elapsed_time)
+Console::update(float dt_sec)
 {
-  if(m_stayOpen > 0) {
-    m_stayOpen -= elapsed_time;
-    if(m_stayOpen < 0)
+  if (m_stayOpen > 0) {
+    m_stayOpen -= dt_sec;
+    if (m_stayOpen < 0)
       m_stayOpen = 0;
-  } else if(!m_focused && m_height > 0) {
-    m_alpha -= elapsed_time * FADE_SPEED;
-    if(m_alpha < 0) {
+  } else if (!m_focused && m_height > 0) {
+    m_alpha -= dt_sec * FADE_SPEED;
+    if (m_alpha < 0) {
       m_alpha = 0;
       m_height = 0;
     }
   }
 
-  m_backgroundOffset += 600 * elapsed_time;
-  if (m_backgroundOffset > (int)m_background->get_width()) m_backgroundOffset -= (int)m_background->get_width();
+  m_backgroundOffset += static_cast<int>(600.0f * dt_sec);
+  if (m_backgroundOffset > static_cast<int>(m_background->get_width())) m_backgroundOffset -= static_cast<int>(m_background->get_width());
 }
 
 void
@@ -528,21 +528,23 @@ Console::draw(DrawingContext& context) const
 
   context.push_transform();
   context.set_alpha(m_alpha);
-  context.draw_surface(m_background2,
-                       Vector(SCREEN_WIDTH/2 - m_background->get_width()/2 - m_background->get_width() + m_backgroundOffset,
-                              m_height - m_background->get_height()),
-                       layer);
-  context.draw_surface(m_background2,
-                       Vector(SCREEN_WIDTH/2 - m_background->get_width()/2 + m_backgroundOffset,
-                              m_height - m_background->get_height()),
-                       layer);
-  for (int x = (SCREEN_WIDTH/2 - m_background->get_width()/2
-                - (static_cast<int>(ceilf((float)SCREEN_WIDTH /
-                                          (float)m_background->get_width()) - 1) * m_background->get_width()));
-       x < SCREEN_WIDTH;
+  context.color().draw_surface(m_background2,
+                               Vector(static_cast<float>(context.get_width() / 2 - m_background->get_width() / 2 - m_background->get_width() + m_backgroundOffset),
+                                      m_height - static_cast<float>(m_background->get_height())),
+                               layer);
+  context.color().draw_surface(m_background2,
+                               Vector(static_cast<float>(context.get_width()/2 - m_background->get_width()/2 + m_backgroundOffset),
+                                      m_height - static_cast<float>(m_background->get_height())),
+                               layer);
+  for (int x = (context.get_width()/2 - m_background->get_width()/2
+                - (static_cast<int>(ceilf(static_cast<float>(context.get_width()) /
+                                          static_cast<float>(m_background->get_width())) - 1) * m_background->get_width()));
+       x < context.get_width();
        x += m_background->get_width())
   {
-    context.draw_surface(m_background, Vector(x, m_height - m_background->get_height()), layer);
+    context.color().draw_surface(m_background, Vector(static_cast<float>(x),
+                                                      m_height - static_cast<float>(m_background->get_height())),
+                                 layer);
   }
 
   int lineNo = 0;
@@ -550,10 +552,23 @@ Console::draw(DrawingContext& context) const
   if (m_focused) {
     lineNo++;
     float py = m_height-4-1 * m_font->get_height();
-    context.draw_text(m_font, "> "+m_inputBuffer, Vector(4, py), ALIGN_LEFT, layer);
-    if (SDL_GetTicks() % 1000 < 750) {
-      int cursor_px = 2 + m_inputBufferPosition;
-      context.draw_text(m_font, "_", Vector(4 + (cursor_px * m_font->get_text_width("X")), py), ALIGN_LEFT, layer);
+    std::string line = "> " + m_inputBuffer;
+    context.color().draw_text(m_font, line, Vector(4, py), ALIGN_LEFT, layer);
+
+    if (SDL_GetTicks() % 500 < 250) {
+      std::string::size_type p = 2 + m_inputBufferPosition;
+      float cursor_x;
+      if (p >= line.size())
+      {
+        cursor_x = m_font->get_text_width(line);
+      }
+      else
+      {
+        cursor_x = m_font->get_text_width(line.substr(0, p));
+      }
+      context.color().draw_filled_rect(Rectf(Vector(3 + cursor_x, py),
+                                             Sizef(2.0f, m_font->get_height() - 2)),
+                                       Color(1.0f, 1.0f, 1.0f, 0.75f), layer);
     }
   }
 
@@ -562,9 +577,9 @@ Console::draw(DrawingContext& context) const
   {
     if (skipLines-- > 0) continue;
     lineNo++;
-    float py = m_height - 4 - lineNo * m_font->get_height();
+    float py = static_cast<float>(m_height - 4.0f - static_cast<float>(lineNo) * m_font->get_height());
     if (py < -m_font->get_height()) break;
-    context.draw_text(m_font, *i, Vector(4, py), ALIGN_LEFT, layer);
+    context.color().draw_text(m_font, *i, Vector(4.0f, py), ALIGN_LEFT, layer);
   }
   context.pop_transform();
 }

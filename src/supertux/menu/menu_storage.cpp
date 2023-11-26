@@ -16,9 +16,11 @@
 
 #include "supertux/menu/menu_storage.hpp"
 
-#include "supertux/globals.hpp"
+#include <assert.h>
+
 #include "supertux/menu/addon_menu.hpp"
 #include "supertux/menu/cheat_menu.hpp"
+#include "supertux/menu/debug_menu.hpp"
 #include "supertux/menu/contrib_menu.hpp"
 #include "supertux/menu/editor_menu.hpp"
 #include "supertux/menu/editor_level_menu.hpp"
@@ -40,8 +42,9 @@
 #include "supertux/menu/worldmap_menu.hpp"
 #include "supertux/menu/worldmap_cheat_menu.hpp"
 #include "supertux/menu/world_set_menu.hpp"
+#include "util/log.hpp"
 
-MenuStorage* MenuStorage::s_instance = 0;
+MenuStorage* MenuStorage::s_instance = nullptr;
 
 MenuStorage&
 MenuStorage::instance()
@@ -64,13 +67,13 @@ MenuStorage::~MenuStorage()
 std::unique_ptr<Menu>
 MenuStorage::create(MenuId menu_id)
 {
-  switch(menu_id)
+  switch (menu_id)
   {
     case MAIN_MENU:
-      return std::unique_ptr<Menu>(new MainMenu);
+      return std::make_unique<MainMenu>();
 
     case LANGUAGE_MENU:
-      return std::unique_ptr<Menu>(new LanguageMenu);
+      return std::make_unique<LanguageMenu>();
 
     case OPTIONS_MENU:
       return std::unique_ptr<Menu>(new OptionsMenu(true));
@@ -79,7 +82,7 @@ MenuStorage::create(MenuId menu_id)
       return std::unique_ptr<Menu>(new OptionsMenu(false));
 
     case PROFILE_MENU:
-      return std::unique_ptr<Menu>(new ProfileMenu);
+      return std::make_unique<ProfileMenu>();
 
     case KEYBOARD_MENU:
       return std::unique_ptr<Menu>(new KeyboardMenu(*InputManager::current()));
@@ -88,70 +91,74 @@ MenuStorage::create(MenuId menu_id)
       return std::unique_ptr<Menu>(new JoystickMenu(*InputManager::current()));
 
     case WORLDMAP_MENU:
-      return std::unique_ptr<Menu>(new WorldmapMenu);
+      return std::make_unique<WorldmapMenu>();
 
     case WORLDMAP_CHEAT_MENU:
-      return std::unique_ptr<Menu>(new WorldmapCheatMenu);
+      return std::make_unique<WorldmapCheatMenu>();
 
     case GAME_MENU:
-      return std::unique_ptr<Menu>(new GameMenu);
+      return std::make_unique<GameMenu>();
 
     case CHEAT_MENU:
-      return std::unique_ptr<Menu>(new CheatMenu);
+      return std::make_unique<CheatMenu>();
+
+    case DEBUG_MENU:
+      return std::make_unique<DebugMenu>();
 
     case WORLDSET_MENU:
-      return std::unique_ptr<Menu>(new WorldSetMenu);
-      
+      return std::make_unique<WorldSetMenu>();
+
     case CONTRIB_MENU:
-      return std::unique_ptr<Menu>(new ContribMenu);
+      return std::make_unique<ContribMenu>();
 
     case CONTRIB_WORLD_MENU:
-      return 0; //return new ContribWorldMenu();
+      return nullptr; //return new ContribWorldMenu();
 
     case ADDON_MENU:
-      return std::unique_ptr<Menu>(new AddonMenu);
+      return std::make_unique<AddonMenu>();
 
     case LANGPACK_MENU:
-      return std::unique_ptr<Menu>(new AddonMenu(true));
+      return std::unique_ptr<Menu>(new AddonMenu);
 
     case EDITOR_LEVELSET_SELECT_MENU:
-      return std::unique_ptr<Menu>(new EditorLevelsetSelectMenu);
+      return std::make_unique<EditorLevelsetSelectMenu>();
 
     case EDITOR_NEW_LEVELSET_MENU:
-      return std::unique_ptr<Menu>(new EditorNewLevelsetMenu);
+      return std::make_unique<EditorNewLevelsetMenu>();
 
     case LANGPACK_AUTO_UPDATE_MENU:
-      return std::unique_ptr<Menu>(new AddonMenu(true, true));
+      return std::unique_ptr<Menu>(new AddonMenu(true));
 
     case EDITOR_LEVEL_SELECT_MENU:
-      return std::unique_ptr<Menu>(new EditorLevelSelectMenu);
+      return std::make_unique<EditorLevelSelectMenu>();
 
     case EDITOR_MENU:
-      return std::unique_ptr<Menu>(new EditorMenu);
+      return std::make_unique<EditorMenu>();
 
     case EDITOR_TILEGROUP_MENU:
-      return std::unique_ptr<Menu>(new EditorTilegroupMenu);
+      return std::make_unique<EditorTilegroupMenu>();
 
     case EDITOR_OBJECTGROUP_MENU:
-      return std::unique_ptr<Menu>(new EditorObjectgroupMenu);
+      return std::make_unique<EditorObjectgroupMenu>();
 
     case EDITOR_SECTORS_MENU:
-      return std::unique_ptr<Menu>(new EditorSectorsMenu);
+      return std::make_unique<EditorSectorsMenu>();
 
     case EDITOR_SECTOR_MENU:
-      return std::unique_ptr<Menu>(new EditorSectorMenu);
+      return std::make_unique<EditorSectorMenu>();
 
     case EDITOR_LEVEL_MENU:
-      return std::unique_ptr<Menu>(new EditorLevelMenu);
+      return std::make_unique<EditorLevelMenu>();
 
     case EDITOR_LEVELSET_MENU:
-      return std::unique_ptr<Menu>(new EditorLevelsetMenu);
+      return std::make_unique<EditorLevelsetMenu>();
 
     case NO_MENU:
       return std::unique_ptr<Menu>();
 
     default:
-      assert(!"unknown MenuId provided");
+      log_warning << "unknown MenuId provided" << std::endl;
+      assert(false);
       return std::unique_ptr<Menu>();
   }
 }

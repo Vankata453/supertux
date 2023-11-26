@@ -27,27 +27,30 @@ public:
   OpenALSoundSource();
   virtual ~OpenALSoundSource();
 
-  virtual void play();
-  virtual void stop();
+  virtual void play() override;
+  virtual void stop() override;
   virtual void pause();
   virtual void resume();
-  virtual bool playing() const;
+  virtual bool playing() const override;
   virtual bool paused() const;
 
   virtual void update();
 
-  virtual void set_looping(bool looping);
-  virtual void set_relative(bool relative);
-  virtual void set_gain(float gain);
-  virtual void set_pitch(float pitch);
-  virtual void set_position(const Vector& position);
-  virtual void set_velocity(const Vector& position);
-  virtual void set_reference_distance(float distance);
+  virtual void set_looping(bool looping) override;
+  virtual void set_relative(bool relative) override;
+  virtual void set_gain(float gain) override;
+  virtual void set_pitch(float pitch) override;
+  virtual void set_position(const Vector& position) override;
+  virtual void set_velocity(const Vector& position) override;
+  virtual void set_reference_distance(float distance) override;
+  virtual void set_volume(float volume);
 
 protected:
   friend class SoundManager;
 
   ALuint source;
+  float m_gain;
+  float m_volume;
 
 private:
   OpenALSoundSource(const OpenALSoundSource&) = delete;

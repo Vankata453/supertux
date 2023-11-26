@@ -16,328 +16,343 @@
 
 #include "object/background.hpp"
 
-#include <iostream>
-#include <math.h>
-#include <stdexcept>
-
-#include "math/sizef.hpp"
-#include "scripting/squirrel_util.hpp"
+#include "editor/editor.hpp"
 #include "supertux/globals.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
-#include "util/log.hpp"
 #include "util/reader.hpp"
 #include "util/reader_mapping.hpp"
+#include "util/writer.hpp"
+#include "video/drawing_context.hpp"
+#include "video/surface.hpp"
 
 Background::Background() :
   ExposedObject<Background, scripting::Background>(this),
-  alignment(NO_ALIGNMENT),
-  layer(LAYER_BACKGROUND0),
-  imagefile_top(),
-  imagefile(),
-  imagefile_bottom(),
-  pos(),
-  speed(),
-  speed_y(),
-  scroll_speed(),
-  scroll_offset(),
-  image_top(),
-  image(),
-  image_bottom(),
-  has_pos_x(false),
-  has_pos_y(false)
+  m_alignment(NO_ALIGNMENT),
+  m_fill(false),
+  m_layer(LAYER_BACKGROUND0),
+  m_imagefile_top(),
+  m_imagefile(),
+  m_imagefile_bottom(),
+  m_pos(),
+  m_speed(),
+  m_scroll_speed(),
+  m_scroll_offset(),
+  m_image_top(),
+  m_image(),
+  m_image_bottom(),
+  m_has_pos_x(false),
+  m_has_pos_y(false),
+  m_blend(),
+  m_target(DrawingTarget::COLORMAP)
 {
 }
 
 Background::Background(const ReaderMapping& reader) :
+  GameObject(reader),
   ExposedObject<Background, scripting::Background>(this),
-  alignment(NO_ALIGNMENT),
-  layer(LAYER_BACKGROUND0),
-  imagefile_top(),
-  imagefile(),
-  imagefile_bottom(),
-  pos(),
-  speed(),
-  speed_y(),
-  scroll_speed(),
-  scroll_offset(),
-  image_top(),
-  image(),
-  image_bottom(),
-  has_pos_x(false),
-  has_pos_y(false)
+  m_alignment(NO_ALIGNMENT),
+  m_fill(false),
+  m_layer(LAYER_BACKGROUND0),
+  m_imagefile_top(),
+  m_imagefile(),
+  m_imagefile_bottom(),
+  m_pos(),
+  m_speed(),
+  m_scroll_speed(),
+  m_scroll_offset(),
+  m_image_top(),
+  m_image(),
+  m_image_bottom(),
+  m_has_pos_x(false),
+  m_has_pos_y(false),
+  m_blend(),
+  m_target(DrawingTarget::COLORMAP)
 {
   // read position, defaults to (0,0)
   float px = 0;
   float py = 0;
-  has_pos_x = reader.get("x", px);
-  has_pos_y = reader.get("y", py);
-  this->pos = Vector(px,py);
+  m_has_pos_x = reader.get("x", px);
+  m_has_pos_y = reader.get("y", py);
+  m_pos = Vector(px,py);
 
-  if (!reader.get("name", name)) name = "";
+  m_speed.x = 1.0;
+  m_speed.y = 1.0;
 
-  speed = 1.0;
-  speed_y = 1.0;
+  reader.get("fill", m_fill);
 
   std::string alignment_str;
   if (reader.get("alignment", alignment_str))
   {
     if (alignment_str == "left")
     {
-      alignment = LEFT_ALIGNMENT;
+      m_alignment = LEFT_ALIGNMENT;
     }
     else if (alignment_str == "right")
     {
-      alignment = RIGHT_ALIGNMENT;
+      m_alignment = RIGHT_ALIGNMENT;
     }
     else if (alignment_str == "top")
     {
-      alignment = TOP_ALIGNMENT;
+      m_alignment = TOP_ALIGNMENT;
     }
     else if (alignment_str == "bottom")
     {
-      alignment = BOTTOM_ALIGNMENT;
+      m_alignment = BOTTOM_ALIGNMENT;
     }
     else if (alignment_str == "none")
     {
-      alignment = NO_ALIGNMENT;
+      m_alignment = NO_ALIGNMENT;
     }
     else
     {
       log_warning << "Background: invalid alignment: '" << alignment_str << "'" << std::endl;
-      alignment = NO_ALIGNMENT;
+      m_alignment = NO_ALIGNMENT;
     }
   }
 
-  if (!reader.get("scroll-offset-x", scroll_offset.x)) scroll_offset.x = 0;
-  if (!reader.get("scroll-offset-y", scroll_offset.y)) scroll_offset.y = 0;
+  reader.get("scroll-offset-x", m_scroll_offset.x, 0.0f);
+  reader.get("scroll-offset-y", m_scroll_offset.y, 0.0f);
 
-  if (!reader.get("scroll-speed-x", scroll_speed.x)) scroll_speed.x = 0.5;
-  if (!reader.get("scroll-speed-y", scroll_speed.y)) scroll_speed.y = 0.5;
+  reader.get("scroll-speed-x", m_scroll_speed.x, 0.5f);
+  reader.get("scroll-speed-y", m_scroll_speed.y, 0.5f);
 
-  layer = reader_get_layer (reader, /* default = */ LAYER_BACKGROUND0);
+  m_layer = reader_get_layer (reader, /* default = */ LAYER_BACKGROUND0);
 
-  if (!reader.get("image", imagefile)) imagefile = "images/background/transparent_up.png";
-  if (!reader.get("speed", speed)) speed = 0.5;
+  reader.get("image", m_imagefile, "images/background/transparent_up.png");
 
-  set_image(imagefile, speed);
-  if (!reader.get("speed-y", speed_y))
+  if(!reader.get("speed-x", m_speed.x))
   {
-    speed_y = speed;
+    // for backward compatibilty
+    reader.get("speed", m_speed.x, 0.5f);
+  };
+
+  set_image(m_imagefile, m_speed.x);
+  reader.get("speed-y", m_speed.y, m_speed.x);
+
+  if (reader.get("image-top", m_imagefile_top)) {
+    m_image_top = Surface::from_file(m_imagefile_top);
+  } else {
+    if (!Editor::is_active()) {
+      m_imagefile_top = m_imagefile;
+    }
   }
 
-  if (reader.get("image-top", imagefile_top)) {
-    image_top = Surface::create(imagefile_top);
-  } else {
-    imagefile_top = imagefile;
+  if (reader.get("image-bottom", m_imagefile_bottom)) {
+    m_image_bottom = Surface::from_file(m_imagefile_bottom);
+    } else {
+    if (!Editor::is_active()) {
+      m_imagefile_bottom = m_imagefile;
+    }
   }
 
-  if (reader.get("image-bottom", imagefile_bottom)) {
-    image_bottom = Surface::create(imagefile_bottom);
-  } else {
-    imagefile_bottom = imagefile;
-  }
+  reader.get_custom("blend", m_blend, Blend_from_string);
+  reader.get_custom("target", m_target, DrawingTarget_from_string);
 }
 
 Background::~Background()
 {
 }
 
-void
-Background::save(Writer& writer) {
-  GameObject::save(writer);
-  switch (alignment) {
-    case LEFT_ALIGNMENT:   writer.write("alignment", "left",   false); break;
-    case RIGHT_ALIGNMENT:  writer.write("alignment", "right",  false); break;
-    case TOP_ALIGNMENT:    writer.write("alignment", "top",    false); break;
-    case BOTTOM_ALIGNMENT: writer.write("alignment", "bottom", false); break;
-    case NO_ALIGNMENT: break;
-  }
-
-  if (speed_y != speed) {
-    writer.write("speed_y", speed_y);
-  }
-}
-
 ObjectSettings
-Background::get_settings() {
+Background::get_settings()
+{
   ObjectSettings result = GameObject::get_settings();
-  result.options.push_back( ObjectOption(MN_INTFIELD, _("Z-pos"), &layer, "z-pos"));
-  ObjectOption align(MN_STRINGSELECT, _("Alignment"), &alignment);
-  align.select.push_back(_("none"));
-  align.select.push_back(_("left"));
-  align.select.push_back(_("right"));
-  align.select.push_back(_("top"));
-  align.select.push_back(_("bottom"));
-  result.options.push_back(align);
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Scroll offset x"),
-                                         &scroll_offset.x, "scroll-offset-x"));
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Scroll offset y"),
-                                         &scroll_offset.y, "scroll-offset-y"));
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Scroll speed x"),
-                                         &scroll_speed.x, "scroll-speed-x"));
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Scroll speed y"),
-                                         &scroll_speed.y, "scroll-speed-y"));
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Speed x"), &speed, "speed"));
-  result.options.push_back( ObjectOption(MN_NUMFIELD, _("Speed y"), &speed_y));
 
-  ObjectOption img(MN_FILE, _("Top image"), &imagefile_top, "image-top", true, false);
-  img.select.push_back(".png");
-  img.select.push_back(".jpg");
-  img.select.push_back(".gif");
-  img.select.push_back(".bmp");
-  result.options.push_back(img);
-  ObjectOption img2(MN_FILE, _("Image"), &imagefile, "image");
-  img2.select = img.select;
-  ObjectOption img3(MN_FILE, _("Bottom image"), &imagefile_bottom, "image-bottom", true, false);
-  img3.select = img.select;
-  result.options.push_back(img2);
-  result.options.push_back(img3);
+  result.add_float(_("X"), &m_pos.x, "x", 0.0f, OPTION_HIDDEN);
+  result.add_float(_("Y"), &m_pos.y, "y", 0.0f, OPTION_HIDDEN);
 
-  result.options.push_back( ObjectOption(MN_REMOVE, "", NULL));
+  result.add_bool(_("Fill"), &m_fill, "fill", false);
+  result.add_int(_("Z-pos"), &m_layer, "z-pos", LAYER_BACKGROUND0);
+  result.add_enum(_("Alignment"), reinterpret_cast<int*>(&m_alignment),
+                  {_("none"), _("left"), _("right"), _("top"), _("bottom")},
+                  {"none", "left", "right", "top", "bottom"},
+                  static_cast<int>(NO_ALIGNMENT), "alignment");
+  result.add_float(_("Scroll offset x"), &m_scroll_offset.x, "scroll-offset-x", 0.0f);
+  result.add_float(_("Scroll offset y"), &m_scroll_offset.y, "scroll-offset-y", 0.0f);
+  result.add_float(_("Scroll speed x"), &m_scroll_speed.x, "scroll-speed-x", 0.5f);
+  result.add_float(_("Scroll speed y"), &m_scroll_speed.y, "scroll-speed-y", 0.5f);
+  result.add_float(_("Speed x"), &m_speed.x, "speed", boost::none);
+  result.add_float(_("Speed y"), &m_speed.y, "speed-y", m_speed.x);
+  result.add_surface(_("Top image"), &m_imagefile_top, "image-top", std::string());
+  result.add_surface(_("Image"), &m_imagefile, "image");
+  result.add_surface(_("Bottom image"), &m_imagefile_bottom, "image-bottom", std::string());
+  result.add_enum(_("Draw target"), reinterpret_cast<int*>(&m_target),
+                  {_("Normal"), _("Lightmap")},
+                  {"normal", "lightmap"},
+                  static_cast<int>(DrawingTarget::COLORMAP),
+                  "target");
+
+  result.reorder({"x", "y", "alignment", "scroll-speed-x", "scroll-speed-y", "speed", "speed-y", "fill", "target", "image-top", "image", "image-bottom", "z-pos"});
+
+  result.add_remove();
+
   return result;
 }
 
 void
 Background::after_editor_set()
 {
-  image_top = Surface::create(imagefile_top);
-  image = Surface::create(imagefile);
-  image_bottom = Surface::create(imagefile_bottom);
+  m_image_top = Surface::from_file(m_imagefile_top);
+  m_image = Surface::from_file(m_imagefile);
+  m_image_bottom = Surface::from_file(m_imagefile_bottom);
 }
 
 void
-Background::update(float delta)
+Background::update(float dt_sec)
 {
-  scroll_offset += scroll_speed * delta;
+  m_scroll_offset += m_scroll_speed * dt_sec;
 }
 
 void
 Background::set_image(const std::string& name_)
 {
-  this->imagefile = name_;
-  image = Surface::create(name_);
-  imagefile = name_;
+  m_imagefile = name_;
+  m_image = Surface::from_file(name_);
+  m_imagefile = name_;
 }
 
 void
-Background::set_image(const std::string& name_, float speed_)
+Background::set_image(const std::string& name, float speed)
 {
-  this->speed = speed_;
-  set_image(name_);
+  m_speed.x = speed;
+  set_image(name);
 }
 
 void
 Background::set_images(const std::string& name_top_, const std::string& name_middle_,
                        const std::string& name_bottom_)
 {
-  image_top = Surface::create(name_top_);
-  imagefile_top = name_top_;
+  m_image_top = Surface::from_file(name_top_);
+  m_imagefile_top = name_top_;
 
-  image = Surface::create(name_middle_);
-  imagefile = name_middle_;
+  m_image = Surface::from_file(name_middle_);
+  m_imagefile = name_middle_;
 
-  image_bottom = Surface::create(name_bottom_);
-  imagefile_bottom = name_bottom_;
+  m_image_bottom = Surface::from_file(name_bottom_);
+  m_imagefile_bottom = name_bottom_;
 }
 
 void
-Background::set_speed(float speed_)
+Background::set_speed(float speed)
 {
-  speed = speed_;
+  m_speed.x = speed;
 }
 
 void
 Background::draw_image(DrawingContext& context, const Vector& pos_)
 {
-  Sizef level(Sector::current()->get_width(), Sector::current()->get_height());
-  Sizef screen(SCREEN_WIDTH, SCREEN_HEIGHT);
-  Sizef parallax_image_size = (1.0f - speed) * screen + level * speed;
-  Rectf cliprect = context.get_cliprect();
+  const Sizef level(Sector::get().get_width(), Sector::get().get_height());
+  const Sizef screen(static_cast<float>(context.get_width()),
+                     static_cast<float>(context.get_height()));
+  const Sizef parallax_image_size = (1.0f - m_speed.x) * screen + level * m_speed.x;
 
-  int start_x = static_cast<int>(floorf((cliprect.get_left()  - (pos_.x - image->get_width() /2.0f)) / image->get_width()));
-  int end_x   = static_cast<int>(ceilf((cliprect.get_right()  - (pos_.x + image->get_width() /2.0f)) / image->get_width()))+1;
-  int start_y = static_cast<int>(floorf((cliprect.get_top()   - (pos_.y - image->get_height()/2.0f)) / image->get_height()));
-  int end_y   = static_cast<int>(ceilf((cliprect.get_bottom() - (pos_.y + image->get_height()/2.0f)) / image->get_height()))+1;
+  const Rectf cliprect = context.get_cliprect();
+  const float img_w = static_cast<float>(m_image->get_width());
+  const float img_h = static_cast<float>(m_image->get_height());
 
-  switch(alignment)
+  const float img_w_2 = img_w / 2.0f;
+  const float img_h_2 = img_h / 2.0f;
+
+  const int start_x = static_cast<int>(floorf((cliprect.get_left() - (pos_.x - img_w /2.0f)) / img_w));
+  const int end_x   = static_cast<int>(ceilf((cliprect.get_right() - (pos_.x + img_w /2.0f)) / img_w)) + 1;
+  const int start_y = static_cast<int>(floorf((cliprect.get_top() - (pos_.y - img_h/2.0f)) / img_h));
+  const int end_y   = static_cast<int>(ceilf((cliprect.get_bottom() - (pos_.y + img_h/2.0f)) / img_h)) + 1;
+
+  Canvas& canvas = context.get_canvas(m_target);
+
+  if (m_fill)
   {
-    case LEFT_ALIGNMENT:
-      for(int y = start_y; y < end_y; ++y)
-      {
-        Vector p(pos_.x - parallax_image_size.width / 2.0f,
-                 pos_.y + y * image->get_height()  - image->get_height() / 2.0f);
-        context.draw_surface(image, p, layer);
-      }
-      break;
-
-    case RIGHT_ALIGNMENT:
-      for(int y = start_y; y < end_y; ++y)
-      {
-        Vector p(pos_.x + parallax_image_size.width / 2.0f - image->get_width(),
-                 pos_.y + y * image->get_height() - image->get_height() / 2.0f);
-        context.draw_surface(image, p, layer);
-      }
-      break;
-
-    case TOP_ALIGNMENT:
-      for(int x = start_x; x < end_x; ++x)
-      {
-        Vector p(pos_.x + x * image->get_width() - image->get_width() / 2.0f,
-                 pos_.y - parallax_image_size.height / 2.0f);
-        context.draw_surface(image, p, layer);
-      }
-      break;
-
-    case BOTTOM_ALIGNMENT:
-      for(int x = start_x; x < end_x; ++x)
-      {
-        Vector p(pos_.x + x * image->get_width()  - image->get_width() / 2.0f,
-                 pos_.y - image->get_height() + parallax_image_size.height / 2.0f);
-        context.draw_surface(image, p, layer);
-      }
-      break;
-
-    case NO_ALIGNMENT:
-      for(int y = start_y; y < end_y; ++y)
-        for(int x = start_x; x < end_x; ++x)
+    Rectf dstrect(Vector(pos_.x - static_cast<float>(context.get_width()) / 2.0f,
+                         pos_.y - static_cast<float>(context.get_height()) / 2.0f),
+                  Sizef(static_cast<float>(context.get_width()),
+                        static_cast<float>(context.get_height())));
+    canvas.draw_surface_scaled(m_image, dstrect, m_layer);
+  }
+  else
+  {
+    switch (m_alignment)
+    {
+      case LEFT_ALIGNMENT:
+        for (int y = start_y; y < end_y; ++y)
         {
-          Vector p(pos_.x + x * image->get_width()  - image->get_width()/2,
-                   pos_.y + y * image->get_height() - image->get_height()/2);
-
-          if (image_top.get() != NULL && (y < 0))
-          {
-            context.draw_surface(image_top, p, layer);
-          }
-          else if (image_bottom.get() != NULL && (y > 0))
-          {
-            context.draw_surface(image_bottom, p, layer);
-          }
-          else
-          {
-            context.draw_surface(image, p, layer);
-          }
+          Vector p(pos_.x - parallax_image_size.width / 2.0f,
+                   pos_.y + static_cast<float>(y) * img_h - img_h_2);
+          canvas.draw_surface(m_image, p, m_layer);
         }
-      break;
+        break;
+
+      case RIGHT_ALIGNMENT:
+        for (int y = start_y; y < end_y; ++y)
+        {
+          Vector p(pos_.x + parallax_image_size.width / 2.0f - img_w,
+                   pos_.y + static_cast<float>(y) * img_h - img_h_2);
+          canvas.draw_surface(m_image, p, m_layer);
+        }
+        break;
+
+      case TOP_ALIGNMENT:
+        for (int x = start_x; x < end_x; ++x)
+        {
+          Vector p(pos_.x + static_cast<float>(x) * img_w - img_w_2,
+                   pos_.y - parallax_image_size.height / 2.0f);
+          canvas.draw_surface(m_image, p, m_layer);
+        }
+        break;
+
+      case BOTTOM_ALIGNMENT:
+        for (int x = start_x; x < end_x; ++x)
+        {
+          Vector p(pos_.x + static_cast<float>(x) * img_w - img_w_2,
+                   pos_.y - img_h + parallax_image_size.height / 2.0f);
+          canvas.draw_surface(m_image, p, m_layer);
+        }
+        break;
+
+      case NO_ALIGNMENT:
+        for (int y = start_y; y < end_y; ++y)
+          for (int x = start_x; x < end_x; ++x)
+          {
+            Vector p(pos_.x + static_cast<float>(x) * img_w - img_w_2,
+                     pos_.y + static_cast<float>(y) * img_h - img_h_2);
+
+            if (m_image_top.get() != nullptr && (y < 0))
+            {
+              canvas.draw_surface(m_image_top, p, m_layer);
+            }
+            else if (m_image_bottom.get() != nullptr && (y > 0))
+            {
+              canvas.draw_surface(m_image_bottom, p, m_layer);
+            }
+            else
+            {
+              canvas.draw_surface(m_image, p, m_layer);
+            }
+          }
+        break;
+    }
   }
 }
 
 void
 Background::draw(DrawingContext& context)
 {
-  if(image.get() == NULL)
+  if (Editor::is_active() && !EditorOverlayWidget::render_background)
     return;
 
-  Sizef level_size(Sector::current()->get_width(),
-                   Sector::current()->get_height());
-  Sizef screen(SCREEN_WIDTH, SCREEN_HEIGHT);
+  if (m_image.get() == nullptr)
+    return;
+
+  Sizef level_size(Sector::get().get_width(),
+                   Sector::get().get_height());
+  Sizef screen(static_cast<float>(context.get_width()),
+               static_cast<float>(context.get_height()));
   Sizef translation_range = level_size - screen;
   Vector center_offset(context.get_translation().x - translation_range.width  / 2.0f,
                        context.get_translation().y - translation_range.height / 2.0f);
 
-  float px = has_pos_x ? pos.x : level_size.width/2;
-  float py = has_pos_y ? pos.y : level_size.height/2;
-  draw_image(context, Vector(px, py) + center_offset * (1.0f - speed));
+  float px = m_has_pos_x ? m_pos.x : level_size.width/2;
+  float py = m_has_pos_y ? m_pos.y : level_size.height/2;
+  draw_image(context, Vector(px, py) + center_offset * (1.0f - m_speed.x));
 }
 
 /* EOF */

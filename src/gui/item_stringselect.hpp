@@ -17,32 +17,40 @@
 #ifndef HEADER_SUPERTUX_GUI_ITEM_STRINGSELECT_HPP
 #define HEADER_SUPERTUX_GUI_ITEM_STRINGSELECT_HPP
 
-#include <list>
-#include <memory>
-#include <SDL.h>
+#include <functional>
 
 #include "gui/menu_item.hpp"
 
-class ItemStringSelect : public MenuItem
+class ItemStringSelect final : public MenuItem
 {
-  public:
-    ItemStringSelect(const std::string& text_, const std::vector<std::string>& list_, int* selected_, int _id = -1);
+public:
+  ItemStringSelect(const std::string& text, const std::vector<std::string>& list_, int* selected_, int id = -1);
 
-    /** Draws the menu item. */
-    virtual void draw(DrawingContext&, Vector pos, int menu_width, bool active);
+  /** Draws the menu item. */
+  virtual void draw(DrawingContext&, const Vector& pos, int menu_width, bool active) override;
 
-    /** Returns the minimum width of the menu item. */
-    virtual int get_width() const;
+  /** Returns the minimum width of the menu item. */
+  virtual int get_width() const override;
 
-    /** Processes the menu action. */
-    virtual void process_action(MenuAction action);
+  /** Processes the menu action. */
+  virtual void process_action(const MenuAction& action) override;
 
-    std::vector<std::string> list; // list of values for a STRINGSELECT item
-    int* selected; // currently selected item
+  virtual bool changes_width() const override {
+    return true;
+  }
 
-  private:
-    ItemStringSelect(const ItemStringSelect&);
-    ItemStringSelect& operator=(const ItemStringSelect&);
+  void set_callback(const std::function<void(int)>& callback) {
+    m_callback = callback;
+  }
+
+  std::vector<std::string> list; // list of values for a STRINGSELECT item
+  int* selected; // currently selected item
+private:
+  std::function<void(int)> m_callback;
+
+private:
+  ItemStringSelect(const ItemStringSelect&) = delete;
+  ItemStringSelect& operator=(const ItemStringSelect&) = delete;
 };
 
 #endif

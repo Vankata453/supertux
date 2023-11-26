@@ -19,29 +19,26 @@
 
 #include "badguy/badguy.hpp"
 
-class Kugelblitz : public BadGuy
+class Kugelblitz final : public BadGuy
 {
 public:
   Kugelblitz(const ReaderMapping& reader);
 
-  void initialize();
-  HitResponse collision_badguy(BadGuy& other, const CollisionHit& hit);
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision_player(Player& player, const CollisionHit& hit);
+  virtual void initialize() override;
+  virtual HitResponse collision_badguy(BadGuy& other, const CollisionHit& hit) override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_player(Player& player, const CollisionHit& hit) override;
 
-  void active_update(float);
-  void kill_fall();
+  virtual void active_update(float) override;
+  virtual void kill_fall() override;
+
+  virtual bool is_flammable() const override;
+
+  virtual void draw(DrawingContext& context) override;
+  virtual std::string get_class() const override { return "kugelblitz"; }
+  virtual std::string get_display_name() const override { return _("Kugelblitz"); }
+
   void explode();
-
-  bool is_flammable() const;
-
-  virtual void draw(DrawingContext& context);
-  std::string get_class() const {
-    return "kugelblitz";
-  }
-  std::string get_display_name() const {
-    return _("Kugelblitz");
-  }
 
 private:
   void try_activate();
@@ -54,8 +51,11 @@ private:
   Timer movement_timer;
   Timer lifetime;
   int direction;
-  Color light;
   SpritePtr lightsprite;
+
+private:
+  Kugelblitz(const Kugelblitz&) = delete;
+  Kugelblitz& operator=(const Kugelblitz&) = delete;
 };
 
 #endif

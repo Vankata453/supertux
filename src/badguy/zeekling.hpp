@@ -20,28 +20,24 @@
 
 #include "badguy/badguy.hpp"
 
-class Zeekling : public BadGuy
+class Zeekling final : public BadGuy
 {
 public:
   Zeekling(const ReaderMapping& reader);
-  Zeekling(const Vector& pos, Direction d);
 
-  void initialize();
-  void collision_solid(const CollisionHit& hit);
-  void active_update(float elapsed_time);
+  virtual void initialize() override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual void active_update(float dt_sec) override;
 
-  void freeze();
-  void unfreeze();
-  bool is_freezable() const;
-  std::string get_class() const {
-    return "zeekling";
-  }
-  std::string get_display_name() const {
-    return _("Zeekling");
-  }
+  virtual void freeze() override;
+  virtual void unfreeze() override;
+  virtual bool is_freezable() const override;
+  virtual std::string get_class() const override { return "zeekling"; }
+  virtual std::string get_display_name() const override { return _("Zeekling"); }
 
 private:
-  bool collision_squished(GameObject& object);
+  virtual bool collision_squished(GameObject& object) override;
+
   bool should_we_dive();
   void onBumpHorizontal();
   void onBumpVertical();
@@ -62,8 +58,8 @@ private:
   Vector last_self_pos; /**< position we last were at */
 
 private:
-  Zeekling(const Zeekling&);
-  Zeekling& operator=(const Zeekling&);
+  Zeekling(const Zeekling&) = delete;
+  Zeekling& operator=(const Zeekling&) = delete;
 };
 
 #endif

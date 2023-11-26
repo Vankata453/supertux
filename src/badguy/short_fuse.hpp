@@ -20,26 +20,28 @@
 
 #include "badguy/walking_badguy.hpp"
 
-class ShortFuse : public WalkingBadguy
+class ShortFuse final : public WalkingBadguy
 {
 public:
   ShortFuse(const ReaderMapping& reader);
-  std::string get_class() const {
-    return "short_fuse";
-  }
-  std::string get_display_name() const {
-    return _("Short fuse");
-  }
+
+  virtual std::string get_class() const override { return "short_fuse"; }
+  virtual std::string get_display_name() const override { return _("Short fuse"); }
 
 protected:
-  HitResponse collision_player (Player& player, const CollisionHit& hit);
-  HitResponse collision_bullet (Bullet& bullet, const CollisionHit& );
-  bool collision_squished (GameObject& object);
-  void kill_fall();
-  void ignite();
+  virtual HitResponse collision_player (Player& player, const CollisionHit& hit) override;
+  virtual HitResponse collision_bullet (Bullet& bullet, const CollisionHit& ) override;
+  virtual bool collision_squished (GameObject& object) override;
+  virtual void kill_fall() override;
+  virtual void ignite() override;
+
   void explode();
+
+private:
+  ShortFuse(const ShortFuse&) = delete;
+  ShortFuse& operator=(const ShortFuse&) = delete;
 };
 
-#endif /* HEADER_SUPERTUX_BADGUY_SHORT_FUSE_HPP */
+#endif
 
 /* EOF */

@@ -19,25 +19,22 @@
 
 #include "supertux/game_object.hpp"
 #include "scripting/display_effect.hpp"
-#include "scripting/exposed_object.hpp"
+#include "squirrel/exposed_object.hpp"
 
-class DisplayEffect : public GameObject,
+class DisplayEffect final : public GameObject,
                       public ExposedObject<DisplayEffect, scripting::DisplayEffect>
 {
 public:
   DisplayEffect(const std::string& name = std::string());
   virtual ~DisplayEffect();
 
-  void update(float elapsed_time);
-  void draw(DrawingContext& context);
-  virtual bool do_save() const {
-    return false;
-  }
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual bool is_singleton() const override { return true; }
+  virtual bool is_saveable() const override { return false; }
 
-  /**
-   * @name Scriptable Methods
-   * @{
-   */
+  /** @name Scriptable Methods
+      @{ */
 
   void fade_out(float fadetime);
   void fade_in(float fadetime);
@@ -46,14 +43,14 @@ public:
   void sixteen_to_nine(float fadetime);
   void four_to_three(float fadetime);
 
-  /**
-   * @}
-   */
+  /** @} */
 
 private:
   enum FadeType {
     NO_FADE, FADE_IN, FADE_OUT
   };
+
+private:
   FadeType screen_fade;
   float screen_fadetime;
   float screen_fading;
@@ -64,6 +61,10 @@ private:
 
   bool black;
   bool borders;
+
+private:
+  DisplayEffect(const DisplayEffect&) = delete;
+  DisplayEffect& operator=(const DisplayEffect&) = delete;
 };
 
 #endif

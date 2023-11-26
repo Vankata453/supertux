@@ -14,15 +14,16 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "audio/sound_manager.hpp"
 #include "badguy/mole.hpp"
-#include "badguy/mole_rock.hpp"
-#include "math/random_generator.hpp"
-#include "sprite/sprite.hpp"
-#include "supertux/object_factory.hpp"
-#include "supertux/sector.hpp"
 
 #include <math.h>
+
+#include "audio/sound_manager.hpp"
+#include "badguy/mole_rock.hpp"
+#include "math/random.hpp"
+#include "math/util.hpp"
+#include "sprite/sprite.hpp"
+#include "supertux/sector.hpp"
 
 static const float MOLE_WAIT_TIME = 0.2f; /**< time to wait before and after throwing */
 static const float THROW_TIME = 4.6f; /**< time to spend throwing */
@@ -35,19 +36,7 @@ Mole::Mole(const ReaderMapping& reader) :
   timer(),
   throw_timer()
 {
-  physic.enable_gravity(false);
-  SoundManager::current()->preload("sounds/fall.wav");
-  SoundManager::current()->preload("sounds/squish.wav");
-  SoundManager::current()->preload("sounds/dartfire.wav");
-}
-
-Mole::Mole(const Vector& pos) :
-  BadGuy(pos, "images/creatures/mole/mole.sprite", LAYER_TILES-1),
-  state(PRE_THROWING),
-  timer(),
-  throw_timer()
-{
-  physic.enable_gravity(false);
+  m_physic.enable_gravity(false);
   SoundManager::current()->preload("sounds/fall.wav");
   SoundManager::current()->preload("sounds/squish.wav");
   SoundManager::current()->preload("sounds/dartfire.wav");
@@ -76,7 +65,7 @@ Mole::collision_badguy(BadGuy& , const CollisionHit& )
 bool
 Mole::collision_squished(GameObject& )
 {
-  if (frozen) {
+  if (m_frozen) {
     unfreeze();
   }
 
@@ -89,20 +78,20 @@ Mole::collision_squished(GameObject& )
 void
 Mole::throw_rock()
 {
-  float angle = gameRandom.rand(90 - 15, 90 + 15) * (M_PI / 180);
-  float vx = cos(angle) * THROW_VELOCITY;
-  float vy = -sin(angle) * THROW_VELOCITY;
+  float angle = math::radians(gameRandom.randf(90.0f - 15.0f, 90.0f + 15.0f));
+  float vx = cosf(angle) * THROW_VELOCITY;
+  float vy = -sinf(angle) * THROW_VELOCITY;
 
   SoundManager::current()->play("sounds/dartfire.wav", get_pos());
-  Sector::current()->add_object(std::make_shared<MoleRock>(bbox.get_middle(), Vector(vx, vy), this));
+  Sector::get().add<MoleRock>(m_col.m_bbox.get_middle(), Vector(vx, vy), this);
 }
 
 void
-Mole::active_update(float elapsed_time)
+Mole::active_update(float dt_sec)
 {
-  BadGuy::active_update(elapsed_time);
+  BadGuy::active_update(dt_sec);
 
-  if (frozen)
+  if (m_frozen)
     return;
 
   switch (state) {
@@ -126,12 +115,12 @@ Mole::active_update(float elapsed_time)
       }
       break;
     case PEEKING:
-      if (sprite->animation_done()) {
+      if (m_sprite->animation_done()) {
         set_state(PRE_THROWING);
       }
       break;
     case BURNING:
-      if (sprite->animation_done()) {
+      if (m_sprite->animation_done()) {
         set_state(DEAD);
       }
       break;
@@ -150,36 +139,36 @@ Mole::is_freezable() const
 void
 Mole::set_state(MoleState new_state)
 {
-  if (frozen)
+  if (m_frozen)
     return;
 
   switch (new_state) {
     case PRE_THROWING:
-      sprite->set_action("idle");
+      m_sprite->set_action("idle");
       set_colgroup_active(COLGROUP_DISABLED);
       timer.start(MOLE_WAIT_TIME);
       break;
     case THROWING:
-      sprite->set_action("idle");
+      m_sprite->set_action("idle");
       set_colgroup_active(COLGROUP_DISABLED);
       timer.start(THROW_TIME);
       throw_timer.start(THROW_INTERVAL);
       break;
     case POST_THROWING:
-      sprite->set_action("idle");
+      m_sprite->set_action("idle");
       set_colgroup_active(COLGROUP_DISABLED);
       timer.start(MOLE_WAIT_TIME);
       break;
     case PEEKING:
-      sprite->set_action("peeking", 1);
+      m_sprite->set_action("peeking", 1);
       set_colgroup_active(COLGROUP_STATIC);
       break;
     case DEAD:
-      sprite->set_action("idle");
+      m_sprite->set_action("idle");
       set_colgroup_active(COLGROUP_DISABLED);
       break;
     case BURNING:
-      sprite->set_action("burning", 1);
+      m_sprite->set_action("burning", 1);
       set_colgroup_active(COLGROUP_DISABLED);
       break;
   }

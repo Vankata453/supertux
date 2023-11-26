@@ -18,121 +18,130 @@
 
 #include "object/player.hpp"
 #include "object/portable.hpp"
-#include "supertux/object_factory.hpp"
 #include "supertux/sector.hpp"
+#include "util/reader_mapping.hpp"
 
-PneumaticPlatform::PneumaticPlatform(const ReaderMapping& reader) :
-  MovingSprite(reader, "images/objects/platforms/small.sprite", LAYER_OBJECTS, COLGROUP_STATIC),
-  master(0),
-  slave(0),
-  start_y(0),
-  offset_y(0),
-  speed_y(0),
-  contacts()
+PneumaticPlatformChild::PneumaticPlatformChild(const ReaderMapping& mapping, bool left, PneumaticPlatform& parent) :
+  MovingSprite(mapping, "images/objects/platforms/small.sprite", LAYER_OBJECTS, COLGROUP_STATIC),
+  m_parent(parent),
+  m_left(left),
+  m_contacts()
 {
-  start_y = get_pos().y;
+  if (!m_left) {
+    set_pos(get_pos() + Vector(get_bbox().get_width(), 0));
+  }
 }
 
-PneumaticPlatform::PneumaticPlatform(PneumaticPlatform* master_) :
-  MovingSprite(*master_),
-  master(master_),
-  slave(this),
-  start_y(master_->start_y),
-  offset_y(-master_->offset_y),
-  speed_y(0),
-  contacts()
+PneumaticPlatformChild::~PneumaticPlatformChild()
 {
-  set_pos(get_pos() + Vector(master->get_bbox().get_width(), 0));
-  master->master = master;
-  master->slave = this;
+}
+
+void
+PneumaticPlatformChild::update(float dt_sec)
+{
+  const float offset_y = m_left ? m_parent.m_offset_y : -m_parent.m_offset_y;
+  m_col.m_movement = Vector(0, (m_parent.m_start_y + offset_y) - get_pos().y);
+}
+
+HitResponse
+PneumaticPlatformChild::collision(GameObject& other, const CollisionHit& )
+{
+  // somehow the hit parameter does not get filled in, so to determine (hit.top == true) we do this:
+  auto mo = dynamic_cast<MovingObject*>(&other);
+  if (!mo) return FORCE_MOVE;
+  if ((mo->get_bbox().get_bottom()) > (m_col.m_bbox.get_top() + 2)) return FORCE_MOVE;
+
+  auto pl = dynamic_cast<Player*>(mo);
+  if (pl) {
+    if (pl->is_big()) m_contacts.insert(nullptr);
+    auto po = pl->get_grabbed_object();
+    auto pomo = dynamic_cast<MovingObject*>(po);
+    if (pomo) m_contacts.insert(pomo);
+  }
+
+  m_contacts.insert(&other);
+  return FORCE_MOVE;
+}
+
+PneumaticPlatform::PneumaticPlatform(const ReaderMapping& mapping) :
+  GameObject(mapping),
+  m_pos(),
+  m_sprite_name(),
+  m_start_y(),
+  m_speed_y(0),
+  m_offset_y(0),
+  m_children()
+{
+  mapping.get("x", m_pos.x);
+  mapping.get("y", m_pos.y);
+  mapping.get("sprite", m_sprite_name);
+
+  m_children.push_back(&d_sector->add<PneumaticPlatformChild>(mapping, true, *this));
+  m_children.push_back(&d_sector->add<PneumaticPlatformChild>(mapping, false, *this));
+
+  m_start_y = m_children[0]->get_pos().y;
 }
 
 PneumaticPlatform::~PneumaticPlatform()
 {
-  if ((this == master) && (master)) {
-    slave->master = 0;
-    slave->slave = 0;
-  }
-  if ((master) && (this == slave)) {
-    master->master = 0;
-    master->slave = 0;
-  }
-  master = 0;
-  slave = 0;
 }
 
-HitResponse
-PneumaticPlatform::collision(GameObject& other, const CollisionHit& )
+void
+PneumaticPlatform::draw(DrawingContext& context)
 {
-
-  // somehow the hit parameter does not get filled in, so to determine (hit.top == true) we do this:
-  auto mo = dynamic_cast<MovingObject*>(&other);
-  if (!mo) return FORCE_MOVE;
-  if ((mo->get_bbox().p2.y) > (bbox.p1.y + 2)) return FORCE_MOVE;
-
-  auto pl = dynamic_cast<Player*>(mo);
-  if (pl) {
-    if (pl->is_big()) contacts.insert(0);
-    auto po = pl->get_grabbed_object();
-    auto pomo = dynamic_cast<MovingObject*>(po);
-    if (pomo) contacts.insert(pomo);
-  }
-
-  contacts.insert(&other);
-  return FORCE_MOVE;
 }
 
 void
-PneumaticPlatform::update(float elapsed_time)
+PneumaticPlatform::update(float dt_sec)
 {
-  if (!slave) {
-    Sector::current()->add_object(std::make_shared<PneumaticPlatform>(this));
-    return;
+  const int contact_diff = static_cast<int>(m_children[0]->m_contacts.size()) - static_cast<int>(m_children[1]->m_contacts.size());
+  for (auto& child : m_children) {
+    child->m_contacts.clear();
   }
-  if (!master) {
-    return;
-  }
-  if (this == slave) {
-    offset_y = -master->offset_y;
-    movement = Vector(0, (start_y + offset_y) - get_pos().y);
-  }
-  if (this == master) {
-    int contact_diff = contacts.size() - slave->contacts.size();
-    contacts.clear();
-    slave->contacts.clear();
 
-    speed_y += ((float)contact_diff * elapsed_time) * 12.8f;
-    speed_y -= (offset_y * elapsed_time * 0.05f);
-    speed_y *= 1 - elapsed_time;
-    offset_y += speed_y * elapsed_time * Sector::current()->get_gravity();
-    if (offset_y < -256) { offset_y = -256; speed_y = 0; }
-    if (offset_y > 256) { offset_y = 256; speed_y = -0; }
-    movement = Vector(0, (start_y + offset_y) - get_pos().y);
+  const float gravity = Sector::get().get_gravity();
+
+  m_speed_y += (static_cast<float>(contact_diff) * dt_sec) * 12.8f;
+  m_speed_y -= (m_offset_y * dt_sec * 0.05f);
+  m_speed_y *= 1 - dt_sec;
+
+  m_offset_y += m_speed_y * dt_sec * gravity;
+
+  if (m_offset_y < -256) {
+    m_offset_y = -256;
+    m_speed_y = 0;
+  }
+
+  if (m_offset_y > 256) {
+    m_offset_y = 256;
+    m_speed_y = -0;
   }
 }
 
 void
-PneumaticPlatform::move_to(const Vector& pos) {
-  Vector shift = pos - bbox.p1;
-  if (this == slave) {
-    master->set_pos(master->get_pos() + shift);
-  } else if (this == master) {
-    slave->set_pos(slave->get_pos() + shift);
+PneumaticPlatform::editor_delete()
+{
+  for (auto& child : m_children) {
+    child->remove_me();
   }
-  MovingObject::move_to(pos);
-  start_y += shift.y;
+}
+
+ObjectSettings
+PneumaticPlatform::get_settings()
+{
+  ObjectSettings result = GameObject::get_settings();
+
+  result.add_sprite(_("Sprite"), &m_sprite_name, "sprite", std::string("images/objects/platforms/small.sprite"));
+  result.add_float(_("X"), &m_pos.x, "x", 0.0f, OPTION_HIDDEN);
+  result.add_float(_("Y"), &m_pos.y, "y", 0.0f, OPTION_HIDDEN);
+
+  return result;
 }
 
 void
-PneumaticPlatform::editor_delete() {
-  master->remove_me();
-  slave->remove_me();
-}
-
-void
-PneumaticPlatform::after_editor_set() {
-  MovingSprite::after_editor_set();
-  slave->change_sprite(sprite_name);
+PneumaticPlatform::after_editor_set()
+{
+  GameObject::after_editor_set();
 }
 
 /* EOF */

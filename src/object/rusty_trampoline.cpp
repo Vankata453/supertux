@@ -15,14 +15,13 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "object/rusty_trampoline.hpp"
+
 #include "audio/sound_manager.hpp"
 #include "badguy/walking_badguy.hpp"
 #include "control/controller.hpp"
 #include "object/player.hpp"
-#include "object/rusty_trampoline.hpp"
 #include "sprite/sprite.hpp"
-#include "sprite/sprite_manager.hpp"
-#include "supertux/object_factory.hpp"
 #include "util/reader_mapping.hpp"
 
 /* Trampoline will accelerate player to to VY_BOUNCE, if
@@ -33,43 +32,56 @@ const float VY_TRIGGER = -900; //negative, upwards
 const float VY_BOUNCE = -500;
 }
 
-RustyTrampoline::RustyTrampoline(const ReaderMapping& lisp) :
-  Rock(lisp, "images/objects/rusty-trampoline/rusty-trampoline.sprite"),
+RustyTrampoline::RustyTrampoline(const ReaderMapping& mapping) :
+  Rock(mapping, "images/objects/rusty-trampoline/rusty-trampoline.sprite"),
   portable(true), counter(3)
 {
   SoundManager::current()->preload(BOUNCE_SOUND);
 
-  lisp.get("counter", counter);
-  lisp.get("portable", portable); //do we really need this?
+  mapping.get("counter", counter);
+  mapping.get("portable", portable); //do we really need this?
 }
 
 void
-RustyTrampoline::update(float elapsed_time)
+RustyTrampoline::update(float dt_sec)
 {
-  if(sprite->animation_done()) {
+  if (m_sprite->animation_done()) {
     if (counter < 1) {
       remove_me();
     } else {
-      sprite->set_action("normal");
+      m_sprite->set_action("normal");
     }
 
   }
 
-  Rock::update(elapsed_time);
+  Rock::update(dt_sec);
+}
+
+ObjectSettings
+RustyTrampoline::get_settings()
+{
+  ObjectSettings result = Rock::get_settings();
+
+  result.add_int(_("Counter"), &counter, "counter", 3);
+  result.add_bool(_("Portable"), &portable, "portable", true);
+
+  result.reorder({"counter", "x", "y"});
+
+  return result;
 }
 
 HitResponse
 RustyTrampoline::collision(GameObject& other, const CollisionHit& hit)
 {
   //Trampoline has to be on ground to work.
-  if(on_ground) {
+  if (on_ground) {
     auto player = dynamic_cast<Player*> (&other);
     //Trampoline works for player
-    if(player) {
+    if (player) {
       float vy = player->get_physic().get_velocity_y();
       //player is falling down on trampoline
-      if(hit.top && vy >= 0) {
-        if(player->get_controller()->hold(Controller::JUMP)) {
+      if (hit.top && vy >= 0) {
+        if (player->get_controller().hold(Controller::JUMP)) {
           vy = VY_TRIGGER;
         } else {
           vy = VY_BOUNCE;
@@ -78,9 +90,9 @@ RustyTrampoline::collision(GameObject& other, const CollisionHit& hit)
         SoundManager::current()->play(BOUNCE_SOUND);
         counter--;
         if (counter > 0) {
-          sprite->set_action("swinging", 1);
+          m_sprite->set_action("swinging", 1);
         } else {
-          sprite->set_action("breaking", 1);
+          m_sprite->set_action("breaking", 1);
         }
 
         return FORCE_MOVE;
@@ -88,18 +100,18 @@ RustyTrampoline::collision(GameObject& other, const CollisionHit& hit)
     }
     auto walking_badguy = dynamic_cast<WalkingBadguy*> (&other);
     //Trampoline also works for WalkingBadguy
-    if(walking_badguy) {
+    if (walking_badguy) {
       float vy = walking_badguy->get_velocity_y();
       //walking_badguy is falling down on trampoline
-      if(hit.top && vy >= 0) {
+      if (hit.top && vy >= 0) {
         vy = VY_BOUNCE;
         walking_badguy->set_velocity_y(vy);
         SoundManager::current()->play(BOUNCE_SOUND);
         counter--;
         if (counter > 0) {
-          sprite->set_action("swinging", 1);
+          m_sprite->set_action("swinging", 1);
         } else {
-          sprite->set_action("breaking", 1);
+          m_sprite->set_action("breaking", 1);
         }
         return FORCE_MOVE;
       }
@@ -122,7 +134,7 @@ RustyTrampoline::grab(MovingObject& object, const Vector& pos, Direction dir) {
 void
 RustyTrampoline::ungrab(MovingObject& object, Direction dir) {
   Rock::ungrab(object, dir);
-  sprite->set_action("breaking", 1);
+  m_sprite->set_action("breaking", 1);
   counter = 0; //remove in update()
 }
 

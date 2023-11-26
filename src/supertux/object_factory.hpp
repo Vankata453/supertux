@@ -24,7 +24,6 @@
 #include <functional>
 
 #include "supertux/direction.hpp"
-#include "supertux/game_object_ptr.hpp"
 
 class ReaderMapping;
 class Vector;
@@ -32,23 +31,19 @@ class GameObject;
 
 class ObjectFactory
 {
-public:
-  static ObjectFactory& instance();
-
 private:
-  typedef std::map<std::string, std::function<GameObjectPtr (const ReaderMapping&)> > Factories;
+  typedef std::function<std::unique_ptr<GameObject> (const ReaderMapping&)> FactoryFunction;
+  typedef std::map<std::string, FactoryFunction> Factories;
   Factories factories;
 
 public:
+  /** Will throw in case of creation failure, will never return nullptr */
+  std::unique_ptr<GameObject> create(const std::string& name, const ReaderMapping& reader) const;
+
+protected:
   ObjectFactory();
-  ~ObjectFactory();
 
-  GameObjectPtr create(const std::string& name, const ReaderMapping& reader) const;
-  GameObjectPtr create(const std::string& name, const Vector& pos, const Direction& dir = AUTO, const std::string& data = {}) const;
-
-private:
-  void add_factory(const char* name,
-                   std::function<GameObjectPtr (const ReaderMapping&)> func)
+  void add_factory(const char* name, const FactoryFunction& func)
   {
     assert(factories.find(name) == factories.end());
     factories[name] = func;
@@ -58,10 +53,9 @@ private:
   void add_factory(const char* name)
   {
     add_factory(name, [](const ReaderMapping& reader) {
-        return std::make_shared<C>(reader);
+        return std::make_unique<C>(reader);
       });
   }
-  void init_factories();
 };
 
 #endif

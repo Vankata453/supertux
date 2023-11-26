@@ -17,12 +17,22 @@
 #include "audio/openal_sound_source.hpp"
 
 #include "audio/sound_manager.hpp"
+#include "util/log.hpp"
 
 OpenALSoundSource::OpenALSoundSource() :
-  source()
+  source(),
+  m_gain(1.0f),
+  m_volume(1.0f)
 {
   alGenSources(1, &source);
-  SoundManager::check_al_error("Couldn't create audio source: ");
+  try
+  {
+    SoundManager::check_al_error("Couldn't create audio source: ");
+  }
+  catch(std::exception& e)
+  {
+    log_warning << e.what() << std::endl;
+  }
   set_reference_distance(128);
 }
 
@@ -37,14 +47,31 @@ OpenALSoundSource::stop()
 {
   alSourceRewindv(1, &source); // Stops the source
   alSourcei(source, AL_BUFFER, AL_NONE);
-  SoundManager::check_al_error("Problem stopping audio source: ");
+  try
+  {
+    SoundManager::check_al_error("Problem stopping audio source: ");
+  }
+  catch(const std::exception& e)
+  {
+    // Internal OpenAL error. Don't you crash on me, baby!
+    log_warning << e.what() << std::endl;
+  }
 }
 
 void
 OpenALSoundSource::play()
 {
   alSourcePlay(source);
-  SoundManager::check_al_error("Couldn't start audio source: ");
+
+  try
+  {
+    SoundManager::check_al_error("Couldn't start audio source: ");
+  }
+  catch(const std::exception& e)
+  {
+    // We probably have too many sources playing simultaneously.
+    log_warning << e.what() << std::endl;
+  }
 }
 
 bool
@@ -52,7 +79,7 @@ OpenALSoundSource::playing() const
 {
   ALint state = AL_PLAYING;
   alGetSourcei(source, AL_SOURCE_STATE, &state);
-  return state != AL_STOPPED;
+  return state == AL_PLAYING;
 }
 
 void
@@ -65,12 +92,12 @@ OpenALSoundSource::pause()
 void
 OpenALSoundSource::resume()
 {
-  if( !this->paused() )
+  if ( !paused() )
   {
     return;
   }
 
-  this->play();
+  play();
 }
 
 bool
@@ -113,7 +140,8 @@ OpenALSoundSource::set_velocity(const Vector& velocity)
 void
 OpenALSoundSource::set_gain(float gain)
 {
-  alSourcef(source, AL_GAIN, gain);
+  alSourcef(source, AL_GAIN, gain * m_volume);
+  m_gain = gain;
 }
 
 void
@@ -126,6 +154,13 @@ void
 OpenALSoundSource::set_reference_distance(float distance)
 {
   alSourcef(source, AL_REFERENCE_DISTANCE, distance);
+}
+
+void
+OpenALSoundSource::set_volume(float volume)
+{
+  m_volume = volume;
+  alSourcef(source, AL_GAIN, m_gain * m_volume);
 }
 
 /* EOF */

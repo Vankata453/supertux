@@ -19,31 +19,29 @@
 
 #include "object/rock.hpp"
 
-/**
- * Jumping on a trampoline makes tux jump higher.
- */
-class Trampoline : public Rock
+/** Jumping on a trampoline makes tux jump higher. */
+class Trampoline final : public Rock
 {
 public:
   Trampoline(const ReaderMapping& reader);
   Trampoline(const Vector& pos, bool port);
 
-  HitResponse collision(GameObject& other, const CollisionHit& hit);
-  void update(float elapsed_time);
+  virtual HitResponse collision(GameObject& other, const CollisionHit& hit) override;
+  virtual void update(float dt_sec) override;
 
-  void grab(MovingObject&, const Vector& pos, Direction);
-  bool is_portable() const;
-  std::string get_class() const {
-    return "trampoline";
-  }
-  std::string get_display_name() const {
-    return _("Trampoline");
-  }
+  virtual void grab(MovingObject&, const Vector& pos, Direction) override;
+  virtual bool is_portable() const override;
+  virtual std::string get_class() const override { return "trampoline"; }
+  virtual std::string get_display_name() const override { return _("Trampoline"); }
 
-  virtual ObjectSettings get_settings();
+  virtual ObjectSettings get_settings() override;
 
 private:
   bool portable;
+
+private:
+  Trampoline(const Trampoline&) = delete;
+  Trampoline& operator=(const Trampoline&) = delete;
 
 };
 

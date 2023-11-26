@@ -18,19 +18,27 @@
 #define HEADER_SUPERTUX_SCRIPTING_THUNDERSTORM_HPP
 
 #ifndef SCRIPTING_API
+#include "scripting/game_object.hpp"
+
 class Thunderstorm;
 #endif
 
 namespace scripting {
 
-class Thunderstorm
-{
-public:
+class Thunderstorm final
 #ifndef SCRIPTING_API
-  Thunderstorm(::Thunderstorm* thunderstorm);
-  ~Thunderstorm();
+  : public GameObject<::Thunderstorm>
+#endif
+{
+#ifndef SCRIPTING_API
+public:
+  using GameObject::GameObject;
+private:
+  Thunderstorm(const Thunderstorm&) = delete;
+  Thunderstorm& operator=(const Thunderstorm&) = delete;
 #endif
 
+public:
   /**
    * Start playing thunder and lightning at configured interval
    */
@@ -60,17 +68,9 @@ public:
    * Electrify water throughout the whole sector for a short time
    */
   void electrify();
-
-#ifndef SCRIPTING_API
-  ::Thunderstorm* thunderstorm;
-
-private:
-  Thunderstorm(const Thunderstorm&);
-  Thunderstorm& operator=(const Thunderstorm&);
-#endif
 };
 
-}
+} // namespace scripting
 
 #endif
 

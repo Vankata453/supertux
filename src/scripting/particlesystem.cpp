@@ -20,25 +20,18 @@
 
 namespace scripting {
 
-ParticleSystem::ParticleSystem(::ParticleSystem* parent) :
-  particlesystem(parent)
-{
-}
-
-ParticleSystem::~ParticleSystem()
-{
-}
-
 void ParticleSystem::set_enabled(bool enable)
 {
-  particlesystem->set_enabled(enable);
+  SCRIPT_GUARD_VOID;
+  object.set_enabled(enable);
 }
 
 bool ParticleSystem::get_enabled() const
 {
-  return particlesystem->get_enabled();
+  SCRIPT_GUARD_DEFAULT;
+  return object.get_enabled();
 }
 
-}
+} // namespace scripting
 
 /* EOF */

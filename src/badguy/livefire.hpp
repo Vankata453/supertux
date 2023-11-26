@@ -14,8 +14,8 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADER_SUPERTUX_BADGUY_LiveFire_HPP
-#define HEADER_SUPERTUX_BADGUY_LiveFire_HPP
+#ifndef HEADER_SUPERTUX_BADGUY_LIVEFIRE_HPP
+#define HEADER_SUPERTUX_BADGUY_LIVEFIRE_HPP
 
 #include "badguy/walking_badguy.hpp"
 
@@ -24,21 +24,17 @@ class LiveFire : public WalkingBadguy
 public:
   LiveFire(const ReaderMapping& reader);
 
-  void collision_solid(const CollisionHit& hit) override;
-  HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit) override;
-  void active_update(float elapsed_time) override;
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit) override;
+  virtual void active_update(float dt_sec) override;
 
-  void freeze() override;
-  bool is_freezable() const override;
-  bool is_flammable() const override;
+  virtual void freeze() override;
+  virtual bool is_freezable() const override;
+  virtual bool is_flammable() const override;
 
   virtual void kill_fall() override;
-  virtual std::string get_class() const override {
-    return "livefire";
-  }
-  virtual std::string get_display_name() const override {
-    return _("Live fire");
-  }
+  virtual std::string get_class() const override { return "livefire"; }
+  virtual std::string get_display_name() const override { return _("Live fire"); }
 
 private:
   std::string death_sound;
@@ -50,35 +46,45 @@ protected:
     STATE_WALKING,
     STATE_DORMANT
   };
+
+protected:
   SState state;
+
+private:
+  LiveFire(const LiveFire&) = delete;
+  LiveFire& operator=(const LiveFire&) = delete;
 };
 
-class LiveFireAsleep : public LiveFire
+class LiveFireAsleep final : public LiveFire
 {
 public:
   LiveFireAsleep(const ReaderMapping& reader);
 
-  void initialize();
-  std::string get_class() const {
-    return "livefire_asleep";
-  }
-  std::string get_display_name() const {
-    return _("Sleeping live fire");
-  }
+  virtual void draw(DrawingContext& context) override;
+
+  virtual void initialize() override;
+  virtual std::string get_class() const override { return "livefire_asleep"; }
+  virtual std::string get_display_name() const override { return _("Sleeping live fire"); }
+
+private:
+  LiveFireAsleep(const LiveFireAsleep&) = delete;
+  LiveFireAsleep& operator=(const LiveFireAsleep&) = delete;
 };
 
-class LiveFireDormant : public LiveFire
+class LiveFireDormant final : public LiveFire
 {
 public:
   LiveFireDormant(const ReaderMapping& reader);
 
-  void initialize();
-  std::string get_class() const {
-    return "livefire_dormant";
-  }
-  std::string get_display_name() const {
-    return _("Dormant live fire");
-  }
+  virtual void draw(DrawingContext& context) override;
+
+  virtual void initialize() override;
+  virtual std::string get_class() const override { return "livefire_dormant"; }
+  virtual std::string get_display_name() const override { return _("Dormant live fire"); }
+
+private:
+  LiveFireDormant(const LiveFireDormant&) = delete;
+  LiveFireDormant& operator=(const LiveFireDormant&) = delete;
 };
 
 #endif

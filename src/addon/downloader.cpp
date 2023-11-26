@@ -24,14 +24,9 @@
 #include <physfs.h>
 #include <sstream>
 #include <stdexcept>
+#include <version.h>
 
 #include "util/log.hpp"
-#include "version.h"
-
-#ifdef WIN32
-#include <SDL.h>
-#include "util/file_system.hpp"
-#endif
 
 namespace {
 
@@ -49,7 +44,14 @@ size_t my_curl_physfs_write(void* ptr, size_t size, size_t nmemb, void* userdata
   PHYSFS_file* f = static_cast<PHYSFS_file*>(userdata);
   PHYSFS_sint64 written = PHYSFS_writeBytes(f, ptr, size * nmemb);
   log_debug << "read " << size * nmemb << " bytes of data..." << std::endl;
-  return written;
+  if (written < 0)
+  {
+    return 0;
+  }
+  else
+  {
+    return static_cast<size_t>(written);
+  }
 }
 
 } // namespace
@@ -66,7 +68,7 @@ TransferStatus::update()
   m_downloader.update();
 }
 
-class Transfer
+class Transfer final
 {
 private:
   Downloader& m_downloader;
@@ -94,7 +96,7 @@ public:
     if (!m_fout)
     {
       std::ostringstream out;
-      out << "PHYSFS_openRead() failed: " << PHYSFS_getLastError();
+      out << "PHYSFS_openRead() failed: " << PHYSFS_getLastErrorCode();
       throw std::runtime_error(out.str());
     }
 
@@ -203,7 +205,7 @@ Downloader::Downloader() :
 
 Downloader::~Downloader()
 {
-  for(auto& transfer : m_transfers)
+  for (auto& transfer : m_transfers)
   {
     curl_multi_remove_handle(m_multi_handle, transfer->get_curl_handle());
   }
@@ -278,7 +280,7 @@ Downloader::abort(TransferId id)
     curl_multi_remove_handle(m_multi_handle, (*it)->get_curl_handle());
     m_transfers.erase(it);
 
-    for(auto& callback : status->callbacks)
+    for (auto& callback : status->callbacks)
     {
       try
       {
@@ -298,7 +300,7 @@ Downloader::update()
   // read data from the network
   CURLMcode ret;
   int running_handles;
-  while((ret = curl_multi_perform(m_multi_handle, &running_handles)) == CURLM_CALL_MULTI_PERFORM)
+  while ((ret = curl_multi_perform(m_multi_handle, &running_handles)) == CURLM_CALL_MULTI_PERFORM)
   {
     log_debug << "updating" << std::endl;
   }
@@ -308,11 +310,12 @@ Downloader::update()
   CURLMsg* msg;
   while ((msg = curl_multi_info_read(m_multi_handle, &msgs_in_queue)))
   {
-    switch(msg->msg)
+    switch (msg->msg)
     {
       case CURLMSG_DONE:
         {
-          log_info << "Download completed with " << msg->data.result << std::endl;
+          CURLcode resultfromcurl = msg->data.result;
+          log_info << "Download completed with " << resultfromcurl << std::endl;
           curl_multi_remove_handle(m_multi_handle, msg->easy_handle);
 
           auto it = std::find_if(m_transfers.begin(), m_transfers.end(),
@@ -324,10 +327,10 @@ Downloader::update()
           status->error_msg = (*it)->get_error_buffer();
           m_transfers.erase(it);
 
-          if (msg->data.result == CURLE_OK)
+          if (resultfromcurl == CURLE_OK)
           {
             bool success = true;
-            for(auto& callback : status->callbacks)
+            for (auto& callback : status->callbacks)
             {
               try
               {
@@ -343,8 +346,8 @@ Downloader::update()
           }
           else
           {
-            log_warning << "Error: " << curl_easy_strerror(msg->data.result) << std::endl;
-            for(auto& callback : status->callbacks)
+            log_warning << "Error: " << curl_easy_strerror(resultfromcurl) << std::endl;
+            for (auto& callback : status->callbacks)
             {
               try
               {
@@ -370,7 +373,7 @@ TransferStatusPtr
 Downloader::request_download(const std::string& url, const std::string& outfile)
 {
   log_info << "request_download: " << url << std::endl;
-  std::unique_ptr<Transfer> transfer(new Transfer(*this, m_next_transfer_id++, url, outfile));
+  auto transfer = std::make_unique<Transfer>(*this, m_next_transfer_id++, url, outfile);
   curl_multi_add_handle(m_multi_handle, transfer->get_curl_handle());
   m_transfers.push_back(std::move(transfer));
   return m_transfers.back()->get_status();

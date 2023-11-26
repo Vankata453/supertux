@@ -19,42 +19,35 @@
 
 #include "badguy/badguy.hpp"
 
-/**
- * Badguy "MoleRock" - Rock thrown by "Mole" Badguy
- */
-class MoleRock : public BadGuy
+/** Badguy "MoleRock" - Rock thrown by "Mole" Badguy */
+class MoleRock final : public BadGuy
 {
 public:
   MoleRock(const ReaderMapping& reader);
   MoleRock(const Vector& pos, const Vector& velocity, const BadGuy* parent);
-  ~MoleRock();
 
-  void initialize();
-  void deactivate();
+  virtual void initialize() override;
+  virtual void deactivate() override;
 
-  void active_update(float elapsed_time);
+  virtual void active_update(float dt_sec) override;
 
-  void collision_solid(const CollisionHit& hit);
-  HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit);
-  HitResponse collision_player(Player& player, const CollisionHit& hit);
+  virtual void collision_solid(const CollisionHit& hit) override;
+  virtual HitResponse collision_badguy(BadGuy& badguy, const CollisionHit& hit) override;
+  virtual HitResponse collision_player(Player& player, const CollisionHit& hit) override;
 
   virtual bool updatePointers(const GameObject* from_object, GameObject* to_object);
 
-  bool is_flammable() const;
-  std::string get_class() const {
-    return "mole_rock";
-  }
-  std::string get_display_name() const {
-    return _("Mole's rock");
-  }
+  virtual bool is_flammable() const override;
+  virtual std::string get_class() const override { return "mole_rock"; }
+  virtual std::string get_display_name() const override { return _("Mole's rock"); }
 
 protected:
   const BadGuy* parent; /**< collisions with this BadGuy will be ignored */
   const Vector initial_velocity; /**< velocity at time of creation */
 
 private:
-  MoleRock(const MoleRock&);
-  MoleRock& operator=(const MoleRock&);
+  MoleRock(const MoleRock&) = delete;
+  MoleRock& operator=(const MoleRock&) = delete;
 };
 
 #endif

@@ -17,12 +17,10 @@
 #ifndef HEADER_SUPERTUX_OBJECT_RAIN_PARTICLE_SYSTEM_HPP
 #define HEADER_SUPERTUX_OBJECT_RAIN_PARTICLE_SYSTEM_HPP
 
-#include <memory>
-
 #include "object/particlesystem_interactive.hpp"
 #include "video/surface_ptr.hpp"
 
-class RainParticleSystem : public ParticleSystem_Interactive
+class RainParticleSystem final : public ParticleSystem_Interactive
 {
 public:
   RainParticleSystem();
@@ -30,18 +28,12 @@ public:
   virtual ~RainParticleSystem();
 
   void init();
-  virtual void update(float elapsed_time);
+  virtual void update(float dt_sec) override;
 
-  std::string type() const
-  { return "RainParticleSystem"; }
-  std::string get_class() const {
-    return "particles-rain";
-  }
-  std::string get_display_name() const {
-    return _("Rain particles");
-  }
+  virtual std::string get_class() const override { return "particles-rain"; }
+  virtual std::string get_display_name() const override { return _("Rain particles"); }
 
-  virtual const std::string get_icon_path() const {
+  virtual const std::string get_icon_path() const override {
     return "images/engine/editor/rain.png";
   }
 
@@ -59,8 +51,8 @@ private:
   SurfacePtr rainimages[2];
 
 private:
-  RainParticleSystem(const RainParticleSystem&);
-  RainParticleSystem& operator=(const RainParticleSystem&);
+  RainParticleSystem(const RainParticleSystem&) = delete;
+  RainParticleSystem& operator=(const RainParticleSystem&) = delete;
 };
 
 #endif

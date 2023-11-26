@@ -19,29 +19,24 @@
 
 #include "badguy/badguy.hpp"
 
-class Mole : public BadGuy
+class Mole final : public BadGuy
 {
 public:
   Mole(const ReaderMapping& );
-  Mole(const Vector& pos);
 
-  void kill_fall();
-  HitResponse collision_badguy(BadGuy& , const CollisionHit& );
-  bool collision_squished(GameObject& object);
+  virtual void kill_fall() override;
+  virtual HitResponse collision_badguy(BadGuy& , const CollisionHit& ) override;
+  virtual bool collision_squished(GameObject& object) override;
 
-  void activate();
-  void active_update(float);
+  virtual void activate() override;
+  virtual void active_update(float) override;
 
-  bool is_freezable() const;
+  virtual bool is_freezable() const override;
 
-  virtual void ignite();
+  virtual void ignite() override;
 
-  std::string get_class() const {
-    return "mole";
-  }
-  std::string get_display_name() const {
-    return _("Mole");
-  }
+  virtual std::string get_class() const override { return "mole"; }
+  virtual std::string get_display_name() const override { return _("Mole"); }
 
 private:
   enum MoleState {
@@ -61,6 +56,10 @@ private:
   MoleState state;
   Timer timer;
   Timer throw_timer;
+
+private:
+  Mole(const Mole&) = delete;
+  Mole& operator=(const Mole&) = delete;
 };
 
 #endif

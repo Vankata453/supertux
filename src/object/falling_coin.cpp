@@ -16,33 +16,32 @@
 
 #include "object/falling_coin.hpp"
 
+#include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
 #include "supertux/globals.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
 FallingCoin::FallingCoin(const Vector& start_position, const int vel_x) :
   physic(),
   pos(start_position),
   sprite(SpriteManager::current()->create("images/objects/coin/coin.sprite"))
 {
-  physic.set_velocity_y(-800);
-  physic.set_velocity_x(vel_x);
-}
-
-FallingCoin::~FallingCoin()
-{
+  physic.set_velocity_y(-800.0f);
+  physic.set_velocity_x(static_cast<float>(vel_x));
 }
 
 void
 FallingCoin::draw(DrawingContext& context)
 {
-  sprite->draw(context, pos, LAYER_FLOATINGOBJECTS + 5);
+  sprite->draw(context.color(), pos, LAYER_FLOATINGOBJECTS + 5);
 }
 
 void
-FallingCoin::update(float elapsed_time)
+FallingCoin::update(float dt_sec)
 {
-  pos += physic.get_movement(elapsed_time);
-  if (pos.y > SCREEN_HEIGHT)
+  pos += physic.get_movement(dt_sec);
+  if (pos.y > static_cast<float>(SCREEN_HEIGHT))
     remove_me();
 }
 

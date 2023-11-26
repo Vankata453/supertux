@@ -18,12 +18,13 @@
 
 #include "editor/editor.hpp"
 #include "supertux/game_session.hpp"
-#include "supertux/globals.hpp"
+#include "supertux/level.hpp"
 #include "supertux/levelset.hpp"
 #include "supertux/savegame.hpp"
 #include "supertux/screen_fade.hpp"
 #include "supertux/screen_manager.hpp"
 #include "util/file_system.hpp"
+#include "util/log.hpp"
 
 LevelsetScreen::LevelsetScreen(const std::string& basedir, const std::string& level_filename,
                                Savegame& savegame) :
@@ -34,7 +35,7 @@ LevelsetScreen::LevelsetScreen(const std::string& basedir, const std::string& le
   m_solved(false)
 {
   Levelset levelset(basedir);
-  for(int i = 0; i < levelset.get_num_levels(); ++i)
+  for (int i = 0; i < levelset.get_num_levels(); ++i)
   {
     std::string lev = levelset.get_level_filename(i);
     m_savegame.set_levelset_state(m_basedir, lev, false);
@@ -45,17 +46,13 @@ LevelsetScreen::LevelsetScreen(const std::string& basedir, const std::string& le
   m_solved = level_state.solved;
 }
 
-LevelsetScreen::~LevelsetScreen()
+void
+LevelsetScreen::draw(Compositor& compositor)
 {
 }
 
 void
-LevelsetScreen::draw(DrawingContext&)
-{
-}
-
-void
-LevelsetScreen::update(float elapsed_time)
+LevelsetScreen::update(float dt_sec, const Controller& controller)
 {
 }
 
@@ -84,8 +81,8 @@ LevelsetScreen::setup()
       log_warning << "Editor is still active, quiting Levelset screen" << std::endl;
       ScreenManager::current()->pop_screen();
     } else {
-      std::unique_ptr<Screen> screen(new GameSession(FileSystem::join(m_basedir, m_level_filename),
-                                                     m_savegame));
+      auto screen = std::make_unique<GameSession>(FileSystem::join(m_basedir, m_level_filename),
+                                                  m_savegame);
       ScreenManager::current()->push_screen(std::move(screen));
     }
   }

@@ -14,59 +14,58 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <string>
-
 #include "editor/object_icon.hpp"
-#include "math/rect.hpp"
-#include "supertux/globals.hpp"
-#include "supertux/resources.hpp"
-#include "video/renderer.hpp"
-#include "video/video_system.hpp"
-#include "util/reader.hpp"
-#include "util/reader_mapping.hpp"
 
-ObjectIcon::ObjectIcon(const std::string& name, const std::string& icon) :
-  object_name(name),
-  surface(Surface::create(icon)),
-  offset()
+#include "math/rectf.hpp"
+#include "util/reader_mapping.hpp"
+#include "video/surface.hpp"
+#include "video/drawing_context.hpp"
+
+ObjectIcon::ObjectIcon(const std::string& object_class, const std::string& icon) :
+  m_object_class(object_class),
+  m_surface(Surface::from_file(icon)),
+  m_offset()
 {
   calculate_offset();
 }
 
 ObjectIcon::ObjectIcon(const ReaderMapping& reader) :
-  object_name(),
-  surface(),
-  offset()
+  m_object_class(),
+  m_surface(),
+  m_offset()
 {
   std::string icon = "images/engine/icons/supertux.png";
-  reader.get("class", object_name);
+  reader.get("class", m_object_class);
   reader.get("icon", icon);
-  surface = Surface::create(icon);
+  m_surface = Surface::from_file(icon);
   calculate_offset();
 }
 
-ObjectIcon::~ObjectIcon() {
+ObjectIcon::~ObjectIcon()
+{
 
 }
 
 void
-ObjectIcon::calculate_offset() {
-  float w = surface->get_width();
-  float h = surface->get_height();
+ObjectIcon::calculate_offset()
+{
+  float w = static_cast<float>(m_surface->get_width());
+  float h = static_cast<float>(m_surface->get_height());
 
   if (w > h) {
-    offset.x = 0;
-    offset.y = 32/w * (w - h) / 2;
+    m_offset.x = 0;
+    m_offset.y = 32/w * (w - h) / 2;
   } else {
-    offset.y = 0;
-    offset.x = 32/h * (h - w) / 2;
+    m_offset.y = 0;
+    m_offset.x = 32/h * (h - w) / 2;
   }
 }
 
 void
-ObjectIcon::draw(DrawingContext& context, Vector pos) {
-  context.draw_surface_part(surface, Rectf(Vector(0,0), surface->get_size()),
-                            Rectf(pos + offset, pos + Vector(32,32) - offset), LAYER_GUI - 9);
+ObjectIcon::draw(DrawingContext& context, const Vector& pos)
+{
+  context.color().draw_surface_scaled(m_surface,
+                                      Rectf(pos + m_offset, pos + Vector(32,32) - m_offset), LAYER_GUI - 9);
 }
 
 /* EOF */

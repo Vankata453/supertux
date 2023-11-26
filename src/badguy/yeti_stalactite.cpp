@@ -18,16 +18,11 @@
 
 #include "editor/editor.hpp"
 #include "sprite/sprite.hpp"
-#include "supertux/object_factory.hpp"
 
 static const float YT_SHAKE_TIME = .8f;
 
-YetiStalactite::YetiStalactite(const ReaderMapping& lisp)
-  : Stalactite(lisp)
-{
-}
-
-YetiStalactite::~YetiStalactite()
+YetiStalactite::YetiStalactite(const ReaderMapping& mapping) :
+  Stalactite(mapping)
 {
 }
 
@@ -36,8 +31,8 @@ YetiStalactite::start_shaking()
 {
   timer.start(YT_SHAKE_TIME);
   state = STALACTITE_SHAKING;
-  if(((int)get_pos().x / 32) % 2 == 0) {
-    physic.set_velocity_y(100);
+  if ((static_cast<int>(get_pos().x) / 32) % 2 == 0) {
+    m_physic.set_velocity_y(100);
   }
 }
 
@@ -48,34 +43,46 @@ YetiStalactite::is_hanging() const
 }
 
 void
-YetiStalactite::active_update(float elapsed_time)
+YetiStalactite::active_update(float dt_sec)
 {
-  if(state == STALACTITE_HANGING)
+  if (state == STALACTITE_HANGING)
     return;
 
-  Stalactite::active_update(elapsed_time);
+  Stalactite::active_update(dt_sec);
 }
 
 void
-YetiStalactite::update(float elapsed_time)
+YetiStalactite::update(float dt_sec)
 {
-  if (Editor::is_active() && sprite->get_action() != "yeti-stalactite" &&
-      sprite->has_action("yeti-stalactite")) {
-    sprite->set_action("yeti-stalactite");
-  }
-
   // Respawn instead of removing once squished
-  if(get_state() == STATE_SQUISHED && check_state_timer()) {
+  if (get_state() == STATE_SQUISHED && check_state_timer()) {
     set_state(STATE_ACTIVE);
     state = STALACTITE_HANGING;
     // Hopefully we shouldn't come into contact with anything...
-    sprite->set_action("normal");
-    set_pos(start_position);
+    m_sprite->set_action("normal");
+    set_pos(m_start_position);
     set_colgroup_active(COLGROUP_TOUCHABLE);
   }
 
   // Call back to badguy to do normal stuff
-  BadGuy::update(elapsed_time);
+  BadGuy::update(dt_sec);
+}
+
+void
+YetiStalactite::draw(DrawingContext& context)
+{
+  if (Editor::is_active() &&
+      m_sprite->get_action() != "yeti-stalactite" &&
+      m_sprite->has_action("yeti-stalactite"))
+  {
+    m_sprite->set_action("yeti-stalactite");
+    BadGuy::draw(context);
+    return;
+  }
+  else
+  {
+    Stalactite::draw(context);
+  }
 }
 
 bool

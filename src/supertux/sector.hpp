@@ -17,157 +17,105 @@
 #ifndef HEADER_SUPERTUX_SUPERTUX_SECTOR_HPP
 #define HEADER_SUPERTUX_SUPERTUX_SECTOR_HPP
 
-#include <list>
-#include <squirrel.h>
+#include <vector>
 #include <stdint.h>
 
-#include "supertux/direction.hpp"
-#include "supertux/game_object_ptr.hpp"
-#include "util/writer.hpp"
+#include "math/anchor_point.hpp"
+#include "squirrel/squirrel_environment.hpp"
+#include "supertux/d_scope.hpp"
+#include "supertux/game_object_manager.hpp"
 #include "video/color.hpp"
-#include "object/anchor_point.hpp"
 
 namespace collision {
 class Constraints;
 }
 
-class Size;
-class Vector;
-class Rectf;
-class Player;
 class Camera;
-class TileMap;
-class Bullet;
-class SpawnPoint;
-class MovingObject;
-class Level;
-class Portable;
-class DrawingContext;
+class CollisionSystem;
 class DisplayEffect;
+class DrawingContext;
+class Level;
+class MovingObject;
+class Player;
 class ReaderMapping;
+class Rectf;
+class Size;
+class SpawnPoint;
+class TileMap;
+class Vector;
+class Writer;
 
-enum MusicType {
-  LEVEL_MUSIC,
-  HERRING_MUSIC,
-  HERRING_WARNING_MUSIC
-};
-
-/**
- * Represents one of (potentially) multiple, separate parts of a Level.
- *
- * Sectors contain GameObjects, e.g. Badguys and Players.
- */
-class Sector
+/** Represents one of (potentially) multiple, separate parts of a Level.
+    Sectors contain GameObjects, e.g. Badguys and Players. */
+class Sector final : public GameObjectManager
 {
 public:
-  friend class SectorParser;
+  friend class CollisionSystem;
+  friend class EditorSectorMenu;
+
+private:
+  static Sector* s_current;
 
 public:
-  Sector(Level* parent);
+  /** get currently activated sector. */
+  static Sector& get() { assert(s_current != nullptr); return *s_current; }
+  static Sector* current() { return s_current; }
+
+public:
+  Sector(Level& parent);
   ~Sector();
 
-  /// get parent level
-  Level* get_level() const;
+  /** Needs to be called after parsing to finish the construction of
+      the Sector before using it. */
+  void finish_construction(bool editable);
 
-  /// activates this sector (change music, initialize player class, ...)
+  Level& get_level() const;
+
+  /** activates this sector (change music, initialize player class, ...) */
   void activate(const std::string& spawnpoint);
   void activate(const Vector& player_pos);
   void deactivate();
 
-  void update(float elapsed_time);
-  void update_game_objects();
+  void update(float dt_sec);
 
   void draw(DrawingContext& context);
 
   void save(Writer &writer);
 
-  /// stops all looping sounds in whole sector.
+  /** stops all looping sounds in whole sector. */
   void stop_looping_sounds();
 
-  /// continues the looping sounds in whole sector.
+  /** continues the looping sounds in whole sector. */
   void play_looping_sounds();
 
-  /**
-   * runs a script in the context of the sector (sector_table will be the
-   * roottable of this squirrel VM)
-   */
-  HSQUIRRELVM run_script(std::istream& in, const std::string& sourcename);
+  void set_name(const std::string& name_) { m_name = name_; }
+  const std::string& get_name() const { return m_name; }
 
-  /// adds a gameobject
-  void add_object(GameObjectPtr object);
-
-  void set_name(const std::string& name_)
-  { this->name = name_; }
-  const std::string& get_name() const
-  { return name; }
-
-  /**
-   * tests if a given rectangle is inside the sector
-   * (a rectangle that is on top of the sector is considered inside)
-   */
+  /** tests if a given rectangle is inside the sector
+      (a rectangle that is on top of the sector is considered inside) */
   bool inside(const Rectf& rectangle) const;
 
-  void play_music(MusicType musictype);
-  void resume_music();
-  MusicType get_music_type() const;
-
-  int get_active_bullets() const
-  { return (int)bullets.size(); }
-  bool add_smoke_cloud(const Vector& pos);
-
-  /** get currently activated sector. */
-  static Sector* current()
-  { return _current; }
-
-  /** Get total number of badguys */
-  int get_total_badguys() const;
-
-  /** Get total number of GameObjects of given type */
-  template<class T> int get_total_count() const
-  {
-    int total = 0;
-    for(GameObjects::const_iterator i = gameobjects.begin(); i != gameobjects.end(); ++i) {
-      if (dynamic_cast<T*>(i->get())) total++;
-    }
-    return total;
-  }
-
-  void collision_tilemap(collision::Constraints* constraints,
-                         const Vector& movement, const Rectf& dest,
-                         MovingObject &object) const;
-
-  /**
-   * Checks if the specified rectangle is free of (solid) tiles.
-   * Note that this does not include static objects, e.g. bonus blocks.
-   */
+  /** Checks if the specified rectangle is free of (solid) tiles.
+      Note that this does not include static objects, e.g. bonus blocks. */
   bool is_free_of_tiles(const Rectf& rect, const bool ignoreUnisolid = false) const;
-  /**
-   * Checks if the specified rectangle is free of both
-   * 1.) solid tiles and
-   * 2.) MovingObjects in COLGROUP_STATIC.
-   * Note that this does not include badguys or players.
-   */
-  bool is_free_of_statics(const Rectf& rect, const MovingObject* ignore_object = 0, const bool ignoreUnisolid = false) const;
-  /**
-   * Checks if the specified rectangle is free of both
-   * 1.) solid tiles and
-   * 2.) MovingObjects in COLGROUP_STATIC, COLGROUP_MOVINGSTATIC or COLGROUP_MOVING.
-   * This includes badguys and players.
-   */
-  bool is_free_of_movingstatics(const Rectf& rect, const MovingObject* ignore_object = 0) const;
 
-  bool free_line_of_sight(const Vector& line_start, const Vector& line_end, const MovingObject* ignore_object = 0) const;
+  /** Checks if the specified rectangle is free of both
+      1.) solid tiles and
+      2.) MovingObjects in COLGROUP_STATIC.
+      Note that this does not include badguys or players. */
+  bool is_free_of_statics(const Rectf& rect, const MovingObject* ignore_object = nullptr, const bool ignoreUnisolid = false) const;
+
+  /** Checks if the specified rectangle is free of both
+      1.) solid tiles and
+      2.) MovingObjects in COLGROUP_STATIC, COLGROUP_MOVINGSTATIC or COLGROUP_MOVING.
+      This includes badguys and players. */
+  bool is_free_of_movingstatics(const Rectf& rect, const MovingObject* ignore_object = nullptr) const;
+
+  bool free_line_of_sight(const Vector& line_start, const Vector& line_end, const MovingObject* ignore_object = nullptr) const;
   bool can_see_player(const Vector& eye) const;
 
-/**
-   * returns a list of players currently in the sector
-   */
-  std::vector<Player*> get_players() const {
-    return std::vector<Player*>(1, this->player);
-  }
-  Player *get_nearest_player (const Vector& pos) const;
-  Player *get_nearest_player (const Rectf& pos) const
-  {
+  Player* get_nearest_player (const Vector& pos) const;
+  Player* get_nearest_player (const Rectf& pos) const {
     return (get_nearest_player (get_anchor_pos (pos, ANCHOR_MIDDLE)));
   }
 
@@ -177,145 +125,61 @@ public:
 
   int get_foremost_layer() const;
 
-  /**
-   * returns the width (in px) of a sector)
-   */
-  float get_width() const;
-
-  /**
-   * returns the height (in px) of a sector)
-   */
-  float get_height() const;
-
-  /**
-   * returns the editor size (in tiles) of a sector
-   */
+  /** returns the editor size (in tiles) of a sector */
   Size get_editor_size() const;
 
-  /**
-   * resize all tilemaps with given size
-   */
-  void resize_sector(Size& old_size, Size& new_size);
+  /** resize all tilemaps with given size */
+  void resize_sector(const Size& old_size, const Size& new_size, const Size& resize_offset);
 
-  /**
-   * globally changes solid tilemaps' tile ids
-   */
+  /** globally changes solid tilemaps' tile ids */
   void change_solid_tiles(uint32_t old_tile_id, uint32_t new_tile_id);
 
-  typedef std::vector<GameObjectPtr> GameObjects;
-  typedef std::vector<MovingObject*> MovingObjects;
-  typedef std::vector<std::shared_ptr<SpawnPoint> > SpawnPoints;
-  typedef std::vector<Portable*> Portables;
-
-  // --- scripting ---
-  /**
-   *  get/set color of ambient light
-   */
-  void set_ambient_light(float red, float green, float blue);
-  float get_ambient_red() const;
-  float get_ambient_green() const;
-  float get_ambient_blue() const;
-
-  /**
-   *  set gravity throughout sector
-   */
+  /** set gravity throughout sector */
   void set_gravity(float gravity);
   float get_gravity() const;
 
-  std::string* get_name_ptr() {return &name;}
-  std::string* get_init_script_ptr() {return &init_script;}
-  Color* get_ambient_light_ptr() {return &ambient_light;}
+  void set_init_script(const std::string& init_script) {
+    m_init_script = init_script;
+  }
+
+  void run_script(const std::string& script, const std::string& sourcename);
+
+  Camera& get_camera() const;
+  Player& get_player() const;
+  DisplayEffect& get_effect() const;
 
 private:
   uint32_t collision_tile_attributes(const Rectf& dest, const Vector& mov) const;
 
-  void before_object_remove(GameObjectPtr object);
-  bool before_object_add(GameObjectPtr object);
-
-  void try_expose(GameObjectPtr object);
-  void try_unexpose(GameObjectPtr object);
-  void try_expose_me();
-  void try_unexpose_me();
-
-  /** Checks for all possible collisions. And calls the
-      collision_handlers, which the collision_objects provide for this
-      case (or not). */
-  void handle_collisions();
-
-  /**
-   * Does collision detection between 2 objects and does instant
-   * collision response handling in case of a collision
-   */
-  void collision_object(MovingObject* object1, MovingObject* object2) const;
-
-  /**
-   * Does collision detection of an object against all other static
-   * objects (and the tilemap) in the level. Collision response is done
-   * for the first hit in time. (other hits get ignored, the function
-   * should be called repeatedly to resolve those)
-   *
-   * returns true if the collision detection should be aborted for this object
-   * (because of ABORT_MOVE in the collision response or no collisions)
-   */
-  void collision_static(collision::Constraints* constraints,
-                        const Vector& movement, const Rectf& dest, MovingObject& object);
-
-  void collision_static_constrains(MovingObject& object);
-
-  GameObjectPtr parse_object(const std::string& name, const ReaderMapping& lisp);
-
-  void fix_old_tiles();
+  virtual bool before_object_add(GameObject& object) override;
+  virtual void before_object_remove(GameObject& object) override;
 
   int calculate_foremost_layer() const;
 
-private:
-  static Sector* _current;
-
-  Level* level; /**< Parent level containing this sector */
-
-  std::string name;
-
-  std::vector<Bullet*> bullets;
-
-  std::string init_script;
-
-  /// container for newly created objects, they'll be added in Sector::update
-  GameObjects gameobjects_new;
-
-  MusicType currentmusic;
-
-  HSQOBJECT sector_table;
-  /// sector scripts
-  typedef std::vector<HSQOBJECT> ScriptList;
-  ScriptList scripts;
-
-  Color ambient_light;
-
-  int foremost_layer;
-
-public: // TODO make this private again
-  /// show collision rectangles of moving objects (for debugging)
-  static bool show_collrects;
-  static bool draw_solids_only;
-
-  GameObjects gameobjects;
-  MovingObjects moving_objects;
-  SpawnPoints spawnpoints;
-  Portables portables;
-
-  std::string music;
-  float gravity;
-
-  // some special objects, where we need direct access
-  // (try to avoid accessing them directly)
-  Player* player;
-  std::list<TileMap*> solid_tilemaps;
-  Camera* camera;
-  DisplayEffect* effect;
+  /** Convert tiles into their corresponding GameObjects (e.g.
+      bonusblocks, add light to lava tiles) */
+  void convert_tiles2gameobject();
 
 private:
-  Sector(const Sector&);
-  Sector& operator=(const Sector&);
+  /** Parent level containing this sector */
+  Level& m_level;
+
+  std::string m_name;
+
+  bool m_fully_constructed;
+
+  std::string m_init_script;
+
+  int m_foremost_layer;
+
+  std::unique_ptr<SquirrelEnvironment> m_squirrel_environment;
+  std::unique_ptr<CollisionSystem> m_collision_system;
+
+  float m_gravity;
+
+private:
+  Sector(const Sector&) = delete;
+  Sector& operator=(const Sector&) = delete;
 };
 
 #endif

@@ -22,28 +22,23 @@
 
 class ReaderMapping;
 
-class SnowParticleSystem : public ParticleSystem
+class SnowParticleSystem final : public ParticleSystem
 {
 public:
   SnowParticleSystem();
   SnowParticleSystem(const ReaderMapping& reader);
   virtual ~SnowParticleSystem();
 
-  void init();
-  virtual void update(float elapsed_time);
+  virtual void update(float dt_sec) override;
 
-  std::string type() const
-  { return "SnowParticleSystem"; }
-  std::string get_class() const {
-    return "particles-snow";
-  }
-  std::string get_display_name() const {
-    return _("Snow particles");
-  }
+  virtual std::string get_class() const override { return "particles-snow"; }
+  virtual std::string get_display_name() const override { return _("Snow particles"); }
 
-  virtual const std::string get_icon_path() const {
+  virtual const std::string get_icon_path() const override {
     return "images/engine/editor/snow.png";
   }
+
+  void init();
 
 private:
   class SnowParticle : public Particle
@@ -81,22 +76,24 @@ private:
     RESTING,
     MAX_STATE
   };
-  State state;
 
+private:
+  State state;
 
   // Gust state delay timer
   Timer timer;
 
   // Peak magnitude of gust is gust_onset * randf(5)
-  float gust_onset,
+  float gust_onset;
+
   // Current blowing velocity of gust
-        gust_current_velocity;
+  float gust_current_velocity;
 
   SurfacePtr snowimages[3];
 
 private:
-  SnowParticleSystem(const SnowParticleSystem&);
-  SnowParticleSystem& operator=(const SnowParticleSystem&);
+  SnowParticleSystem(const SnowParticleSystem&) = delete;
+  SnowParticleSystem& operator=(const SnowParticleSystem&) = delete;
 };
 
 #endif

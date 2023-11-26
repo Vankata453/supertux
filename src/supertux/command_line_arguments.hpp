@@ -14,10 +14,11 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADER_SUPERTUX_SUPERTUX_OPTIONS_HPP
-#define HEADER_SUPERTUX_SUPERTUX_OPTIONS_HPP
+#ifndef HEADER_SUPERTUX_SUPERTUX_COMMAND_LINE_ARGUMENTS_HPP
+#define HEADER_SUPERTUX_SUPERTUX_COMMAND_LINE_ARGUMENTS_HPP
 
 #include <boost/optional.hpp>
+#include <vector>
 
 #include "math/size.hpp"
 #include "math/vector.hpp"
@@ -27,7 +28,7 @@
 class Config;
 
 /** Command line argument parsing */
-class CommandLineArguments
+class CommandLineArguments final
 {
 public:
   enum Action
@@ -50,12 +51,11 @@ public:
   boost::optional<int> fullscreen_refresh_rate;
   boost::optional<Size> window_size;
   boost::optional<Size> aspect_size;
-  
 
   // boost::optional<float> magnification;
 
   boost::optional<bool> use_fullscreen;
-   boost::optional<VideoSystem::Enum> video;
+  boost::optional<VideoSystem::Enum> video;
   // boost::optional<bool> try_vsync;
   boost::optional<bool> show_fps;
   boost::optional<bool> show_player_pos;
@@ -64,25 +64,27 @@ public:
 
   // boost::optional<int> random_seed;
 
-  boost::optional<std::string> start_level;
+  std::vector<std::string> filenames;
   boost::optional<bool> enable_script_debugger;
   boost::optional<std::string> start_demo;
   boost::optional<std::string> record_demo;
   boost::optional<Vector> tux_spawn_pos;
+  boost::optional<std::string> sector;
+  boost::optional<std::string> spawnpoint;
 
   boost::optional<bool> developer_mode;
-  
+
   boost::optional<bool> christmas_mode;
 
   boost::optional<std::string> repository_url;
 
-  boost::optional<std::string> edit_level;
+  boost::optional<bool> editor;
+  boost::optional<bool> resave;
 
   // boost::optional<std::string> locale;
 
 public:
   CommandLineArguments();
-  ~CommandLineArguments();
 
   Action get_action() const { return m_action; }
   LogLevel get_log_level() const { return m_log_level; }

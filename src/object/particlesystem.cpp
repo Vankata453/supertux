@@ -18,52 +18,64 @@
 
 #include <math.h>
 
-#include "math/random_generator.hpp"
-#include "scripting/squirrel_util.hpp"
 #include "supertux/globals.hpp"
 #include "util/reader.hpp"
+#include "util/reader_mapping.hpp"
+#include "util/writer.hpp"
 #include "video/drawing_context.hpp"
+#include "video/surface_batch.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
 
-ParticleSystem::ParticleSystem(float max_particle_size_) :
+ParticleSystem::ParticleSystem(const ReaderMapping& reader, float max_particle_size_) :
+  GameObject(reader),
   ExposedObject<ParticleSystem, scripting::ParticleSystem>(this),
   max_particle_size(max_particle_size_),
-  z_pos(),
+  z_pos(LAYER_BACKGROUND1),
   particles(),
-  virtual_width(),
-  virtual_height(),
+  virtual_width(static_cast<float>(SCREEN_WIDTH) + max_particle_size * 2.0f),
+  virtual_height(static_cast<float>(SCREEN_HEIGHT) + max_particle_size * 2.0f),
   enabled(true)
 {
-  virtual_width = SCREEN_WIDTH + max_particle_size * 2;
-  virtual_height = SCREEN_HEIGHT + max_particle_size *2;
-  z_pos = LAYER_BACKGROUND1;
+  reader.get("enabled", enabled, true);
+  z_pos = reader_get_layer(reader, /* default = */ LAYER_BACKGROUND1);
+}
+
+ParticleSystem::ParticleSystem(float max_particle_size_) :
+  GameObject(),
+  ExposedObject<ParticleSystem, scripting::ParticleSystem>(this),
+  max_particle_size(max_particle_size_),
+  z_pos(LAYER_BACKGROUND1),
+  particles(),
+  virtual_width(static_cast<float>(SCREEN_WIDTH) + max_particle_size * 2.0f),
+  virtual_height(static_cast<float>(SCREEN_HEIGHT) + max_particle_size * 2.0f),
+  enabled(true)
+{
 }
 
 ObjectSettings
-ParticleSystem::get_settings() {
-  ObjectSettings result = GameObject::get_settings();
-  result.options.push_back( ObjectOption(MN_INTFIELD, _("Z-pos"), &z_pos,
-                                         "z-pos"));
-
-  result.options.push_back( ObjectOption(MN_REMOVE, "", NULL));
-  return result;
-}
-
-void ParticleSystem::parse(const ReaderMapping& reader)
+ParticleSystem::get_settings()
 {
-  if (!reader.get("name", name))
-    name = "";
-  if(!reader.get("enabled", enabled))
-    enabled = true;
-  z_pos = reader_get_layer (reader, /* default = */ LAYER_BACKGROUND1);
+  ObjectSettings result = GameObject::get_settings();
+
+  result.add_bool(_("Enabled"), &enabled, "enabled", true);
+  result.add_int(_("Z-pos"), &z_pos, "z-pos", LAYER_BACKGROUND1);
+
+  result.reorder({"enabled", "name"});
+
+  result.add_remove();
+
+  return result;
 }
 
 ParticleSystem::~ParticleSystem()
 {
 }
 
-void ParticleSystem::draw(DrawingContext& context)
+void
+ParticleSystem::draw(DrawingContext& context)
 {
-  if(!enabled)
+  if (!enabled)
     return;
 
   float scrollx = context.get_translation().x;
@@ -72,20 +84,38 @@ void ParticleSystem::draw(DrawingContext& context)
   context.push_transform();
   context.set_translation(Vector(max_particle_size,max_particle_size));
 
-  for(const auto& particle : particles) {
+  std::unordered_map<SurfacePtr, SurfaceBatch> batches;
+  for (const auto& particle : particles)
+  {
     // remap x,y coordinates onto screencoordinates
     Vector pos;
 
     pos.x = fmodf(particle->pos.x - scrollx, virtual_width);
-    if(pos.x < 0) pos.x += virtual_width;
+    if (pos.x < 0) pos.x += virtual_width;
 
     pos.y = fmodf(particle->pos.y - scrolly, virtual_height);
-    if(pos.y < 0) pos.y += virtual_height;
+    if (pos.y < 0) pos.y += virtual_height;
 
     //if(pos.x > virtual_width) pos.x -= virtual_width;
     //if(pos.y > virtual_height) pos.y -= virtual_height;
 
-    context.draw_surface(particle->texture, pos, particle->angle, Color(1.0f, 1.0f, 1.0f), Blend(), z_pos);
+    auto it = batches.find(particle->texture);
+    if (it == batches.end()) {
+      const auto& batch_it = batches.emplace(particle->texture, SurfaceBatch(particle->texture));
+      batch_it.first->second.draw(pos, particle->angle);
+    } else {
+      it->second.draw(pos, particle->angle);
+    }
+  }
+
+  for(auto& it : batches) {
+    auto& surface = it.first;
+    auto& batch = it.second;
+    context.color().draw_surface_batch(surface,
+                                       std::move(batch).get_srcrects(),
+                                       std::move(batch).get_dstrects(),
+                                       std::move(batch).get_angles(),
+                                       Color::WHITE, z_pos);
   }
 
   context.pop_transform();

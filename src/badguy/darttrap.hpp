@@ -17,27 +17,22 @@
 #ifndef HEADER_SUPERTUX_BADGUY_DARTTRAP_HPP
 #define HEADER_SUPERTUX_BADGUY_DARTTRAP_HPP
 
-/**
- * Badguy "DartTrap" - Shoots a Dart at regular intervals
- */
-class DartTrap : public BadGuy
+#include "badguy/badguy.hpp"
+
+/** Badguy "DartTrap" - Shoots a Dart at regular intervals */
+class DartTrap final : public BadGuy
 {
 public:
   DartTrap(const ReaderMapping& reader);
 
-  void initialize();
-  void activate();
-  void active_update(float elapsed_time);
-  HitResponse collision_player(Player& player, const CollisionHit& hit);
-  std::string get_class() const {
-    return "darttrap";
-  }
-  std::string get_display_name() const {
-    return _("Dart trap");
-  }
+  virtual void initialize() override;
+  virtual void activate() override;
+  virtual void active_update(float dt_sec) override;
+  virtual HitResponse collision_player(Player& player, const CollisionHit& hit) override;
+  virtual std::string get_class() const override { return "darttrap"; }
+  virtual std::string get_display_name() const override { return _("Dart trap"); }
 
-  ObjectSettings get_settings();
-  void after_editor_set();
+  virtual ObjectSettings get_settings() override;
 
 protected:
   enum State {
@@ -48,12 +43,17 @@ protected:
   void fire(); /**< fire a shot */
 
 private:
+  bool enabled; /** Is DartTrap enabled **/
   float initial_delay; /**< time to wait before firing first shot */
   float fire_delay; /**< reload time */
   int ammo; /**< ammo left (-1 means unlimited) */
 
   State state; /**< current state */
   Timer fire_timer; /**< time until new shot is fired */
+
+private:
+  DartTrap(const DartTrap&) = delete;
+  DartTrap& operator=(const DartTrap&) = delete;
 };
 
 #endif

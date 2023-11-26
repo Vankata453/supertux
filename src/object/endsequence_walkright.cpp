@@ -15,8 +15,8 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "object/endsequence_walkright.hpp"
+
 #include "object/player.hpp"
-#include "supertux/globals.hpp"
 #include "supertux/screen_manager.hpp"
 #include "supertux/sector.hpp"
 
@@ -45,10 +45,10 @@ EndSequenceWalkRight::starting()
 }
 
 void
-EndSequenceWalkRight::running(float elapsed_time)
+EndSequenceWalkRight::running(float dt_sec)
 {
-  EndSequence::running(elapsed_time);
-  Player& tux = *Sector::current()->player;
+  EndSequence::running(dt_sec);
+  Player& tux = Sector::get().get_player();
 
   if (tux_may_walk) {
     end_sequence_controller->press(Controller::RIGHT);

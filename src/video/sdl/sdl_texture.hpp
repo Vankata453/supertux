@@ -14,56 +14,42 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HEADER_SUPERTUX_VIDEO_SDL_TEXTURE_HPP
-#define HEADER_SUPERTUX_VIDEO_SDL_TEXTURE_HPP
+#ifndef HEADER_SUPERTUX_VIDEO_SDL_SDL_TEXTURE_HPP
+#define HEADER_SUPERTUX_VIDEO_SDL_SDL_TEXTURE_HPP
 
-#include <algorithm>
-#include <config.h>
+#include "video/texture.hpp"
 
 #include <SDL.h>
 
-#include "video/color.hpp"
-#include "video/texture.hpp"
+#include "video/sampler.hpp"
 
-class SDLTexture : public Texture
+struct SDL_Texture;
+
+class SDLTexture final : public Texture
 {
-protected:
+public:
+  SDLTexture(SDL_Texture* texture, int width, int height, const Sampler& sampler);
+  SDLTexture(const SDL_Surface& sdl_surface, const Sampler& sampler);
+  virtual ~SDLTexture();
+
+  virtual int get_texture_width() const override { return m_width; }
+  virtual int get_texture_height() const override { return m_height; }
+
+  virtual int get_image_width() const override { return m_width; }
+  virtual int get_image_height() const override { return m_height; }
+
+  SDL_Texture *get_texture() const { return m_texture; }
+  const Sampler& get_sampler() const { return m_sampler; }
+
+private:
   SDL_Texture* m_texture;
   int m_width;
   int m_height;
-
-public:
-  SDLTexture(SDL_Surface* sdlsurface);
-  virtual ~SDLTexture();
-
-  SDL_Texture *get_texture() const
-  {
-    return m_texture;
-  }
-
-  unsigned int get_texture_width() const
-  {
-    return m_width;
-  }
-
-  unsigned int get_texture_height() const
-  {
-    return m_height;
-  }
-
-  unsigned int get_image_width() const
-  {
-    return m_width;
-  }
-
-  unsigned int get_image_height() const
-  {
-    return m_height;
-  }
+  Sampler m_sampler;
 
 private:
-  SDLTexture(const SDLTexture&);
-  SDLTexture& operator=(const SDLTexture&);
+  SDLTexture(const SDLTexture&) = delete;
+  SDLTexture& operator=(const SDLTexture&) = delete;
 };
 
 #endif

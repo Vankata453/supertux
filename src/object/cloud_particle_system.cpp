@@ -16,27 +16,21 @@
 
 #include "object/cloud_particle_system.hpp"
 
-#include <math.h>
-
-#include "math/random_generator.hpp"
-#include "supertux/globals.hpp"
-#include "util/reader.hpp"
-#include "util/reader_mapping.hpp"
-#include "video/drawing_context.hpp"
+#include "math/random.hpp"
+#include "video/surface.hpp"
 
 CloudParticleSystem::CloudParticleSystem() :
   ParticleSystem(128),
-  cloudimage(Surface::create("images/objects/particles/cloud.png"))
+  cloudimage(Surface::from_file("images/objects/particles/cloud.png"))
 {
   init();
 }
 
 CloudParticleSystem::CloudParticleSystem(const ReaderMapping& reader) :
-  ParticleSystem(128),
-  cloudimage(Surface::create("images/objects/particles/cloud.png"))
+  ParticleSystem(reader, 128),
+  cloudimage(Surface::from_file("images/objects/particles/cloud.png"))
 {
   init();
-  parse(reader);
 }
 
 CloudParticleSystem::~CloudParticleSystem()
@@ -48,10 +42,10 @@ void CloudParticleSystem::init()
   virtual_width = 2000.0;
 
   // create some random clouds
-  for(size_t i=0; i<15; ++i) {
-    auto particle = std::unique_ptr<CloudParticle>(new CloudParticle);
-    particle->pos.x = graphicsRandom.rand(static_cast<int>(virtual_width));
-    particle->pos.y = graphicsRandom.rand(static_cast<int>(virtual_height));
+  for (size_t i=0; i<15; ++i) {
+    auto particle = std::make_unique<CloudParticle>();
+    particle->pos.x = graphicsRandom.randf(virtual_width);
+    particle->pos.y = graphicsRandom.randf(virtual_height);
     particle->texture = cloudimage;
     particle->speed = -graphicsRandom.randf(25.0, 54.0);
 
@@ -59,16 +53,16 @@ void CloudParticleSystem::init()
   }
 }
 
-void CloudParticleSystem::update(float elapsed_time)
+void CloudParticleSystem::update(float dt_sec)
 {
-  if(!enabled)
+  if (!enabled)
     return;
 
-  for(auto& particle : particles) {
+  for (auto& particle : particles) {
     auto cloudParticle = dynamic_cast<CloudParticle*>(particle.get());
     if (!cloudParticle)
       continue;
-    cloudParticle->pos.x += cloudParticle->speed * elapsed_time;
+    cloudParticle->pos.x += cloudParticle->speed * dt_sec;
   }
 }
 

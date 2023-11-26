@@ -19,21 +19,21 @@
 
 #ifndef SCRIPTING_API
 #include <string>
+#include "scripting/game_object.hpp"
 
 class WillOWisp;
 #endif
 
 namespace scripting {
 
-class WillOWisp
+class WillOWisp final
+#ifndef SCRIPTING_API
+  : public GameObject<::WillOWisp>
+#endif
 {
 #ifndef SCRIPTING_API
-private:
-  ::WillOWisp* m_parent;
-
 public:
-  WillOWisp(::WillOWisp* parent);
-  ~WillOWisp();
+  using GameObject::GameObject;
 
 private:
   WillOWisp(const WillOWisp&) = delete;
@@ -53,7 +53,13 @@ public:
    */
   void set_state(const std::string& state);
 
+  /**
+   * Start following the path
+   */
   void start_moving();
+  /**
+   * Stop following the path
+   */
   void stop_moving();
 };
 

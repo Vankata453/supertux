@@ -17,22 +17,19 @@
 #ifndef HEADER_SUPERTUX_OBJECT_BOUNCY_COIN_HPP
 #define HEADER_SUPERTUX_OBJECT_BOUNCY_COIN_HPP
 
-#include <memory>
-
 #include "math/vector.hpp"
 #include "sprite/sprite_ptr.hpp"
 #include "supertux/game_object.hpp"
 #include "supertux/timer.hpp"
 
-class BouncyCoin : public GameObject
+class BouncyCoin final : public GameObject
 {
 public:
   BouncyCoin(const Vector& pos, bool emerge = false,
              const std::string& sprite_path = "images/objects/coin/coin.sprite");
-  ~BouncyCoin();
-  virtual void update(float elapsed_time);
-  virtual void draw(DrawingContext& context);
-  virtual bool do_save() const {
+  virtual void update(float dt_sec) override;
+  virtual void draw(DrawingContext& context) override;
+  virtual bool is_saveable() const override {
     return false;
   }
 
@@ -43,8 +40,8 @@ private:
   float emerge_distance;
 
 private:
-  BouncyCoin(const BouncyCoin&);
-  BouncyCoin& operator=(const BouncyCoin&);
+  BouncyCoin(const BouncyCoin&) = delete;
+  BouncyCoin& operator=(const BouncyCoin&) = delete;
 };
 
 #endif

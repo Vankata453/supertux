@@ -21,25 +21,27 @@
 #include "addon/addon_manager.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
-#include "gui/item_action.hpp"
 #include "physfs/physfs_file_system.hpp"
 #include "util/file_system.hpp"
-#include "util/gettext.hpp"
 #include "util/log.hpp"
+#include "util/gettext.hpp"
 #include "util/string_util.hpp"
 
-FileSystemMenu::FileSystemMenu(std::string* filename_, const std::vector<std::string>& extensions_) :
-  filename(filename_),
-  directory(),
-  extensions(extensions_),
-  directories(),
-  files()
+FileSystemMenu::FileSystemMenu(std::string* filename, const std::vector<std::string>& extensions,
+                               const std::string& basedir) :
+  m_filename(filename),
+  // when a basedir is given, 'filename' is relative to basedir, so
+  // it's useless as a starting point
+  m_directory(basedir.empty() ? FileSystem::dirname(*filename) : basedir),
+  m_extensions(extensions),
+  m_basedir(basedir),
+  m_directories(),
+  m_files()
 {
   AddonManager::current()->unmount_old_addons();
 
-  directory = FileSystem::dirname(*filename);
-  if (!PHYSFS_exists(directory.c_str())) {
-    directory = "/"; //The filename is probably included in an old add-on.
+  if (!PHYSFS_exists(m_directory.c_str())) {
+    m_directory = "/"; //The filename is probably included in an old add-on.
   }
 
   refresh_items();
@@ -54,59 +56,55 @@ void
 FileSystemMenu::refresh_items()
 {
   items.clear();
-  directories.clear();
-  files.clear();
-  directory = FileSystem::normalize(directory);
+  m_directories.clear();
+  m_files.clear();
+  m_directory = FileSystem::normalize(m_directory);
 
-  add_label(directory);
+  add_label(m_directory);
   add_hl();
 
   int item_id = 0;
 
   // Do not allow leaving the data directory
-  if (directory != "/") {
-    directories.push_back("..");
-    add_entry(item_id, "[..]");
-    item_id++;
+  if (m_directory != "/") {
+    m_directories.push_back("..");
   }
 
-  // Load directories
+  char** dir_files = PHYSFS_enumerateFiles(m_directory.c_str());
+  if (dir_files)
   {
-    std::unique_ptr<char*, decltype(&PHYSFS_freeList)>
-      dir_files(PHYSFS_enumerateFiles(directory.c_str()),
-            PHYSFS_freeList);
-    for(const char* const* file = dir_files.get(); *file != 0; ++file)
+    for (const char* const* file = dir_files; *file != nullptr; ++file)
     {
-      std::string dirpath = FileSystem::join(directory, *file);
-      if(PhysFSFileSystem::is_directory(dirpath))
+      std::string filepath = FileSystem::join(m_directory, *file);
+      if (PhysFSFileSystem::is_directory(filepath))
       {
-        directories.push_back(*file);
-        add_entry(item_id, "[" + std::string(*file) + "]");
-        item_id++;
+        m_directories.push_back(*file);
       }
-    }
-  }
-
-  // Load files
-  {
-    char** dir_files = PHYSFS_enumerateFiles(directory.c_str());
-    if (dir_files)
-    {
-      for(const char* const* file = dir_files; *file != 0; ++file)
+      else
       {
-        if (AddonManager::current()->is_from_old_addon(FileSystem::join(directory, *file))) {
+        if (AddonManager::current()->is_from_old_addon(filepath)) {
           continue;
         }
 
-        if(has_right_suffix(*file))
+        if (has_right_suffix(*file))
         {
-          files.push_back(*file);
-          add_entry(item_id, *file);
-          item_id++;
+          m_files.push_back(*file);
         }
       }
-      PHYSFS_freeList(dir_files);
     }
+    PHYSFS_freeList(dir_files);
+  }
+
+  for (const auto& item : m_directories)
+  {
+    add_entry(item_id, "[" + std::string(item) + "]");
+    item_id++;
+  }
+
+  for (const auto& item : m_files)
+  {
+    add_entry(item_id, item);
+    item_id++;
   }
 
   add_hl();
@@ -121,8 +119,8 @@ FileSystemMenu::refresh_items()
 bool
 FileSystemMenu::has_right_suffix(const std::string& file) const
 {
-  for (const auto& extension : extensions) {
-    if(StringUtil::has_suffix(file, extension))
+  for (const auto& extension : m_extensions) {
+    if (StringUtil::has_suffix(file, extension))
     {
       return true;
     }
@@ -131,17 +129,24 @@ FileSystemMenu::has_right_suffix(const std::string& file) const
 }
 
 void
-FileSystemMenu::menu_action(MenuItem* item)
+FileSystemMenu::menu_action(MenuItem& item)
 {
-  if (item->id >= 0) {
-    size_t id = item->id;
-    if (id < directories.size()) {
-      directory = FileSystem::join(directory, directories[id]);
+  if (item.get_id() >= 0) {
+    size_t id = item.get_id();
+    if (id < m_directories.size()) {
+      m_directory = FileSystem::join(m_directory, m_directories[id]);
       refresh_items();
     } else {
-      id -= directories.size();
-      if (id < files.size()) {
-        *filename = FileSystem::join(directory, files[id]);
+      id -= m_directories.size();
+      if (id < m_files.size()) {
+        std::string new_filename = FileSystem::join(m_directory, m_files[id]);
+
+        if (!m_basedir.empty()) {
+          new_filename = FileSystem::relpath(new_filename, m_basedir);
+        }
+
+        *m_filename = new_filename;
+
         MenuManager::instance().pop_menu();
       } else {
         log_warning << "Selected invalid file or directory" << std::endl;

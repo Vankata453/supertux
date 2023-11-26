@@ -21,43 +21,47 @@
 #include "gui/dialog.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
-#include "supertux/fadeout.hpp"
-#include "supertux/game_manager.hpp"
+#include "supertux/fadetoblack.hpp"
 #include "supertux/globals.hpp"
-#include "supertux/menu/addon_menu.hpp"
-#include "supertux/menu/contrib_menu.hpp"
 #include "supertux/menu/menu_storage.hpp"
-#include "supertux/menu/options_menu.hpp"
-#include "supertux/menu/world_set_menu.hpp"
-#include "supertux/screen_fade.hpp"
 #include "supertux/screen_manager.hpp"
-#include "supertux/textscroller.hpp"
-#include "supertux/title_screen.hpp"
-#include "supertux/world.hpp"
-#include "util/gettext.hpp"
+#include "supertux/textscroller_screen.hpp"
+#include "util/log.hpp"
+#include "video/video_system.hpp"
+#include "video/viewport.hpp"
+
+#if defined(_WIN32)
+  #include <windows.h>
+  #include <shellapi.h>
+#else
+  #include <cstdlib>
+#endif
 
 MainMenu::MainMenu()
 {
-  set_center_pos(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 35);
+  set_center_pos(static_cast<float>(SCREEN_WIDTH) / 2.0f,
+                 static_cast<float>(SCREEN_HEIGHT) / 2.0f + 35.0f);
 
   add_entry(MNID_STARTGAME, _("Start Game"));
   add_entry(MNID_ADDONS, _("Add-ons"));
   add_submenu(_("Options"), MenuStorage::OPTIONS_MENU);
   add_entry(MNID_LEVELEDITOR, _("Level Editor"));
   add_entry(MNID_CREDITS, _("Credits"));
+  add_entry(MNID_DONATE, _("Donate"));
   add_entry(MNID_QUITMAINMENU, _("Quit"));
 }
 
 void
 MainMenu::on_window_resize()
 {
-  set_center_pos(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 35);
+  set_center_pos(static_cast<float>(SCREEN_WIDTH) / 2.0f,
+                 static_cast<float>(SCREEN_HEIGHT) / 2.0f + 35.0f);
 }
 
 void
-MainMenu::menu_action(MenuItem* item)
+MainMenu::menu_action(MenuItem& item)
 {
-  switch (item->id)
+  switch (item.get_id())
   {
 
     case MNID_STARTGAME:
@@ -73,42 +77,29 @@ MainMenu::menu_action(MenuItem* item)
 
     case MNID_CREDITS:
       MenuManager::instance().clear_menu_stack();
-      ScreenManager::current()->push_screen(std::unique_ptr<Screen>(new TextScroller("credits.stxt")),
-                                            std::unique_ptr<ScreenFade>(new FadeOut(0.5)));
+      ScreenManager::current()->push_screen(std::unique_ptr<Screen>(new TextScrollerScreen("credits.stxt")),
+                                            std::unique_ptr<ScreenFade>(new FadeToBlack(FadeToBlack::FADEOUT, 0.5)));
       break;
 
     case MNID_LEVELEDITOR:
       {
         MenuManager::instance().clear_menu_stack();
         std::unique_ptr<Screen> screen(new Editor());
-        std::unique_ptr<FadeOut> fade(new FadeOut(0.5));
+        auto fade = std::make_unique<FadeToBlack>(FadeToBlack::FADEOUT, 0.5);
         SoundManager::current()->stop_music(0.5);
         ScreenManager::current()->push_screen(move(screen),move(fade));
         //Editor::current()->setup();
       }
       break;
 
+    case MNID_DONATE:
+      FileSystem::open_path("https://www.supertux.org/donate.html");
+      break;
+
     case MNID_QUITMAINMENU:
-      if (true)
-      {
-        // instantly exit the game
-        MenuManager::instance().clear_menu_stack();
-        ScreenManager::current()->quit(std::unique_ptr<ScreenFade>(new FadeOut(0.25)));
-        SoundManager::current()->stop_music(0.25);
-      }
-      else
-      {
-        // confirmation dialog
-        std::unique_ptr<Dialog> dialog(new Dialog);
-        dialog->set_text(_("Do you really want to quit SuperTux?"));
-        dialog->add_cancel_button(_("Cancel"));
-        dialog->add_default_button(_("Quit SuperTux"), [] {
-            MenuManager::instance().clear_menu_stack();
-            ScreenManager::current()->quit(std::unique_ptr<ScreenFade>(new FadeOut(0.25)));
-            SoundManager::current()->stop_music(0.25);
-          });
-        MenuManager::instance().set_dialog(std::move(dialog));
-      }
+      MenuManager::instance().clear_menu_stack();
+      ScreenManager::current()->quit(std::unique_ptr<ScreenFade>(new FadeToBlack(FadeToBlack::FADEOUT, 0.25)));
+      SoundManager::current()->stop_music(0.25);
       break;
   }
 }

@@ -16,7 +16,7 @@
 
 #include "object/coin_rain.hpp"
 
-#include "math/random_generator.hpp"
+#include "math/random.hpp"
 #include "object/coin.hpp"
 #include "sprite/sprite.hpp"
 #include "sprite/sprite_manager.hpp"
@@ -32,31 +32,33 @@ CoinRain::CoinRain(const Vector& pos, bool emerge) :
   counter(0),
   drop(0)
 {
-  if(emerge) {
-    emerge_distance = sprite->get_height();
+  if (emerge) {
+    emerge_distance = static_cast<float>(sprite->get_height());
   }
 }
 
 void
-CoinRain::update(float elapsed_time)
+CoinRain::update(float dt_sec)
 {
   // first a single (untouchable) coin flies up above the sector
-  if(position.y > -32){
-    float dist = -500 * elapsed_time;
+  if (position.y > -32){
+    float dist = -500 * dt_sec;
     position.y += dist;
     emerge_distance += dist;
   } // then the first collectable coin drops from one of ten random positions
   else if (counter==0){
     drop = gameRandom.rand(10);
-    Sector::current()->add_object(std::make_shared<HeavyCoin>(Vector (position.x+32*((drop<5)?-drop-1:drop-4),-32), Vector (0,0)));
+    Sector::get().add<HeavyCoin>(Vector(position.x + 32.0f * static_cast<float>((drop < 5) ? -drop - 1 : drop - 4), -32.0f),
+                                                              Vector(0, 0));
     counter++;
     timer.start(DROP_TIME);
   } // finally the remainder of the coins drop in a determined but appears to be a random order
-  else if(timer.check()){
-    if(counter<10){
+  else if (timer.check()){
+    if (counter<10){
       drop += 7;
-      if(drop >= 10) drop -=10;
-      Sector::current()->add_object(std::make_shared<HeavyCoin>(Vector (position.x+32*((drop<5)?-drop-1:drop-4),-32), Vector (0,0)));
+      if (drop >= 10) drop -=10;
+      Sector::get().add<HeavyCoin>(Vector(position.x + 32.0f * static_cast<float>((drop < 5) ? -drop - 1 : drop - 4), -32.0f),
+                                                                Vector(0, 0));
       counter++;
       timer.start(DROP_TIME);
     } else {
@@ -69,12 +71,12 @@ void
 CoinRain::draw(DrawingContext& context)
 {
   int layer;
-  if(emerge_distance > 0) {
+  if (emerge_distance > 0) {
     layer = LAYER_OBJECTS - 5;
   } else {
     layer = LAYER_OBJECTS + 5;
   }
-  sprite->draw(context, position, layer);
+  sprite->draw(context.color(), position, layer);
 }
 
 /* EOF */
