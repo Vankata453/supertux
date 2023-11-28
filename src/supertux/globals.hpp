@@ -38,7 +38,7 @@ extern float real_time;
 
 /** Real time (real_time) counter for an RTA speedrun.
     Started when the first level of a worldmap is entered and the black screen has been exited.
-    Captured/uncaptured manually by the user, using the respective control. */
+    Captured manually by the user, using the respective control. */
 extern float g_run_timer;
 extern float g_run_timer_captured_time;
 

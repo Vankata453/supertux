@@ -347,7 +347,7 @@ ScreenManager::process_events()
   }
 
   if (InputManager::current()->get_controller()->pressed(Controller::CAPTURE_RUN_TIMER))
-    g_run_timer_captured_time = (g_run_timer_captured_time < 0.f ? g_run_timer : -1.f); // Capture/uncapture run timer
+    g_run_timer_captured_time = g_run_timer; // Capture run timer
 }
 
 bool
