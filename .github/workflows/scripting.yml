@@ -73,14 +73,14 @@ jobs:
       - name: Check for changes
         working-directory: wiki
         run: |
+          REF_UPDATED=true
           if git diff --exit-code; then
-            echo "::set-env name=reference_updated::true"
-          else
-            echo "::set-env name=reference_updated::false"
+            REF_UPDATED=false
           fi
+          echo "REFERENCE_UPDATED=$(echo $REF_UPDATED)" >> $GITHUB_ENV
 
       - name: Push changes to wiki
-        if: ${{ env.reference_updated == 'true' }}
+        if: ${{ env.REFERENCE_UPDATED == 'true' }}
         working-directory: wiki
         run: |
           git --version
@@ -91,7 +91,7 @@ jobs:
           git commit -m "Update scripting reference (SuperTux/supertux@${{ github.sha }})"
 
       - name: Push data file changes
-        if: ${{ env.reference_updated == 'true' }}
+        if: ${{ env.REFERENCE_UPDATED == 'true' }}
         run: |
           git status
           git add data/scripts
