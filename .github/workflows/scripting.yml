@@ -79,12 +79,6 @@ jobs:
             echo "::set-env name=reference_updated::false"
           fi
 
-      - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.wiki_repo_key }}
-          known_hosts: ${{ secrets.wiki_repo_hosts }}
-
       - name: Push changes to wiki
         if: ${{ env.reference_updated == 'true' }}
         working-directory: wiki
@@ -95,7 +89,6 @@ jobs:
           git config --global user.name "SuperTux Bot"
           git add .
           git commit -m "Update scripting reference (SuperTux/supertux@${{ github.sha }})"
-          git push git@github.com:SuperTux/wiki.git HEAD:master
 
       - name: Push data file changes
         if: ${{ env.reference_updated == 'true' }}
