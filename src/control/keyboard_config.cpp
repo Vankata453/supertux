@@ -45,7 +45,6 @@ KeyboardConfig::KeyboardConfig() :
   keymap[SDLK_F1]       = Controller::CHEAT_MENU;
   keymap[SDLK_F2]       = Controller::DEBUG_MENU;
   keymap[SDLK_BACKSPACE]= Controller::REMOVE;
-  keymap[SDLK_1]        = Controller::CAPTURE_RUN_TIMER;
 }
 
 void
@@ -83,7 +82,7 @@ KeyboardConfig::read(const ReaderMapping& keymap_mapping)
           log_info << "Invalid control '" << control << "' in keymap" << std::endl;
           continue;
         }
-        bind_key(static_cast<SDL_Keycode>(key), static_cast<Controller::Control>(i));
+        keymap[static_cast<SDL_Keycode>(key)] = static_cast<Controller::Control>(i);
       }
     }
   }

@@ -167,6 +167,7 @@ Config::load()
   }
 
   config_mapping.get("run-timer", g_run_timer);
+  config_mapping.get("run-timer-captured-time", g_run_timer_captured_time);
 }
 
 void
@@ -245,6 +246,7 @@ Config::save()
   writer.end_list("addons");
 
   writer.write("run-timer", g_run_timer);
+  writer.write("run-timer-captured-time", g_run_timer_captured_time);
 
   writer.end_list("supertux-config");
 }
