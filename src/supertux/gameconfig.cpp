@@ -39,6 +39,7 @@ Config::Config() :
   try_vsync(true),
   show_fps(false),
   show_player_pos(false),
+  show_col_rects(false),
   sound_enabled(true),
   music_enabled(true),
   random_seed(0), // set by time(), by default (unless in config)
@@ -77,6 +78,7 @@ Config::load()
   config_lisp.get("profile", profile);
   config_lisp.get("show_fps", show_fps);
   config_lisp.get("show_player_pos", show_player_pos);
+  config_lisp.get("show_col_rects", show_col_rects);
   config_lisp.get("developer", developer_mode);
 
   if(is_christmas()) {
@@ -190,6 +192,7 @@ Config::save()
   writer.write("profile", profile);
   writer.write("show_fps", show_fps);
   writer.write("show_player_pos", show_player_pos);
+  writer.write("show_col_rects", show_col_rects);
   writer.write("developer", developer_mode);
   if(is_christmas()) {
     writer.write("christmas", christmas_mode);

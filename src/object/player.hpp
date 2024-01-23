@@ -337,6 +337,9 @@ public:
 
   Climbable* climbing; /**< Climbable object we are currently climbing, null if none */
 
+  Vector m_last_pos;
+  Vector m_last_speed;
+
 private:
   Player(const Player&);
   Player& operator=(const Player&);
