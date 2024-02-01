@@ -24,7 +24,9 @@ class RNGSavestatesMenu : public Menu
 private:
   enum RNGSavestatesMenuIDs
   {
-    MNID_SAVESTATE = -2
+    MNID_SAVESTATE = -2,
+    MNID_IMPORTFILE = -3,
+    MNID_SAVEFILE = -4
   };
 
 public:
@@ -32,6 +34,9 @@ public:
 
   void refresh() override;
   void menu_action(MenuItem* item) override;
+
+private:
+  std::string m_states_file;
 
 private:
   RNGSavestatesMenu(const RNGSavestatesMenu&);

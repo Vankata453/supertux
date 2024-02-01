@@ -40,7 +40,13 @@
 #include <time.h>
 #include <limits>
 
+#include <physfs.h>
+
 #include "math/random_generator.hpp"
+#include "util/log.hpp"
+#include "util/reader_document.hpp"
+#include "util/reader_mapping.hpp"
+#include "util/writer.hpp"
 
 #include "supertux/globals.hpp"
 #include "supertux/seed_finder.hpp"
@@ -48,7 +54,214 @@
 RandomGenerator graphicsRandom;               // graphic RNG
 RandomGenerator gameRandom;                   // game RNG
 
-std::vector<std::unique_ptr<RandomGenerator>> RandomGenerator::s_rng_savestates = {};
+
+void
+UnrangedRandomization::write(Writer& writer) const
+{
+  writer.write("type", Randomization::UNRANGED);
+}
+
+void
+UnrangedRandomization::apply(RandomGenerator& rng) const
+{
+  rng.rand();
+}
+
+IntRandomization::IntRandomization(int start, boost::optional<int> end) :
+  m_start_value(start),
+  m_end_value(end)
+{
+}
+
+IntRandomization::IntRandomization(const ReaderMapping& reader) :
+  m_start_value(),
+  m_end_value()
+{
+  reader.get("start", m_start_value);
+  int end;
+  if (reader.get("end", end))
+    m_end_value = end;
+}
+
+void
+IntRandomization::write(Writer& writer) const
+{
+  writer.write("type", Randomization::INT);
+  writer.write("start", m_start_value);
+  if (m_end_value)
+    writer.write("end", *m_end_value);
+}
+
+void
+IntRandomization::apply(RandomGenerator& rng) const
+{
+  if (m_end_value)
+    rng.rand(m_start_value, *m_end_value);
+  else
+    rng.rand(m_start_value);
+}
+
+FloatRandomization::FloatRandomization(float start, boost::optional<float> end) :
+  m_start_value(start),
+  m_end_value(end)
+{
+}
+
+FloatRandomization::FloatRandomization(const ReaderMapping& reader) :
+  m_start_value(),
+  m_end_value()
+{
+  reader.get("start", m_start_value);
+  float end;
+  if (reader.get("end", end))
+    m_end_value = end;
+}
+
+void
+FloatRandomization::write(Writer& writer) const
+{
+  writer.write("type", Randomization::FLOAT);
+  writer.write("start", m_start_value);
+  if (m_end_value)
+    writer.write("end", *m_end_value);
+}
+
+void
+FloatRandomization::apply(RandomGenerator& rng) const
+{
+  if (m_end_value)
+    rng.randf(m_start_value, *m_end_value);
+  else
+    rng.randf(m_start_value);
+}
+
+
+SavedRandomGenerator::SavedRandomGenerator(int seed, const RandomizationList& rands) :
+  m_seed(seed),
+  m_randomizations(rands)
+{
+}
+
+SavedRandomGenerator::SavedRandomGenerator(const ReaderMapping& reader) :
+  m_seed(),
+  m_randomizations()
+{
+  reader.get("seed", m_seed);
+
+  ReaderMapping rands_mapping;
+  if (reader.get("randomizations", rands_mapping))
+  {
+    auto iter = rands_mapping.get_iter();
+    while (iter.next())
+    {
+      if (iter.get_key() != "randomization")
+      {
+        log_warning << "Unknown key '" << iter.get_key() << "' in 'randomizations' saved random generator data." << std::endl;
+        continue;
+      }
+
+      auto mapping = iter.as_mapping();
+      int type = -1;
+      mapping.get("type", type);
+      switch (type)
+      {
+        case Randomization::UNRANGED:
+          m_randomizations.push_back(std::shared_ptr<Randomization>(new UnrangedRandomization()));
+          break;
+        case Randomization::INT:
+          m_randomizations.push_back(std::shared_ptr<Randomization>(new IntRandomization(mapping)));
+          break;
+        case Randomization::FLOAT:
+          m_randomizations.push_back(std::shared_ptr<Randomization>(new FloatRandomization(mapping)));
+          break;
+        default:
+          log_warning << "Cannot parse randomization with unknown type " << type << std::endl;
+          break;
+      }
+    }
+  }
+}
+
+void
+SavedRandomGenerator::write(Writer& writer) const
+{
+  writer.write("seed", m_seed);
+
+  writer.start_list("randomizations");
+  for (const auto& rand : m_randomizations)
+  {
+    writer.start_list("randomization");
+    rand->write(writer);
+    writer.end_list("randomization");
+  }
+  writer.end_list("randomizations");
+}
+
+void
+SavedRandomGenerator::apply(RandomGenerator& rng) const
+{
+  rng.srand(m_seed);
+
+  for (const auto& rand : m_randomizations)
+    rand->apply(rng);
+}
+
+
+void
+RandomGenerator::import_savestates(const std::string& filename)
+{
+  try
+  {
+    auto doc = ReaderDocument::parse(filename);
+    auto root = doc.get_root();
+    if (root.get_name() != "supertux-rng-savestates")
+      throw std::runtime_error("File is not a 'supertux-rng-savestates' file.");
+
+    auto iter = root.get_mapping().get_iter();
+    while (iter.next())
+    {
+      if (iter.get_key() != "random-generator")
+      {
+        log_warning << "Unknown key '" << iter.get_key() << "' in RNG savestates data." << std::endl;
+        continue;
+      }
+
+      s_rng_savestates.push_back(SavedRandomGenerator(iter.as_mapping()));
+    }
+  }
+  catch (const std::exception& err)
+  {
+    log_warning << "Error parsing RNG savestates from file '" << filename
+                << "': " << err.what() << std::endl;
+  }
+}
+
+void
+RandomGenerator::save_savestates()
+{
+  // Make sure "rng" directory exists in the root
+  if (!PHYSFS_exists("rng") && !PHYSFS_mkdir("rng"))
+  {
+    log_warning << "Couldn't create directory for RNG savestates 'rng': " << PHYSFS_getLastError();
+    return;
+  }
+
+  Writer writer("rng/rands_" + std::to_string(time(nullptr)) + ".strng");
+  writer.start_list("supertux-rng-savestates");
+
+  for (const auto& rng_savestate : s_rng_savestates)
+  {
+    writer.start_list("random-generator");
+    rng_savestate.write(writer);
+    writer.end_list("random-generator");
+  }
+
+  writer.end_list("supertux-rng-savestates");
+}
+
+
+bool RandomGenerator::s_rand_range = false;
+std::vector<SavedRandomGenerator> RandomGenerator::s_rng_savestates = {};
 
 RandomGenerator::RandomGenerator() :
   initialized(),
@@ -60,11 +273,10 @@ RandomGenerator::RandomGenerator() :
   rand_sep(),
   end_ptr(),
   debug(),
-  log_disabled(false),
   log(false),
   log_started_time(-1),
-  rand_count(0),
-  seed()
+  seed(),
+  m_randomizations()
 {
   assert(sizeof(int) >= 4);
   initialized = 0;
@@ -82,6 +294,12 @@ RandomGenerator::toggle_logging()
   log = !log;
 }
 
+void
+RandomGenerator::save_state() const
+{
+  s_rng_savestates.push_back(SavedRandomGenerator(seed, m_randomizations));
+}
+
 int RandomGenerator::srand(int x)    {
   int x0 = x;
   while (x <= 0)                          // random seed of zero means
@@ -93,49 +311,60 @@ int RandomGenerator::srand(int x)    {
 
   RandomGenerator::srandom(x);
   seed = x;
+  m_randomizations.clear();
   return x;                               // let caller know seed used
 }
 
 int RandomGenerator::rand() {
-  if (!log_disabled && log)
-    SeedFinder::log_randomization(new Randomization(0, std::numeric_limits<int>::max(), Randomization::RANDTYPE_INT, real_time - log_started_time));
+  if (log)
+    SeedFinder::log_randomization(new SeedFinder::Randomization(0, std::numeric_limits<int>::max(), SeedFinder::Randomization::RANDTYPE_INT, real_time - log_started_time));
+  m_randomizations.push_back(std::shared_ptr<Randomization>(new UnrangedRandomization()));
 
   int rv;                                  // a positive int
   while ((rv = RandomGenerator::random()) <= 0) // neg or zero causes probs
     ;
   if (debug > 0)
     printf("==== rand(): %10d =====\n", rv);
-  rand_count++;
   return rv;
 }
 
 int RandomGenerator::rand(int v) {
-  if (!log_disabled && log)
-    SeedFinder::log_randomization(new Randomization(0, v, Randomization::RANDTYPE_INT, real_time - log_started_time));
   assert(v >= 0); // illegal arg
+
+  if (!s_rand_range)
+  {
+    if (log)
+      SeedFinder::log_randomization(new SeedFinder::Randomization(0, v, SeedFinder::Randomization::RANDTYPE_INT, real_time - log_started_time));
+    m_randomizations.push_back(std::shared_ptr<Randomization>(new IntRandomization(v)));
+  }
 
   // remove biases, esp. when v is large (e.g. v == (rand_max/4)*3;)
   int rv, maxV =(RandomGenerator::rand_max / v) * v;
   while ((rv = RandomGenerator::random()) >= maxV)
     ;
-  rand_count++;
   return rv % v;                          // mod it down to 0..(maxV-1)
 }
 
 int RandomGenerator::rand(int u, int v) {
-  if (!log_disabled && log)
-    SeedFinder::log_randomization(new Randomization(u, v, Randomization::RANDTYPE_INT, real_time - log_started_time));
   assert(v > u);
 
-  log_disabled = true;
+  if (log)
+    SeedFinder::log_randomization(new SeedFinder::Randomization(u, v, SeedFinder::Randomization::RANDTYPE_INT, real_time - log_started_time));
+  m_randomizations.push_back(std::shared_ptr<Randomization>(new IntRandomization(u, v)));
+
+  s_rand_range = true;
   int result = u + RandomGenerator::rand(v-u);
-  log_disabled = false;
+  s_rand_range = false;
   return result;
 }
 
 double RandomGenerator::randf(double v) {
-  if (!log_disabled && log)
-    SeedFinder::log_randomization(new Randomization(0, v, Randomization::RANDTYPE_FLOAT, real_time - log_started_time));
+  if (!s_rand_range)
+  {
+    if (log)
+      SeedFinder::log_randomization(new SeedFinder::Randomization(0, v, SeedFinder::Randomization::RANDTYPE_FLOAT, real_time - log_started_time));
+    m_randomizations.push_back(std::shared_ptr<Randomization>(new FloatRandomization(v)));
+  }
 
   float rv;
   do {
@@ -144,17 +373,17 @@ double RandomGenerator::randf(double v) {
 
   if (debug > 0)
     printf("==== rand(): %f =====\n", rv);
-  rand_count++;
   return rv;
 }
 
 double RandomGenerator::randf(double u, double v) {
-  if (!log_disabled && log)
-    SeedFinder::log_randomization(new Randomization(u, v, Randomization::RANDTYPE_FLOAT, real_time - log_started_time));
+  if (log)
+    SeedFinder::log_randomization(new SeedFinder::Randomization(u, v, SeedFinder::Randomization::RANDTYPE_FLOAT, real_time - log_started_time));
+  m_randomizations.push_back(std::shared_ptr<Randomization>(new FloatRandomization(u, v)));
 
-  log_disabled = true;
+  s_rand_range = true;
   double result = u + RandomGenerator::randf(v-u);
-  log_disabled = false;
+  s_rand_range = false;
   return result;
 }
 
@@ -401,7 +630,7 @@ void RandomGenerator::srandom(unsigned long x)
   }
 
   initialized = 1;
-  rand_count = 0;
+  m_randomizations.clear();
   for (i = 0; i < lim; i++) random();
 }
 

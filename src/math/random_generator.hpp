@@ -36,11 +36,95 @@
 
 #include <memory>
 #include <vector>
+#include <string>
 
-class RandomGenerator
+#include <boost/optional.hpp>
+
+class RandomGenerator;
+class ReaderMapping;
+class Writer;
+
+class Randomization
 {
 public:
-  static std::vector<std::unique_ptr<RandomGenerator>> s_rng_savestates;
+  enum Type { UNRANGED, INT, FLOAT };
+
+public:
+  Randomization() {}
+  virtual ~Randomization() {}
+
+  virtual void write(Writer& writer) const = 0;
+  virtual void apply(RandomGenerator& rng) const = 0;
+};
+
+typedef std::vector<std::shared_ptr<Randomization>> RandomizationList;
+
+class UnrangedRandomization final : public Randomization
+{
+public:
+  UnrangedRandomization() {}
+
+  void write(Writer& writer) const override;
+  void apply(RandomGenerator& rng) const override;
+};
+
+class IntRandomization final : public Randomization
+{
+public:
+  IntRandomization(int start, boost::optional<int> end = boost::none);
+  IntRandomization(const ReaderMapping& reader);
+
+  void write(Writer& writer) const override;
+  void apply(RandomGenerator& rng) const override;
+
+private:
+  int m_start_value;
+  boost::optional<int> m_end_value;
+};
+
+class FloatRandomization final : public Randomization
+{
+public:
+  FloatRandomization(float start, boost::optional<float> end = boost::none);
+  FloatRandomization(const ReaderMapping& reader);
+
+  void write(Writer& writer) const override;
+  void apply(RandomGenerator& rng) const override;
+
+private:
+  float m_start_value;
+  boost::optional<float> m_end_value;
+};
+
+
+class SavedRandomGenerator final
+{
+public:
+  SavedRandomGenerator(int seed, const RandomizationList& rands);
+  SavedRandomGenerator(const ReaderMapping& reader);
+
+  void write(Writer& writer) const;
+  void apply(RandomGenerator& rng) const;
+
+  int get_seed() const { return m_seed; }
+  size_t get_rand_count() const { return m_randomizations.size(); }
+
+private:
+  int m_seed;
+  RandomizationList m_randomizations;
+};
+
+
+class RandomGenerator final
+{
+private:
+  static bool s_rand_range;
+
+public:
+  static std::vector<SavedRandomGenerator> s_rng_savestates;
+
+  static void import_savestates(const std::string& filename);
+  static void save_savestates();
 
 private:
   // Array versions of the above information to make code run faster --
@@ -87,17 +171,16 @@ private:
   long *end_ptr;
   int debug;
   static const int rand_max = 0x7fffffff;         // biggest signed Uint32
-  bool log_disabled;
 
   bool log;
   float log_started_time;
 
-  int rand_count;
   int seed;
+  RandomizationList m_randomizations;
 
 public:
-  const int& get_rand_count() const { return rand_count; }
-  const int& get_seed() const { return seed; }
+  int get_seed() const { return seed; }
+  size_t get_rand_count() const { return m_randomizations.size(); }
 
 public:
   RandomGenerator();
@@ -105,6 +188,8 @@ public:
 
   void toggle_logging();
   bool logging_on() const { return log; }
+
+  void save_state() const;
 
   // Documentation of user-visible calls:
 
@@ -140,6 +225,10 @@ public:
   //  char *initstate(unsigned long seed, char *arg_state, long n);
   //  char *setstate(char *arg_state);
   long random();
+
+private:
+  RandomGenerator(const RandomGenerator&) = delete;
+  RandomGenerator& operator=(const RandomGenerator&) = delete;
 };
 
 // Use for random particle fx or whatever

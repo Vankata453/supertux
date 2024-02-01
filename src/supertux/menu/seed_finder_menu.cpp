@@ -103,7 +103,7 @@ SeedFinderMenu::update_status(const SeedFinder::Status& status)
 void
 SeedFinderMenu::add_randomization()
 {
-  s_seed_finder->add_randomization(new Randomization(0, 1, Randomization::RANDTYPE_INT));
+  s_seed_finder->add_randomization(new SeedFinder::Randomization(0, 1, SeedFinder::Randomization::RANDTYPE_INT));
   import_randomization(s_seed_finder->m_randomizations.size() - 1);
 }
 
@@ -116,7 +116,7 @@ SeedFinderMenu::import_randomization(const int index)
   add_item(std::unique_ptr<MenuItem>(new ItemNumField(_("Range start"), &rand->m_range_start)), items_pos)
     ->id = -10 - (index + 1) * 2; // Set an ID to find the randomization on the menu with.
   add_item(std::unique_ptr<MenuItem>(new ItemNumField(_("Range end"), &rand->m_range_end)), items_pos + 1);
-  add_item(std::unique_ptr<MenuItem>(new ItemStringSelect(_("Type"), Randomization::s_rand_types,
+  add_item(std::unique_ptr<MenuItem>(new ItemStringSelect(_("Type"), SeedFinder::Randomization::s_rand_types,
                                      reinterpret_cast<int*>(&rand->m_type))), items_pos + 2);
 
   const int desired_value_id = -9 - (index + 1) * 2;

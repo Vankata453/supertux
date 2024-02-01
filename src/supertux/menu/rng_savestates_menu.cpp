@@ -18,13 +18,15 @@
 
 #include <sstream>
 
+#include "gui/dialog.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
 #include "math/random_generator.hpp"
 #include "util/gettext.hpp"
 #include "util/log.hpp"
 
-RNGSavestatesMenu::RNGSavestatesMenu()
+RNGSavestatesMenu::RNGSavestatesMenu() :
+  m_states_file()
 {
   refresh();
 }
@@ -44,10 +46,10 @@ RNGSavestatesMenu::refresh()
   else
   {
     int index = 0;
-    for (auto& rand : RandomGenerator::s_rng_savestates)
+    for (const auto& rand : RandomGenerator::s_rng_savestates)
     {
       std::stringstream text;
-      text << rand->get_seed() << "; " << rand->get_rand_count() << " randomizations performed";
+      text << rand.get_seed() << "; " << rand.get_rand_count() << " randomizations performed";
 
       add_entry(index, text.str());
       index++;
@@ -56,6 +58,11 @@ RNGSavestatesMenu::refresh()
   add_hl();
 
   add_entry(MNID_SAVESTATE, _("Save current state"));
+  add_hl();
+
+  add_file(_("Choose states file"), &m_states_file, { ".strng" });
+  add_entry(MNID_IMPORTFILE, _("Import states from file"));
+  add_entry(MNID_SAVEFILE, _("Save states to file"));
   add_hl();
 
   add_back(_("Back"));
@@ -68,17 +75,36 @@ RNGSavestatesMenu::menu_action(MenuItem* item)
 {
   if (item->id == MNID_SAVESTATE)
   {
-    RandomGenerator::s_rng_savestates.push_back(std::unique_ptr<RandomGenerator>(new RandomGenerator(gameRandom)));
+    gameRandom.save_state();
     refresh();
+  }
+  else if (item->id == MNID_IMPORTFILE)
+  {
+    if (m_states_file.empty())
+    {
+      auto dialog = std::unique_ptr<Dialog>(new Dialog(false));
+      dialog->set_text(_("No import file selected."));
+      dialog->add_button(_("OK"), []() { MenuManager::instance().set_dialog({}); });
+      MenuManager::instance().set_dialog(std::move(dialog));
+      return;
+    }
+    RandomGenerator::import_savestates(m_states_file);
+    m_states_file.clear();
+    refresh();
+  }
+  else if (item->id == MNID_SAVEFILE)
+  {
+    RandomGenerator::save_savestates();
+
+    auto dialog = std::unique_ptr<Dialog>(new Dialog(false));
+    dialog->set_text(_("Saved under \"/rng\"."));
+    dialog->add_button(_("OK"), []() { MenuManager::instance().set_dialog({}); });
+    MenuManager::instance().set_dialog(std::move(dialog));
   }
   else if (item->id >= 0)
   {
-    gameRandom = *RandomGenerator::s_rng_savestates.at(item->id);
+    RandomGenerator::s_rng_savestates.at(item->id).apply(gameRandom);
     MenuManager::instance().pop_menu();
-  }
-  else
-  {
-    log_warning << "Invalid menu item with ID " << item->id << " pressed." << std::endl;
   }
 }
 

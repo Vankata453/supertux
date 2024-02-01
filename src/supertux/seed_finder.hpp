@@ -28,74 +28,74 @@
 #include "util/reader_mapping.hpp"
 #include "util/writer.hpp"
 
-class Randomization
+class SeedFinder final
 {
   friend class SeedFinderMenu;
 
 public:
-  enum RandType
+  class Randomization final
   {
-    RANDTYPE_INT,
-    RANDTYPE_FLOAT
+    friend class SeedFinderMenu;
+
+  public:
+    enum RandType
+    {
+      RANDTYPE_INT,
+      RANDTYPE_FLOAT
+    };
+    enum RandValue
+    {
+      RANDVALUE_EQUAL,
+      RANDVALUE_LESSTHAN,
+      RANDVALUE_MORETHAN
+    };
+    static const std::vector<std::string> s_rand_types;
+
+  private:
+    float m_range_start;
+    float m_range_end;
+    float m_time;
+
+    int m_type;
+    int m_value_type;
+    boost::optional<float> m_desired_value;
+    float m_precision;
+
+    boost::optional<float> m_value;
+    float m_temp_time;
+
+    bool m_pilot_timeframe;
+    float m_pilot_timeframe_time;
+
+  public:
+    Randomization(float range_start, float range_end, RandType type, float time = -1.f,
+                  boost::optional<float> desired_value = boost::none,
+                  float precision = 0.01f);
+    Randomization(ReaderMapping& mapping);
+
+    void rand(RandomGenerator& rng);
+    void reset();
+
+    void save(Writer& writer);
+
+    std::string to_string() const;
+
+    float get_time() const { return m_time; }
+    float get_value() const { return *m_value; }
+    bool has_value() const { return m_value != boost::none; }
+    bool has_match() const;
+
+    bool has_pilot_timeframe() const { return m_pilot_timeframe; }
+    bool has_pilot_timeframe_time() const { return m_pilot_timeframe_time > 0.f; }
+    float get_pilot_timeframe_time() const { return m_pilot_timeframe_time; }
+
+    float get_temp_time() const { return m_temp_time; }
+    void set_temp_time(const float& temp_time) { m_temp_time = temp_time; }
+
+  private:
+    Randomization(const Randomization&);
+    Randomization& operator=(const Randomization&);
   };
-  enum RandValue
-  {
-    RANDVALUE_EQUAL,
-    RANDVALUE_LESSTHAN,
-    RANDVALUE_MORETHAN
-  };
-  static const std::vector<std::string> s_rand_types;
-
-private:
-  float m_range_start;
-  float m_range_end;
-  float m_time;
-
-  int m_type;
-  int m_value_type;
-  boost::optional<float> m_desired_value;
-  float m_precision;
-
-  boost::optional<float> m_value;
-  float m_temp_time;
-
-  bool m_pilot_timeframe;
-  float m_pilot_timeframe_time;
-
-public:
-  Randomization(float range_start, float range_end, RandType type, float time = -1.f,
-                boost::optional<float> desired_value = boost::none,
-                float precision = 0.01f);
-  Randomization(ReaderMapping& mapping);
-
-  void rand(RandomGenerator& rng);
-  void reset();
-
-  void save(Writer& writer);
-
-  std::string to_string() const;
-
-  float get_time() const { return m_time; }
-  float get_value() const { return *m_value; }
-  bool has_value() const { return m_value != boost::none; }
-  bool has_match() const;
-
-  bool has_pilot_timeframe() const { return m_pilot_timeframe; }
-  bool has_pilot_timeframe_time() const { return m_pilot_timeframe_time > 0.f; }
-  float get_pilot_timeframe_time() const { return m_pilot_timeframe_time; }
-
-  float get_temp_time() const { return m_temp_time; }
-  void set_temp_time(const float& temp_time) { m_temp_time = temp_time; }
-
-private:
-  Randomization(const Randomization&);
-  Randomization& operator=(const Randomization&);
-};
-
-
-class SeedFinder
-{
-  friend class SeedFinderMenu;
 
 public:
   typedef std::vector<std::unique_ptr<Randomization>> RandomizationLog; 

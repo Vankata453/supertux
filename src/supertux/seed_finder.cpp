@@ -27,10 +27,10 @@
 #include "util/log.hpp"
 #include "util/reader_document.hpp"
 
-const std::vector<std::string> Randomization::s_rand_types = { _("Integer"), _("Float") };
+const std::vector<std::string> SeedFinder::Randomization::s_rand_types = { _("Integer"), _("Float") };
 
-Randomization::Randomization(float range_start, float range_end, RandType type, float time,
-                             boost::optional<float> desired_value, float precision) :
+SeedFinder::Randomization::Randomization(float range_start, float range_end, RandType type, float time,
+                                         boost::optional<float> desired_value, float precision) :
   m_range_start(range_start),
   m_range_end(range_end),
   m_time(time),
@@ -46,7 +46,7 @@ Randomization::Randomization(float range_start, float range_end, RandType type, 
   reset();
 }
 
-Randomization::Randomization(ReaderMapping& mapping) :
+SeedFinder::Randomization::Randomization(ReaderMapping& mapping) :
   m_range_start(),
   m_range_end(),
   m_time(-1.f),
@@ -78,7 +78,7 @@ Randomization::Randomization(ReaderMapping& mapping) :
 }
 
 void
-Randomization::save(Writer& writer)
+SeedFinder::Randomization::save(Writer& writer)
 {
   writer.write("range-start", m_range_start);
   writer.write("range-end", m_range_end);
@@ -104,7 +104,7 @@ Randomization::save(Writer& writer)
 }
 
 void
-Randomization::rand(RandomGenerator& rng)
+SeedFinder::Randomization::rand(RandomGenerator& rng)
 {
   switch (m_type)
   {
@@ -118,13 +118,13 @@ Randomization::rand(RandomGenerator& rng)
 }
 
 void
-Randomization::reset()
+SeedFinder::Randomization::reset()
 {
   m_value.reset();
 }
 
 std::string
-Randomization::to_string() const
+SeedFinder::Randomization::to_string() const
 {
   const std::string start_str = std::to_string(m_range_start);
   const std::string end_str = std::to_string(m_range_end);
@@ -135,7 +135,7 @@ Randomization::to_string() const
 }
 
 bool
-Randomization::has_match() const
+SeedFinder::Randomization::has_match() const
 {
   if (m_value == boost::none)
     return false;
