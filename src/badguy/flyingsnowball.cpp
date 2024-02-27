@@ -36,6 +36,9 @@ FlyingSnowBall::FlyingSnowBall(const ReaderMapping& reader) :
   puff_timer_time(-100),
   puff_timer()
 {
+  reader.get("normal_propeller_speed", normal_propeller_speed);
+  reader.get("puff_timer", puff_timer_time);
+
   physic.enable_gravity(true);
 }
 
