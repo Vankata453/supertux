@@ -1,0 +1,80 @@
+#  SuperTux
+#  Copyright (C) 2020-2021 Jacob Burroughs <maths22@gmail.com>
+#                2020-2022 A. Semphris <semphris@protonmail.com>
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+name: Windows (v0.5.x)
+on:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    strategy:
+      matrix:
+        arch: [x64, x86]
+
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Download 32-bit dependencies
+        if: ${{ matrix.arch == x86 }}
+        uses: suisei-cn/actions-download-file@818d6b7dc8fe73f2f924b6241f2b1134ca1377d9
+        with:
+          url: "https://download.supertux.org/builddep/dependencies-win32.zip"
+          target: ./
+          filename: "dependencies.zip"
+
+      - name: Download 64-bit dependencies
+        if: ${{ matrix.arch == x64 }}
+        uses: suisei-cn/actions-download-file@818d6b7dc8fe73f2f924b6241f2b1134ca1377d9
+        with:
+          url: "https://download.supertux.org/builddep/dependencies-win64.zip"
+          target: ./
+          filename: "dependencies.zip"
+
+      - name: Extract dependencies
+        run: |
+          7z e dependencies.zip
+
+      - name: Configure bulid
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          cmake --version
+          mkdir build
+          cd build
+          cmake .. -A $Env:ARCH.replace("x86", "Win32") -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        working-directory: build
+        run: |
+          cmake --build . --config Release
+
+      - name: Package
+        working-directory: build
+        run: |
+          cpack -C Release
+          mkdir upload
+          mv *.msi upload/
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: "windows-${{ matrix.arch }}-Release-installer"
+          path: build/upload/*.msi
+          if-no-files-found: ignore
