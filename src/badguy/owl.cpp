@@ -18,6 +18,7 @@
 #include "badguy/owl.hpp"
 
 #include "audio/sound_manager.hpp"
+#include "editor/editor.hpp"
 #include "object/anchor_point.hpp"
 #include "object/player.hpp"
 #include "object/rock.hpp"
@@ -60,21 +61,24 @@ Owl::initialize()
   physic.enable_gravity(false);
   sprite->set_action(dir == LEFT ? "left" : "right");
 
-  auto game_object = ObjectFactory::instance().create(carried_obj_name, get_pos(), dir);
-  if (game_object == NULL)
+  if (!Editor::is_active())
   {
-    log_fatal << "Creating \"" << carried_obj_name << "\" object failed." << std::endl;
-  }
-  else
-  {
-    carried_object = dynamic_cast<Portable*>(game_object.get());
-    if (carried_object == NULL)
+    auto game_object = ObjectFactory::instance().create(carried_obj_name, get_pos(), dir);
+    if (game_object == NULL)
     {
-      log_warning << "Object is not portable: " << carried_obj_name << std::endl;
+      log_fatal << "Creating \"" << carried_obj_name << "\" object failed." << std::endl;
     }
     else
     {
-      Sector::current()->add_object(game_object);
+      carried_object = dynamic_cast<Portable*>(game_object.get());
+      if (carried_object == NULL)
+      {
+        log_warning << "Object is not portable: " << carried_obj_name << std::endl;
+      }
+      else
+      {
+        Sector::current()->add_object(game_object);
+      }
     }
   }
 }

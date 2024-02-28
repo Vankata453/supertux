@@ -275,10 +275,19 @@ BadGuy::update(float elapsed_time)
 void
 BadGuy::save(Writer& writer) {
   MovingSprite::save(writer);
-  writer.write("direction", dir_to_string(dir), false);
+  writer.write("direction", dir_to_string(start_dir), false);
   if(!dead_script.empty()) {
     writer.write("dead-script", dead_script, false);
   }
+}
+
+ObjectSettings
+BadGuy::get_settings()
+{
+  ObjectSettings result = MovingSprite::get_settings();
+  result.options.push_back(dir_option(&start_dir));
+  result.options.push_back(ObjectOption(MN_SCRIPT, _("Death script"), &dead_script));
+  return result;
 }
 
 Direction

@@ -43,9 +43,7 @@ Background::Background() :
   scroll_offset(),
   image_top(),
   image(),
-  image_bottom(),
-  has_pos_x(false),
-  has_pos_y(false)
+  image_bottom()
 {
 }
 
@@ -63,16 +61,11 @@ Background::Background(const ReaderMapping& reader) :
   scroll_offset(),
   image_top(),
   image(),
-  image_bottom(),
-  has_pos_x(false),
-  has_pos_y(false)
+  image_bottom()
 {
   // read position, defaults to (0,0)
-  float px = 0;
-  float py = 0;
-  has_pos_x = reader.get("x", px);
-  has_pos_y = reader.get("y", py);
-  this->pos = Vector(px,py);
+  reader.get("x", pos.x);
+  reader.get("y", pos.y);
 
   if (!reader.get("name", name)) name = "";
 
@@ -162,6 +155,8 @@ Background::save(Writer& writer) {
 ObjectSettings
 Background::get_settings() {
   ObjectSettings result = GameObject::get_settings();
+  result.options.push_back(ObjectOption(MN_NUMFIELD, _("X position"), &pos.x, "x"));
+  result.options.push_back(ObjectOption(MN_NUMFIELD, _("Y position"), &pos.y, "y"));
   result.options.push_back( ObjectOption(MN_INTFIELD, _("Z-pos"), &layer, "z-pos"));
   ObjectOption align(MN_STRINGSELECT, _("Alignment"), &alignment);
   align.select.push_back(_("none"));
@@ -335,9 +330,7 @@ Background::draw(DrawingContext& context)
   Vector center_offset(context.get_translation().x - translation_range.width  / 2.0f,
                        context.get_translation().y - translation_range.height / 2.0f);
 
-  float px = has_pos_x ? pos.x : level_size.width/2;
-  float py = has_pos_y ? pos.y : level_size.height/2;
-  draw_image(context, Vector(px, py) + center_offset * (1.0f - speed));
+  draw_image(context, pos + center_offset * (1.0f - speed));
 }
 
 /* EOF */
