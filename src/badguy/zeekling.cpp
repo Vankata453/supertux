@@ -39,9 +39,9 @@ Zeekling::Zeekling(const ReaderMapping& reader) :
   display_dive_variables(false)
 {
   state = FLYING;
-  speed = gameRandom.rand(130, 171);
-  if (!reader.get("display_dive_variables", display_dive_variables))
-    display_dive_variables = false;
+  if (!reader.get("speed", speed))
+    speed = gameRandom.rand(130, 171);
+  reader.get("display_dive_variables", display_dive_variables);
   physic.enable_gravity(false);
 }
 
