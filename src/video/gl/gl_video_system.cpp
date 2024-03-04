@@ -307,6 +307,12 @@ GLVideoSystem::get_back_renderer() const
   return m_back_renderer.get();
 }
 
+std::unique_ptr<Renderer>
+GLVideoSystem::create_texture_renderer(const Size& size)
+{
+  return std::make_unique<GLTextureRenderer>(*this, size, 1);
+}
+
 TexturePtr
 GLVideoSystem::new_texture(const SDL_Surface& image, const Sampler& sampler)
 {

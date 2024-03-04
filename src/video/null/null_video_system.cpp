@@ -56,6 +56,12 @@ NullVideoSystem::get_lightmap() const
   return *m_lightmap_renderer;
 }
 
+std::unique_ptr<Renderer>
+NullVideoSystem::create_texture_renderer(const Size&)
+{
+  return std::make_unique<NullRenderer>();
+}
+
 TexturePtr
 NullVideoSystem::new_texture(const SDL_Surface& image, const Sampler& sampler)
 {

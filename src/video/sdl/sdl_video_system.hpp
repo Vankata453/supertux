@@ -51,6 +51,9 @@ public:
 
   virtual SDLSurfacePtr make_screenshot() override;
 
+protected:
+  std::unique_ptr<Renderer> create_texture_renderer(const Size& size) override;
+
 private:
   void create_window();
 

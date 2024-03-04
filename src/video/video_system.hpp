@@ -17,15 +17,19 @@
 #ifndef HEADER_SUPERTUX_VIDEO_VIDEO_SYSTEM_HPP
 #define HEADER_SUPERTUX_VIDEO_VIDEO_SYSTEM_HPP
 
+#include "util/currenton.hpp"
+
 #include <string>
 #include <vector>
+#include <functional>
+
 #include <SDL.h>
 
 #include "math/size.hpp"
-#include "util/currenton.hpp"
 #include "video/sampler.hpp"
 #include "video/texture_ptr.hpp"
 
+class Canvas;
 class Rect;
 class Renderer;
 class SDLSurfacePtr;
@@ -63,6 +67,7 @@ public:
   virtual Renderer& get_lightmap() const = 0;
 
   virtual TexturePtr new_texture(const SDL_Surface& image, const Sampler& sampler = Sampler()) = 0;
+  TexturePtr render_to_texture(const std::function<void(Canvas&)>& draw, const Size& size);
 
   virtual const Viewport& get_viewport() const = 0;
   virtual void apply_config() = 0;
@@ -78,6 +83,9 @@ public:
   virtual SDLSurfacePtr make_screenshot() = 0;
 
   void do_take_screenshot();
+
+protected:
+  virtual std::unique_ptr<Renderer> create_texture_renderer(const Size& size) = 0;
 
 private:
   VideoSystem(const VideoSystem&) = delete;

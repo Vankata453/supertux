@@ -36,6 +36,7 @@
 #include "video/drawing_context.hpp"
 #include "video/layer.hpp"
 #include "video/surface.hpp"
+#include "video/video_system.hpp"
 
 TileMap::TileMap(const TileSet *new_tileset) :
   ExposedObject<TileMap, scripting::TileMap>(this),
@@ -43,6 +44,7 @@ TileMap::TileMap(const TileSet *new_tileset) :
   m_editor_active(true),
   m_tileset(new_tileset),
   m_tiles(),
+  m_tile_surface(),
   m_real_solid(false),
   m_effective_solid(false),
   m_speed_x(1),
@@ -78,6 +80,7 @@ TileMap::TileMap(const TileSet *tileset_, const ReaderMapping& reader) :
   m_editor_active(true),
   m_tileset(tileset_),
   m_tiles(),
+  m_tile_surface(),
   m_real_solid(false),
   m_effective_solid(false),
   m_speed_x(1),
@@ -436,6 +439,14 @@ TileMap::on_flip(float height)
 void
 TileMap::draw(DrawingContext& context)
 {
+  if (!m_tile_surface)
+  {
+    // Draw all tiles to a texture.
+    TexturePtr texture = VideoSystem::current()->render_to_texture([this](Canvas& canvas) { draw_tiles(canvas); },
+                                                                   Size(m_width * 32, m_height * 32));
+    m_tile_surface = Surface::from_texture(texture);
+  }
+
   // skip draw if current opacity is 0.0
   if (m_current_alpha == 0.0f) return;
 
@@ -457,30 +468,36 @@ TileMap::draw(DrawingContext& context)
   context.set_translation(Vector(trans_x * (normal_speed ? 1.0f : m_speed_x),
                                  trans_y * (normal_speed ? 1.0f : m_speed_y)));
 
-  Rectf draw_rect = context.get_cliprect();
-  Rect t_draw_rect = get_tiles_overlapping(draw_rect);
-  Vector start = get_tile_position(t_draw_rect.left, t_draw_rect.top);
+  Canvas& canvas = context.get_canvas(m_draw_target);
+  canvas.draw_surface(m_tile_surface, Vector(0.f, 0.f), 0.f, m_current_tint, Blend(), m_z_pos);
 
-  Vector pos(0.0f, 0.0f);
-  int tx, ty;
+  context.pop_transform();
+}
 
+void
+TileMap::draw_tiles(Canvas& canvas) const
+{
   std::unordered_map<SurfacePtr,
                      std::tuple<std::vector<Rectf>,
                                 std::vector<Rectf>>> batches;
 
-  for (pos.x = start.x, tx = t_draw_rect.left; tx < t_draw_rect.right; pos.x += 32, ++tx) {
-    for (pos.y = start.y, ty = t_draw_rect.top; ty < t_draw_rect.bottom; pos.y += 32, ++ty) {
-      int index = ty*m_width + tx;
-      assert (index >= 0);
-      assert (index < (m_width * m_height));
+  Vector pos(0.f, 0.f);
+  int tx, ty;
+  for (pos.x = 0.f, tx = 0; tx < m_width; pos.x += 32.f, ++tx)
+  {
+    for (pos.y = 0.f, ty = 0; ty < m_height; pos.y += 32.f, ++ty)
+    {
+      int index = ty * m_width + tx;
+      assert(index >= 0);
+      assert(index < (m_width * m_height));
 
       if (m_tiles[index] == 0) continue;
       const Tile& tile = m_tileset->get(m_tiles[index]);
 
-      if (g_debug.show_collision_rects) {
-        tile.draw_debug(context.color(), pos, LAYER_FOREGROUND1);
-      }
+      if (g_debug.show_collision_rects)
+        tile.draw_debug(canvas, pos, LAYER_FOREGROUND1);
 
+/**
       // If the tilemap is active in editor and showing deprecated tiles is enabled, draw indication over each deprecated tile
       if (Editor::is_active() && m_editor_active &&
           g_config->editor_show_deprecated_tiles && tile.is_deprecated())
@@ -488,9 +505,11 @@ TileMap::draw(DrawingContext& context)
         context.color().draw_text(Resources::normal_font, "!", pos + Vector(16, 8),
                                   ALIGN_CENTER, LAYER_GUI - 10, Color::RED);
       }
+*/
 
       const SurfacePtr& surface = Editor::is_active() ? tile.get_current_editor_surface() : tile.get_current_surface();
-      if (surface) {
+      if (surface)
+      {
         std::get<0>(batches[surface]).emplace_back(surface->get_region());
         std::get<1>(batches[surface]).emplace_back(pos,
                                                    Sizef(static_cast<float>(surface->get_width()),
@@ -499,20 +518,16 @@ TileMap::draw(DrawingContext& context)
     }
   }
 
-  Canvas& canvas = context.get_canvas(m_draw_target);
-
   for (auto& it : batches)
   {
     const SurfacePtr& surface = it.first;
-    if (surface) {
-      canvas.draw_surface_batch(surface,
-                                std::move(std::get<0>(it.second)),
-                                std::move(std::get<1>(it.second)),
-                                m_current_tint, m_z_pos);
-    }
-  }
+    if (!surface) continue;
 
-  context.pop_transform();
+    canvas.draw_surface_batch(surface,
+                              std::move(std::get<0>(it.second)),
+                              std::move(std::get<1>(it.second)),
+                              Color(1.f, 1.f, 1.f, 1.f), 0);
+  }
 }
 
 void

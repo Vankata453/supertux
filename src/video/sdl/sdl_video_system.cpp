@@ -107,6 +107,12 @@ SDLVideoSystem::get_lightmap() const
   return *m_lightmap;
 }
 
+std::unique_ptr<Renderer>
+SDLVideoSystem::create_texture_renderer(const Size& size)
+{
+  return std::make_unique<SDLTextureRenderer>(*this, m_sdl_renderer.get(), size, 1);
+}
+
 TexturePtr
 SDLVideoSystem::new_texture(const SDL_Surface& image, const Sampler& sampler)
 {

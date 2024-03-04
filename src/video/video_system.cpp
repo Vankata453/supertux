@@ -25,7 +25,10 @@
 
 #include "util/file_system.hpp"
 #include "util/log.hpp"
+#include "util/obstackpp.hpp"
+#include "video/drawing_context.hpp"
 #include "video/null/null_video_system.hpp"
+#include "video/renderer.hpp"
 #include "video/sdl/sdl_video_system.hpp"
 #include "video/sdl_surface.hpp"
 #include "video/sdl_surface_ptr.hpp"
@@ -163,6 +166,28 @@ VideoSystem::get_available_video_systems()
   output.push_back("opengl20");
 #endif
   return output;
+}
+
+TexturePtr
+VideoSystem::render_to_texture(const std::function<void(Canvas&)>& draw, const Size& size)
+{
+  obstack obst;
+  obstack_init(&obst);
+
+  std::unique_ptr<Renderer> renderer = create_texture_renderer(size);
+  {
+    DrawingContext context(*this, obst, false);
+    context.set_viewport(Rect(0, 0, size));
+
+    draw(context.color());
+
+    renderer->start_draw();
+    context.color().render(*renderer, Canvas::ALL);
+    renderer->end_draw();
+  }
+
+  obstack_free(&obst, nullptr);
+  return renderer->get_texture();
 }
 
 void

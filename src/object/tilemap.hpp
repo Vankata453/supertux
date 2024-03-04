@@ -30,12 +30,14 @@
 #include "supertux/autotile.hpp"
 #include "supertux/game_object.hpp"
 #include "video/color.hpp"
-#include "video/flip.hpp"
 #include "video/drawing_target.hpp"
+#include "video/flip.hpp"
+#include "video/surface_ptr.hpp"
 
-class DrawingContext;
+class Canvas;
 class CollisionObject;
 class CollisionGroundMovementManager;
+class DrawingContext;
 class Tile;
 class TileSet;
 
@@ -215,6 +217,8 @@ public:
   const std::vector<uint32_t>& get_tiles() const { return m_tiles; }
 
 private:
+  void draw_tiles(Canvas& canvas) const;
+
   void update_effective_solid(bool update_manager = true);
   void float_channel(float target, float &current, float remaining_time, float dt_sec);
 
@@ -231,6 +235,8 @@ private:
 
   typedef std::vector<uint32_t> Tiles;
   Tiles m_tiles;
+
+  SurfacePtr m_tile_surface;
 
   /* read solid: In *general*, is this a solid layer? effective solid:
      is the layer *currently* solid? A generally solid layer may be

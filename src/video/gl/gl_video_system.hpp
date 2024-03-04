@@ -60,6 +60,9 @@ public:
 
   GLContext& get_context() const { return *m_context; }
 
+protected:
+  std::unique_ptr<Renderer> create_texture_renderer(const Size& size) override;
+
 private:
   void create_gl_window();
   void create_gl_context();
