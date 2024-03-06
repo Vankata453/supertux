@@ -28,7 +28,8 @@
 
 std::unique_ptr<SeedFinder> SeedFinderMenu::s_seed_finder = nullptr;
 
-SeedFinderMenu::SeedFinderMenu()
+SeedFinderMenu::SeedFinderMenu() :
+  m_import_file()
 {
   if (!s_seed_finder) s_seed_finder.reset(new SeedFinder(0));
 
@@ -41,6 +42,11 @@ SeedFinderMenu::refresh()
   clear();
 
   add_label(_("Seed Finder"));
+  add_hl();
+
+  add_file(_("Choose randomizations file"), &m_import_file, { ".stsf" });
+  add_entry(MNID_IMPORTRANDOMIZATIONS, _("Import randomizations"));
+  add_entry(MNID_SAVERANDOMIZATIONS, _("Save randomizations"));
   add_hl();
 
   if (!s_seed_finder->s_randomization_log.empty())
@@ -247,6 +253,27 @@ SeedFinderMenu::menu_action(MenuItem* item)
       break;
     case MNID_USESEED:
       use_seed();
+      break;
+    case MNID_IMPORTRANDOMIZATIONS:
+      if (m_import_file.empty())
+      {
+        auto dialog = std::unique_ptr<Dialog>(new Dialog(false));
+        dialog->set_text(_("No import file selected."));
+        dialog->add_button(_("OK"), []() { MenuManager::instance().set_dialog({}); });
+        MenuManager::instance().set_dialog(std::move(dialog));
+        return;
+      }
+      s_seed_finder->read(m_import_file);
+      m_import_file.clear();
+      refresh();
+      break;
+    case MNID_SAVERANDOMIZATIONS:
+      s_seed_finder->save();
+
+      auto dialog = std::unique_ptr<Dialog>(new Dialog(false));
+      dialog->set_text(_("Saved under \"/seedfinder\"."));
+      dialog->add_button(_("OK"), []() { MenuManager::instance().set_dialog({}); });
+      MenuManager::instance().set_dialog(std::move(dialog));
       break;
   }
 }

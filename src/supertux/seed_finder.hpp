@@ -130,7 +130,7 @@ public:
   void add_randomization(Randomization* rand) { m_randomizations.push_back(std::unique_ptr<Randomization>(rand)); }
   void import_logged_randomizations(const int& selected);
 
-  void read();
+  void read(const std::string& filename);
   void save();
 
   void find_seed();

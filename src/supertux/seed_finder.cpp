@@ -17,9 +17,12 @@
 #include "supertux/seed_finder.hpp"
 
 #include <algorithm>
+#include <iostream>
 #include <limits>
 #include <sstream>
-#include <iostream>
+#include <time.h>
+
+#include <physfs.h>
 
 #include "gui/menu_manager.hpp"
 #include "supertux/menu/seed_finder_menu.hpp"
@@ -185,38 +188,57 @@ SeedFinder::import_logged_randomizations(const int& selected)
 }
 
 void
-SeedFinder::read()
+SeedFinder::read(const std::string& filename)
 {
   m_randomizations.clear();
 
-  auto doc = ReaderDocument::parse("rand");
-  auto root = doc.get_root();
-  if (root.get_name() != "supertux-randomizations")
-    return;
-
-  auto iter = root.get_mapping().get_iter();
-  while (iter.next())
+  try
   {
-    if (iter.get_key() != "randomization")
-      continue;
+    auto doc = ReaderDocument::parse(filename);
+    auto root = doc.get_root();
+    if (root.get_name() != "supertux-randomizations")
+      throw std::runtime_error("File is not a 'supertux-randomizations' file.");
 
-    auto mapping = iter.as_mapping();
-    m_randomizations.push_back(std::unique_ptr<Randomization>(new Randomization(mapping)));
+    auto iter = root.get_mapping().get_iter();
+    while (iter.next())
+    {
+      if (iter.get_key() != "randomization")
+      {
+        log_warning << "Unknown key '" << iter.get_key() << "' in seed finder randomizations data." << std::endl;
+        continue;
+      }
+
+      auto mapping = iter.as_mapping();
+      m_randomizations.push_back(std::unique_ptr<Randomization>(new Randomization(mapping)));
+    }
+  }
+  catch (const std::exception& err)
+  {
+    log_warning << "Error parsing seed finder randomizations from file '" << filename
+                << "': " << err.what() << std::endl;
   }
 }
 
 void
 SeedFinder::save()
 {
-  Writer writer("rand");
+  // Make sure "rng" directory exists in the root
+  if (!PHYSFS_exists("seedfinder") && !PHYSFS_mkdir("seedfinder"))
+  {
+    log_warning << "Couldn't create directory for seed finder randomizations 'seedfinder': " << PHYSFS_getLastError();
+    return;
+  }
 
+  Writer writer("seedfinder/rands_" + std::to_string(time(nullptr)) + ".stsf");
   writer.start_list("supertux-randomizations");
+
   for (const auto& randomization : m_randomizations)
   {
     writer.start_list("randomization");
     randomization->save(writer);
     writer.end_list("randomization");
   }
+
   writer.end_list("supertux-randomizations");
 }
 

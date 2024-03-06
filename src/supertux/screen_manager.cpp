@@ -344,24 +344,6 @@ ScreenManager::process_events()
         {
           gameRandom.toggle_logging();
         }
-        else if (event.key.keysym.sym == SDLK_F8)
-        {
-          auto seed_finder = SeedFinderMenu::get_seed_finder();
-          if (seed_finder)
-          {
-            auto current_menu = MenuManager::instance().current_menu();
-            if (current_menu)
-              current_menu->refresh();
-
-            seed_finder->read();
-          }
-        }
-        else if (event.key.keysym.sym == SDLK_F9)
-        {
-          auto seed_finder = SeedFinderMenu::get_seed_finder();
-          if (seed_finder)
-            seed_finder->save();
-        }
         else if (event.key.keysym.sym == SDLK_F10)
         {
           if (GameSession::current() && GameSession::current()->is_active()) return;

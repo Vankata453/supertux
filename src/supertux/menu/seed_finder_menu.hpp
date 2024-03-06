@@ -52,6 +52,8 @@ public:
 private:
   enum SeedFinderMenuIDs
   {
+    MNID_IMPORTRANDOMIZATIONS,
+    MNID_SAVERANDOMIZATIONS,
     MNID_IMPORTLOGGED,
     MNID_CLEARLOGGED,
     MNID_ADDRANDOMIZATION,
@@ -60,6 +62,9 @@ private:
     MNID_USESEED,
     MNID_STATUS
   };
+
+private:
+  std::string m_import_file;
 
 private:
   SeedFinderMenu(const SeedFinderMenu&);
