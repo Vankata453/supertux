@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <limits>
 #include <sstream>
+#include <iostream>
 
 #include "gui/menu_manager.hpp"
 #include "supertux/menu/seed_finder_menu.hpp"
@@ -325,7 +326,7 @@ SeedFinder::update()
     }
   }
 
-  log_warning << "SEED FINDER: " << m_seed << " -> " << values_to_string(randomizations) << std::endl;
+  std::cout << "SEED FINDER: " << m_seed << " -> " << values_to_string(randomizations) << std::endl;
 
   // Cleanup
   for (auto& rand : randomizations_cleanup)
