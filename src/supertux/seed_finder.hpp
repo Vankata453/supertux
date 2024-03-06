@@ -56,7 +56,7 @@ private:
   boost::optional<float> m_desired_value;
   float m_precision;
 
-  float m_value;
+  boost::optional<float> m_value;
   float m_temp_time;
 
   bool m_pilot_timeframe;
@@ -76,7 +76,8 @@ public:
   std::string to_string() const;
 
   float get_time() const { return m_time; }
-  float get_value() const { return m_value; }
+  float get_value() const { return *m_value; }
+  bool has_value() const { return m_value != boost::none; }
   bool has_match() const;
 
   bool has_pilot_timeframe() const { return m_pilot_timeframe; }
@@ -139,7 +140,7 @@ public:
   Status get_status() const;
 
 private:
-  std::string values_to_string(const std::vector<Randomization*>& rands) const;
+  static std::string values_to_string(const std::vector<Randomization*>& rands);
 
 private:
   SeedFinder(const SeedFinder&);

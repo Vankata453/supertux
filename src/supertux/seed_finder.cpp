@@ -120,7 +120,7 @@ Randomization::rand(RandomGenerator& rng)
 void
 Randomization::reset()
 {
-  m_value = std::numeric_limits<int>::min();
+  m_value.reset();
 }
 
 std::string
@@ -137,17 +137,19 @@ Randomization::to_string() const
 bool
 Randomization::has_match() const
 {
+  if (m_value == boost::none)
+    return false;
   if (m_desired_value == boost::none)
     return true;
 
   switch (m_value_type)
   {
     case RANDVALUE_EQUAL:
-      return std::fabs(m_value - m_desired_value.get()) < m_precision;
+      return std::fabs(*m_value - m_desired_value.get()) < m_precision;
     case RANDVALUE_LESSTHAN:
-      return m_value <= m_desired_value.get();
+      return *m_value <= m_desired_value.get();
     case RANDVALUE_MORETHAN:
-      return m_value >= m_desired_value.get();
+      return *m_value >= m_desired_value.get();
   }
   return false;
 }
@@ -219,16 +221,23 @@ SeedFinder::save()
 }
 
 std::string
-SeedFinder::values_to_string(const std::vector<Randomization*>& rands) const
+SeedFinder::values_to_string(const std::vector<Randomization*>& rands)
 {
+  if (rands.empty())
+    return "";
+
   std::stringstream stream;
 
   for (auto& rand : rands)
-    stream << rand->get_value() << " (" << rand->get_temp_time() << ")" << ' ';
+  {
+    if (!rand->has_value())
+      break;
 
-  std::string result = stream.str();
-  result.pop_back(); // Remove the last space character.
-  return result;
+    stream << rand->get_value() << " (" << rand->get_temp_time() << ")" << ", ";
+  }
+
+  const std::string result = stream.str();
+  return result.substr(0, result.size() - 2); // Remove the last space and comma characters.
 }
 
 void
@@ -276,8 +285,11 @@ SeedFinder::update()
   std::vector<Randomization*> randomizations;
   std::vector<Randomization*> randomizations_cleanup;
 
-  for (const auto& rand : m_randomizations)
+  for (auto& rand : m_randomizations)
+  {
+    rand->reset();
     randomizations.push_back(rand.get());
+  }
 
   std::vector<int> excluded_timeframes;
 
