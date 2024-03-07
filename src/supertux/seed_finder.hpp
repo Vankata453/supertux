@@ -58,7 +58,7 @@ public:
 
     int m_type;
     int m_value_type;
-    boost::optional<float> m_desired_value;
+    std::vector<float> m_desired_values;
     float m_precision;
 
     boost::optional<float> m_value;
@@ -91,6 +91,9 @@ public:
 
     float get_temp_time() const { return m_temp_time; }
     void set_temp_time(const float& temp_time) { m_temp_time = temp_time; }
+
+  private:
+    bool has_value_match(float desired_value) const;
 
   private:
     Randomization(const Randomization&);

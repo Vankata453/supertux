@@ -39,7 +39,7 @@ SeedFinder::Randomization::Randomization(float range_start, float range_end, Ran
   m_time(time),
   m_type(type),
   m_value_type(RANDVALUE_EQUAL),
-  m_desired_value(desired_value),
+  m_desired_values(),
   m_precision(precision),
   m_value(),
   m_temp_time(),
@@ -47,6 +47,9 @@ SeedFinder::Randomization::Randomization(float range_start, float range_end, Ran
   m_pilot_timeframe_time(-1.f)
 {
   reset();
+
+  if (desired_value)
+    m_desired_values.push_back(desired_value.get());
 }
 
 SeedFinder::Randomization::Randomization(ReaderMapping& mapping) :
@@ -55,7 +58,7 @@ SeedFinder::Randomization::Randomization(ReaderMapping& mapping) :
   m_time(-1.f),
   m_type(),
   m_value_type(),
-  m_desired_value(),
+  m_desired_values(),
   m_precision(0.01f),
   m_value(),
   m_temp_time(),
@@ -70,9 +73,8 @@ SeedFinder::Randomization::Randomization(ReaderMapping& mapping) :
   mapping.get("type", m_type);
   mapping.get("value-type", m_value_type);
 
-  float desired_value;
-  if (mapping.get("desired-value", desired_value))
-    m_desired_value = desired_value;
+  if (!mapping.get("desired-values", m_desired_values))
+    mapping.get("desired-value", m_desired_values); // Retro-compatibility
 
   mapping.get("precision", m_precision);
 
@@ -91,10 +93,10 @@ SeedFinder::Randomization::save(Writer& writer)
 
   writer.write("type", m_type);
 
-  if (m_desired_value)
+  if (!m_desired_values.empty())
   {
     writer.write("value-type", m_value_type);
-    writer.write("desired-value", m_desired_value.get());
+    writer.write("desired-values", m_desired_values);
     writer.write("precision", m_precision);
   }
 
@@ -140,19 +142,28 @@ SeedFinder::Randomization::to_string() const
 bool
 SeedFinder::Randomization::has_match() const
 {
+  for (float desired_value : m_desired_values)
+  {
+    if (has_value_match(desired_value))
+      return true;
+  }
+  return false;
+}
+
+bool
+SeedFinder::Randomization::has_value_match(float desired_value) const
+{
   if (m_value == boost::none)
     return false;
-  if (m_desired_value == boost::none)
-    return true;
 
   switch (m_value_type)
   {
     case RANDVALUE_EQUAL:
-      return std::fabs(*m_value - m_desired_value.get()) < m_precision;
+      return std::fabs(*m_value - desired_value) < m_precision;
     case RANDVALUE_LESSTHAN:
-      return *m_value <= m_desired_value.get();
+      return *m_value <= desired_value;
     case RANDVALUE_MORETHAN:
-      return *m_value >= m_desired_value.get();
+      return *m_value >= desired_value;
   }
   return false;
 }

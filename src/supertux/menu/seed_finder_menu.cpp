@@ -128,7 +128,7 @@ SeedFinderMenu::import_randomization(const int index)
   const int desired_value_id = -9 - (index + 1) * 2;
   add_item(std::unique_ptr<MenuItem>(new ItemAction(_("Set desired value..."),
                                      desired_value_id)), items_pos + 3);
-  if (rand->m_desired_value != boost::none) // Check if the desired value isn't already set.
+  if (!rand->m_desired_values.empty()) // Check if a desired value isn't already set.
     set_desired_value(desired_value_id, &items_pos);
 
   add_item(std::unique_ptr<MenuItem>(new ItemHorizontalLine()), items_pos + 4);
@@ -201,11 +201,11 @@ SeedFinderMenu::set_desired_value(const int item_id, int* pos_)
   const int item_pos = get_item_pos(item_id);
   auto* rand = s_seed_finder->m_randomizations[randomization_id].get();
 
-  if (rand->m_desired_value == boost::none)
-    rand->m_desired_value = 0;
+  if (rand->m_desired_values.empty())
+    rand->m_desired_values.push_back(1);
 
   delete_item(item_pos);
-  add_item(std::unique_ptr<MenuItem>(new ItemNumField(_("Desired value"), &(rand->m_desired_value.get()))), item_pos)->id = item_id;
+  add_item(std::unique_ptr<MenuItem>(new ItemNumField(_("Desired value"), &(rand->m_desired_values[0]))), item_pos)->id = item_id;
   add_item(std::unique_ptr<MenuItem>(new ItemNumField(_("Precision"), &rand->m_precision)), item_pos + 1);
   if (pos_) (*pos_) += 1; // Shift item positions.
   set_active_item(item_id);
