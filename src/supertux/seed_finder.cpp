@@ -142,6 +142,9 @@ SeedFinder::Randomization::to_string() const
 bool
 SeedFinder::Randomization::has_match() const
 {
+  if (m_desired_values.empty())
+    return true;
+
   for (float desired_value : m_desired_values)
   {
     if (has_value_match(desired_value))
