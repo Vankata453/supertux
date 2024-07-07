@@ -58,6 +58,7 @@ SeedFinderMenu::refresh()
 
   add_intfield(_("Initial seed"), &s_seed_finder->m_init_seed);
   add_numfield(_("Search time"), &s_seed_finder->m_search_time);
+  add_intfield(_("Search threads"), &s_seed_finder->m_search_threads_count);
   add_hl();
 
   add_entry(MNID_ADDRANDOMIZATION, _("Add randomization"));

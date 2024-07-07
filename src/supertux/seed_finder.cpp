@@ -178,9 +178,10 @@ SeedFinder::SeedFinder(int init_seed) :
   m_randomizations(),
   m_init_seed(init_seed),
   m_search_time(5.0f),
-  m_rng(),
+  m_search_threads_count(2),
   m_in_progress(false),
   m_search_timer(),
+  m_search_threads(),
   m_seed(0)
 {
   // Add initial randomization
@@ -281,7 +282,11 @@ SeedFinder::find_seed()
 {
   if (m_in_progress) return;
 
-  m_rng.srand(m_init_seed);
+  if (m_search_threads_count < 1)
+  {
+    log_warning << "Search threads must be no lower than 1." << std::endl;
+    return;
+  }
 
   float latest_time = 0.f;
   for (auto& rand : m_randomizations)
@@ -309,97 +314,126 @@ SeedFinder::find_seed()
   m_in_progress = true;
   m_search_timer.start(m_search_time - 1.0f); // The search time variable stores real time seconds.
   MenuManager::instance().set_dialog(std::unique_ptr<Dialog>(new SeedFinderDialog(this)));
+
+  // Run threads to find the seed
+  for (int i = 0; i < m_search_threads_count; i++)
+    m_search_threads.emplace_back(&SeedFinder::finder, this);
+}
+
+void
+SeedFinder::finder()
+{
+  RandomGenerator rng;
+  rng.srand(m_init_seed);
+
+  // Copy all randomizations over
+  std::vector<Randomization> randomizations_local;
+  for (auto& rand : m_randomizations)
+    randomizations_local.emplace_back(*rand);
+
+  while (m_in_progress)
+  {
+    const int seed = rng.srand(rng.rand());
+
+    std::vector<Randomization*> randomizations;
+    std::vector<Randomization*> randomizations_cleanup;
+
+    for (Randomization& rand : randomizations_local)
+    {
+      rand.reset();
+      randomizations.push_back(&rand);
+    }
+
+    std::vector<int> excluded_timeframes;
+
+    bool has_match = true;
+    for (size_t i = 0; i < randomizations.size(); i++)
+    {
+      Randomization* rand = randomizations[i];
+      rand->rand(rng);
+      if (!rand->has_match())
+      {
+        has_match = false;
+        break;
+      }
+
+      if (rand->has_pilot_timeframe()) // Timeframe for pilot puff timer
+      {
+        // If time until update is more than the maximum allowed time, do not add pilot update cycle.
+        if (rand->has_pilot_timeframe_time() && rand->get_value() > rand->get_pilot_timeframe_time())
+        {
+          excluded_timeframes.push_back(static_cast<int>(i));
+          continue;
+        }
+
+        int update_time = rand->get_time() + rand->get_value();
+
+        auto new_rand = new Randomization(-10, 10, Randomization::RANDTYPE_FLOAT);
+        new_rand->set_temp_time(update_time);
+        randomizations.push_back(new_rand);
+        randomizations_cleanup.push_back(new_rand);
+
+        auto new_rand2 = new Randomization(4.0f, 8.0f, Randomization::RANDTYPE_FLOAT);
+        new_rand2->set_temp_time(update_time);
+        randomizations.push_back(new_rand2);
+        randomizations_cleanup.push_back(new_rand2);
+
+        auto new_rand3 = new Randomization(0.95, 1.05, Randomization::RANDTYPE_FLOAT);
+        new_rand3->set_temp_time(update_time);
+        randomizations.push_back(new_rand3);
+        randomizations_cleanup.push_back(new_rand3);
+
+        // Re-sort randomizations, including the newly added ones.
+        std::stable_sort(randomizations.begin(), randomizations.end(),
+          [](const Randomization* lhs, const Randomization* rhs) {
+            return lhs->get_temp_time() < rhs->get_temp_time();
+          });
+      }
+    }
+
+    {
+      std::stringstream out;
+      out << "SEED FINDER: " << seed << " -> " << values_to_string(randomizations) << std::endl;
+      std::cout << out.str();
+    }
+
+    // Cleanup
+    for (auto& rand : randomizations_cleanup)
+      delete rand;
+
+    if (has_match)
+    {
+      log_warning << "Found seed: " << seed << std::endl;
+      if (!excluded_timeframes.empty())
+      {
+        std::stringstream out;
+        out << "Excluded timeframes: ";
+        for (const int& rand_id : excluded_timeframes)
+          out << rand_id << " ";
+
+        log_warning << out.str() << std::endl;
+      }
+      m_seed = seed;
+      m_search_timer.stop();
+      m_in_progress = false;
+    }
+  }
 }
 
 void
 SeedFinder::update()
 {
-  if (!m_in_progress) return;
-
-  m_seed = m_rng.srand(m_rng.rand());
-
-  std::vector<Randomization*> randomizations;
-  std::vector<Randomization*> randomizations_cleanup;
-
-  for (auto& rand : m_randomizations)
-  {
-    rand->reset();
-    randomizations.push_back(rand.get());
-  }
-
-  std::vector<int> excluded_timeframes;
-
-  bool has_match = true;
-  for (size_t i = 0; i < randomizations.size(); i++)
-  {
-    Randomization* rand = randomizations[i];
-    rand->rand(m_rng);
-    if (!rand->has_match())
-    {
-      has_match = false;
-      break;
-    }
-
-    if (rand->has_pilot_timeframe()) // Timeframe for pilot puff timer
-    {
-      // If time until update is more than the maximum allowed time, do not add pilot update cycle.
-      if (rand->has_pilot_timeframe_time() && rand->get_value() > rand->get_pilot_timeframe_time())
-      {
-        excluded_timeframes.push_back(static_cast<int>(i));
-        continue;
-      }
-
-      int update_time = rand->get_time() + rand->get_value();
-
-      auto new_rand = new Randomization(-10, 10, Randomization::RANDTYPE_FLOAT);
-      new_rand->set_temp_time(update_time);
-      randomizations.push_back(new_rand);
-      randomizations_cleanup.push_back(new_rand);
-
-      auto new_rand2 = new Randomization(4.0f, 8.0f, Randomization::RANDTYPE_FLOAT);
-      new_rand2->set_temp_time(update_time);
-      randomizations.push_back(new_rand2);
-      randomizations_cleanup.push_back(new_rand2);
-
-      auto new_rand3 = new Randomization(0.95, 1.05, Randomization::RANDTYPE_FLOAT);
-      new_rand3->set_temp_time(update_time);
-      randomizations.push_back(new_rand3);
-      randomizations_cleanup.push_back(new_rand3);
-
-      // Re-sort randomizations, including the newly added ones.
-      std::stable_sort(randomizations.begin(), randomizations.end(),
-        [](const Randomization* lhs, const Randomization* rhs) {
-          return lhs->get_temp_time() < rhs->get_temp_time();
-        });
-    }
-  }
-
-  std::cout << "SEED FINDER: " << m_seed << " -> " << values_to_string(randomizations) << std::endl;
-
-  // Cleanup
-  for (auto& rand : randomizations_cleanup)
-    delete rand;
-
-  if (has_match)
-  {
-    log_warning << "Found seed: " << m_seed << std::endl;
-    if (!excluded_timeframes.empty())
-    {
-      std::stringstream out;
-      out << "Excluded timeframes: ";
-      for (const int& rand_id : excluded_timeframes)
-        out << rand_id << " ";
-
-      log_warning << out.str() << std::endl;
-    }
-    m_search_timer.stop();
-    m_in_progress = false;
-  }
-  else if (m_search_timer.check())
+  if (m_in_progress && m_search_timer.check())
   {
     log_warning << "Seed search timed out: Search took longer than " << m_search_time << " seconds." << std::endl;
     m_seed = -1; // Mark seed as not found due to time out.
     m_in_progress = false;
+  }
+  if (!m_in_progress && !m_search_threads.empty())
+  {
+    for (std::thread& thread : m_search_threads)
+      thread.detach();
+    m_search_threads.clear();
   }
 }
 

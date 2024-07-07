@@ -180,10 +180,6 @@ ScreenManager::draw(DrawingContext& context)
 {
   assert(!m_screen_stack.empty());
 
-  auto seed_finder = SeedFinderMenu::get_seed_finder();
-  if (seed_finder && seed_finder->get_status() == SeedFinder::STATUS_INPROGRESS)
-    return;
-
   static Uint32 fps_ticks = SDL_GetTicks();
 
   m_screen_stack.back()->draw(context);
@@ -235,11 +231,8 @@ void
 ScreenManager::update_gamelogic(float elapsed_time)
 {
   auto seed_finder = SeedFinderMenu::get_seed_finder();
-  if (seed_finder && seed_finder->get_status() == SeedFinder::STATUS_INPROGRESS)
-  {
+  if (seed_finder)
     seed_finder->update();
-    return;
-  }
 
   scripting::Scripting::current()->update_debugger();
   scripting::TimeScheduler::instance->update(game_time);

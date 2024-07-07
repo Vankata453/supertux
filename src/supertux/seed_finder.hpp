@@ -19,6 +19,8 @@
 
 #include <vector>
 #include <memory>
+#include <thread>
+
 #include <boost/optional.hpp>
 
 #include "gui/dialog.hpp"
@@ -94,10 +96,6 @@ public:
 
   private:
     bool has_value_match(float desired_value) const;
-
-  private:
-    Randomization(const Randomization&);
-    Randomization& operator=(const Randomization&);
   };
 
 public:
@@ -121,10 +119,11 @@ private:
   RandomizationLog m_randomizations;
   int m_init_seed;
   float m_search_time;
-  RandomGenerator m_rng;
+  int m_search_threads_count;
 
   bool m_in_progress;
   Timer m_search_timer;
+  std::vector<std::thread> m_search_threads;
   int m_seed;
 
 public:
@@ -144,6 +143,8 @@ public:
 
 private:
   static std::string values_to_string(const std::vector<Randomization*>& rands);
+
+  void finder();
 
 private:
   SeedFinder(const SeedFinder&);
