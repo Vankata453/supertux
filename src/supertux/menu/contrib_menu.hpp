@@ -31,6 +31,16 @@ public:
   void menu_action(MenuItem& item) override;
 
 private:
+  enum MenuIDs {
+    MNID_CONTRIB_TYPES = 0
+  };
+  enum ContribType {
+    CONTRIB_OFFICIAL = 1,
+    CONTRIB_COMMUNITY,
+    CONTRIB_USER
+  };
+
+private:
   ContribMenu(const ContribMenu&) = delete;
   ContribMenu& operator=(const ContribMenu&) = delete;
 };

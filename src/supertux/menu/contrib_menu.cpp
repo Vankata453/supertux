@@ -16,23 +16,18 @@
 
 #include "supertux/menu/contrib_menu.hpp"
 
-#include <physfs.h>
-#include <sstream>
-
-#include "gui/item_action.hpp"
+#include "gui/item_horizontalmenu.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
 #include "physfs/util.hpp"
-#include "supertux/game_manager.hpp"
 #include "supertux/levelset.hpp"
-#include "supertux/menu/contrib_levelset_menu.hpp"
 #include "supertux/menu/sorted_contrib_menu.hpp"
-#include "supertux/player_status.hpp"
-#include "supertux/savegame.hpp"
 #include "supertux/world.hpp"
 #include "util/file_system.hpp"
 #include "util/gettext.hpp"
 #include "util/log.hpp"
+
+static const std::string ICONS_BASE_DIR = "images/engine/contrib/";
 
 ContribMenu::ContribMenu() :
   m_contrib_worlds()
@@ -46,7 +41,6 @@ ContribMenu::ContribMenu() :
       level_worlds.push_back(filepath);
     }
   });
-
   physfsutil::enumerate_files("custom", [&level_worlds](const std::string& addon_filename) {
     std::string addonpath = FileSystem::join("custom", addon_filename);
     if (physfsutil::is_directory(addonpath))
@@ -65,15 +59,11 @@ ContribMenu::ContribMenu() :
     }
   });
 
-  add_label(_("Contrib Levels"));
-  add_hl();
-
   for (std::vector<std::string>::const_iterator it = level_worlds.begin(); it != level_worlds.end(); ++it)
   {
     try
     {
-      auto levelset =
-        std::unique_ptr<Levelset>(new Levelset(*it, /* recursively = */ true));
+      auto levelset = std::unique_ptr<Levelset>(new Levelset(*it, /* recursively = */ true));
       if (levelset->get_num_levels() == 0)
         continue;
 
@@ -90,14 +80,20 @@ ContribMenu::ContribMenu() :
         }
       }
     }
-    catch(std::exception& e)
+    catch (const std::exception& e)
     {
       log_info << "Couldn't parse levelset info for '" << *it << "': " << e.what() << std::endl;
     }
   }
-  add_entry(0,_("Official Contrib Levels"));
-  add_entry(1,_("Community Contrib Levels"));
-  add_entry(2,_("User Contrib Levels"));
+
+  add_label(_("Contrib Levels"));
+  add_hl();
+
+  ItemHorizontalMenu& horizontal_menu = add_horizontalmenu(MNID_CONTRIB_TYPES, 150.f, 100.f);
+  horizontal_menu.add_item(_("Official"), "", ICONS_BASE_DIR + "official.png", CONTRIB_OFFICIAL);
+  horizontal_menu.add_item(_("Community"), "", ICONS_BASE_DIR + "community.png", CONTRIB_COMMUNITY);
+  horizontal_menu.add_item(_("User"), "", ICONS_BASE_DIR + "user.png", CONTRIB_USER);
+
   add_hl();
   add_back(_("Back"));
 }
@@ -105,28 +101,34 @@ ContribMenu::ContribMenu() :
 void
 ContribMenu::menu_action(MenuItem& item)
 {
-  int index = item.get_id();
-  switch (index)
+  if (item.get_id() != MNID_CONTRIB_TYPES)
+    return;
+
+  auto& horizontal_menu = static_cast<ItemHorizontalMenu&>(item);
+
+  std::unique_ptr<SortedContribMenu> contrib_menu;
+  switch (horizontal_menu.get_selected_item().id)
   {
-  case 0: {
-    auto contrib_menu = std::make_unique<SortedContribMenu>(m_contrib_worlds, "official", _("Official Contrib Levels"),
-      _("How is this possible? There are no Official Contrib Levels!"));
-    MenuManager::instance().push_menu(std::move(contrib_menu));
-    break;
+    case CONTRIB_OFFICIAL:
+    {
+      contrib_menu = std::make_unique<SortedContribMenu>(m_contrib_worlds, "official", _("Official Contrib Levels"),
+        _("How is this possible? There are no Official Contrib Levels!"));
+      break;
+    }
+    case CONTRIB_COMMUNITY:
+    {
+      contrib_menu = std::make_unique<SortedContribMenu>(m_contrib_worlds, "community", _("Community Contrib Levels"),
+        _("No Community Contrib Levels yet. Download them from the Add-ons Menu."));
+      break;
+    }
+    case CONTRIB_USER:
+    {
+      contrib_menu = std::make_unique<SortedContribMenu>(m_contrib_worlds, "user", _("User Contrib Levels"),
+        _("No User Contrib Levels yet. Create some with the Level Editor."));
+      break;
+    }
   }
-  case 1: {
-    auto contrib_menu = std::make_unique<SortedContribMenu>(m_contrib_worlds, "community", _("Community Contrib Levels"),
-      _("No Community Contrib Levels yet. Download them from the Add-ons Menu."));
-    MenuManager::instance().push_menu(std::move(contrib_menu));
-    break;
-  }
-  case 2: {
-    auto contrib_menu = std::make_unique<SortedContribMenu>(m_contrib_worlds, "user", _("User Contrib Levels"),
-      _("No User Contrib Levels yet. Create some with the Level Editor."));
-    MenuManager::instance().push_menu(std::move(contrib_menu));
-    break;
-  }
-  }
+  MenuManager::instance().push_menu(std::move(contrib_menu));
 }
 
 /* EOF */
