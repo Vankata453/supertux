@@ -391,11 +391,14 @@ SeedFinder::finder()
       }
     }
 
+// Disable logging on Windows to not flood the "console.err" file (shout out to Servalot for the 106GB worth of searching)
+#if !defined(WIN32) && !defined(_WIN32) && !defined(__WIN32__) && !defined(__NT__)
     {
       std::stringstream out;
       out << "SEED FINDER: " << seed << " -> " << values_to_string(randomizations) << std::endl;
       std::cout << out.str();
     }
+#endif
 
     // Cleanup
     for (auto& rand : randomizations_cleanup)
