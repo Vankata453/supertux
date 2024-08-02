@@ -58,6 +58,7 @@ SeedFinderMenu::refresh()
 
   add_intfield(_("Initial seed"), &s_seed_finder->m_init_seed);
   add_numfield(_("Search time"), &s_seed_finder->m_search_time);
+  add_intfield(_("Search limit"), &s_seed_finder->m_search_limit);
   add_intfield(_("Search threads"), &s_seed_finder->m_search_threads_count);
   add_hl();
 
@@ -88,10 +89,10 @@ SeedFinderMenu::update_status(const SeedFinder::Status& status)
       text = _("Searching...");
       break;
     case SeedFinder::STATUS_FOUND:
-      text = _("Found! Seed: ") + std::to_string(s_seed_finder->get_seed());
+      text = _("Found! Seed: ") + std::to_string(s_seed_finder->get_seed()) + " (" + std::to_string(s_seed_finder->get_seeds_checked()) + " " + _("seeds checked") + ")";
       break;
     case SeedFinder::STATUS_TIMEDOUT:
-      text = _("Seed search timed out.");
+      text = _("Seed search timed out.") + " (" + std::to_string(s_seed_finder->get_seeds_checked()) + " " + _("seeds checked") + ")";
       break;
     default:
       text = _("Unknown status.");

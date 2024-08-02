@@ -184,9 +184,11 @@ SeedFinder::SeedFinder(int init_seed) :
   m_randomizations(),
   m_init_seed(init_seed),
   m_search_time(5.0f),
+  m_search_limit(10000),
   m_search_threads_count(2),
   m_in_progress(false),
   m_search_timer(),
+  m_seeds_checked(0),
   m_search_threads(),
   m_seed(0)
 {
@@ -319,6 +321,7 @@ SeedFinder::find_seed()
 
   m_in_progress = true;
   m_search_timer.start(m_search_time - 1.0f); // The search time variable stores real time seconds.
+  m_seeds_checked = 0;
   MenuManager::instance().set_dialog(std::unique_ptr<Dialog>(new SeedFinderDialog(this)));
 
   // Run threads to find the seed
@@ -423,22 +426,34 @@ SeedFinder::finder()
         log_warning << out.str() << std::endl;
       }
       m_seed = seed;
+      m_seed_values_string = values_to_string(randomizations, false);
       m_search_timer.stop();
       m_in_progress = false;
     }
+
+    ++m_seeds_checked;
   }
 }
 
 void
 SeedFinder::update()
 {
-  if (m_in_progress && m_search_timer.check())
+  if (m_in_progress)
   {
-    log_warning << "Seed search timed out: Search took longer than " << m_search_time << " seconds." << std::endl;
-    m_seed = -1; // Mark seed as not found due to time out.
-    m_in_progress = false;
+    if (m_search_timer.check())
+    {
+      log_warning << "Seed search timed out: Search took longer than " << m_search_time << " seconds." << std::endl;
+      m_seed = -1; // Mark seed as not found due to time out.
+      m_in_progress = false;
+    }
+    else if (m_seeds_checked > m_search_limit)
+    {
+      log_warning << "Seed search timed out: Seed search limit of " << m_search_limit << " reached." << std::endl;
+      m_seed = -1; // Mark seed as not found due to time out.
+      m_in_progress = false;
+    }
   }
-  if (!m_in_progress && !m_search_threads.empty())
+  else if (!m_search_threads.empty())
   {
     for (std::thread& thread : m_search_threads)
       thread.detach();

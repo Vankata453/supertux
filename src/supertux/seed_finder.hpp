@@ -120,10 +120,12 @@ private:
   RandomizationLog m_randomizations;
   int m_init_seed;
   float m_search_time;
+  int m_search_limit;
   int m_search_threads_count;
 
   bool m_in_progress;
   Timer m_search_timer;
+  int m_seeds_checked;
   std::vector<std::thread> m_search_threads;
   int m_seed;
 
@@ -140,6 +142,7 @@ public:
   void update();
 
   int get_seed() const { return m_seed; }
+  int get_seeds_checked() const { return m_seeds_checked; }
   Status get_status() const;
 
 private:
