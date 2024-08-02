@@ -49,7 +49,8 @@ public:
     {
       RANDVALUE_EQUAL,
       RANDVALUE_LESSTHAN,
-      RANDVALUE_MORETHAN
+      RANDVALUE_MORETHAN,
+      RANDVALUE_BETWEEN
     };
     static const std::vector<std::string> s_rand_types;
 

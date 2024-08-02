@@ -145,6 +145,12 @@ SeedFinder::Randomization::has_match() const
   if (m_desired_values.empty())
     return true;
 
+  if (m_value_type == RANDVALUE_BETWEEN)
+  {
+    return *m_value > m_desired_values[0] &&
+      (m_desired_values.size() == 1 ? true : *m_value < m_desired_values[1]);
+  }
+
   for (float desired_value : m_desired_values)
   {
     if (has_value_match(desired_value))
