@@ -148,7 +148,7 @@ public:
 private:
   static std::string values_to_string(const std::vector<Randomization*>& rands);
 
-  void finder();
+  void finder(int thread_index);
 
 private:
   SeedFinder(const SeedFinder&);

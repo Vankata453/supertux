@@ -326,14 +326,14 @@ SeedFinder::find_seed()
 
   // Run threads to find the seed
   for (int i = 0; i < m_search_threads_count; i++)
-    m_search_threads.emplace_back(&SeedFinder::finder, this);
+    m_search_threads.emplace_back(&SeedFinder::finder, this, i);
 }
 
 void
-SeedFinder::finder()
+SeedFinder::finder(int thread_index)
 {
   RandomGenerator rng;
-  rng.srand(m_init_seed);
+  rng.srand(m_init_seed + thread_index);
 
   // Copy all randomizations over
   std::vector<Randomization> randomizations_local;
