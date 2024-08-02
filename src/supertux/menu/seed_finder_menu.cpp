@@ -24,7 +24,9 @@
 #include "gui/menu_select_item.hpp"
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
+#include "supertux/resources.hpp"
 #include "util/gettext.hpp"
+#include "video/font.hpp"
 
 std::unique_ptr<SeedFinder> SeedFinderMenu::s_seed_finder = nullptr;
 
@@ -101,9 +103,16 @@ SeedFinderMenu::update_status(const SeedFinder::Status& status)
 
   // Toggle the use seed button.
   if (has_item_with_id(MNID_USESEED) && status != SeedFinder::STATUS_FOUND)
+  {
     delete_item(get_item_pos(MNID_USESEED));
+    delete_item(get_item_pos(MNID_SEEDVALUES));
+  }
   else if (status == SeedFinder::STATUS_FOUND)
-    add_item(std::unique_ptr<MenuItem>(new ItemAction(_("Use seed"), MNID_USESEED)), get_item_pos(MNID_STATUS) + 1);
+  {
+    const int status_pos = get_item_pos(MNID_STATUS);
+    add_item(std::unique_ptr<MenuItem>(new ItemAction(_("Use seed"), MNID_USESEED)), status_pos + 1);
+    add_item(std::unique_ptr<MenuItem>(new ItemAction(_("Seed values"), MNID_SEEDVALUES)), status_pos + 2);
+  }
 
   get_item_by_id(MNID_STATUS).change_text(text);
 }
@@ -256,7 +265,28 @@ SeedFinderMenu::menu_action(MenuItem* item)
     case MNID_USESEED:
       use_seed();
       break;
+    case MNID_SEEDVALUES:
+    {
+      std::string values_str;
+      std::string rest = s_seed_finder->get_seed_values_string();
+      do
+      {
+        std::string overflow;
+        values_str += Resources::normal_font->wrap_to_width(rest, static_cast<float>(SCREEN_WIDTH - 150), &overflow);
+        if (!overflow.empty())
+          values_str += "\n";
+        rest = overflow;
+      }
+      while (!rest.empty());
+
+      auto dialog = std::unique_ptr<Dialog>(new Dialog(false));
+      dialog->set_text(_("Values for seed ") + std::to_string(s_seed_finder->get_seed()) + ":\n \n" + values_str);
+      dialog->add_button(_("OK"), []() { MenuManager::instance().set_dialog({}); });
+      MenuManager::instance().set_dialog(std::move(dialog));
+      break;
+    }
     case MNID_IMPORTRANDOMIZATIONS:
+    {
       if (m_import_file.empty())
       {
         auto dialog = std::unique_ptr<Dialog>(new Dialog(false));
@@ -269,7 +299,9 @@ SeedFinderMenu::menu_action(MenuItem* item)
       m_import_file.clear();
       refresh();
       break;
+    }
     case MNID_SAVERANDOMIZATIONS:
+    {
       s_seed_finder->save();
 
       auto dialog = std::unique_ptr<Dialog>(new Dialog(false));
@@ -277,6 +309,7 @@ SeedFinderMenu::menu_action(MenuItem* item)
       dialog->add_button(_("OK"), []() { MenuManager::instance().set_dialog({}); });
       MenuManager::instance().set_dialog(std::move(dialog));
       break;
+    }
   }
 }
 

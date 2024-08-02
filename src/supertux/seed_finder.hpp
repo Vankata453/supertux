@@ -128,6 +128,7 @@ private:
   int m_seeds_checked;
   std::vector<std::thread> m_search_threads;
   int m_seed;
+  std::string m_seed_values_string;
 
 public:
   SeedFinder(int init_seed = 0);
@@ -143,10 +144,11 @@ public:
 
   int get_seed() const { return m_seed; }
   int get_seeds_checked() const { return m_seeds_checked; }
+  const std::string& get_seed_values_string() const { return m_seed_values_string; }
   Status get_status() const;
 
 private:
-  static std::string values_to_string(const std::vector<Randomization*>& rands);
+  static std::string values_to_string(const std::vector<Randomization*>& rands, bool timeframes);
 
   void finder(int thread_index);
 

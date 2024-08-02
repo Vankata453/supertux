@@ -190,7 +190,8 @@ SeedFinder::SeedFinder(int init_seed) :
   m_search_timer(),
   m_seeds_checked(0),
   m_search_threads(),
-  m_seed(0)
+  m_seed(0),
+  m_seed_values_string()
 {
   // Add initial randomization
   m_randomizations.push_back(std::unique_ptr<Randomization>(new Randomization(0, 1, Randomization::RANDTYPE_INT)));
@@ -266,7 +267,7 @@ SeedFinder::save()
 }
 
 std::string
-SeedFinder::values_to_string(const std::vector<Randomization*>& rands)
+SeedFinder::values_to_string(const std::vector<Randomization*>& rands, bool timeframes)
 {
   if (rands.empty())
     return "";
@@ -278,7 +279,10 @@ SeedFinder::values_to_string(const std::vector<Randomization*>& rands)
     if (!rand->has_value())
       break;
 
-    stream << rand->get_value() << " (" << rand->get_temp_time() << ")" << ", ";
+    stream << rand->get_value();
+    if (timeframes)
+      stream << " (" << rand->get_temp_time() << ")";
+    stream << ", ";
   }
 
   const std::string result = stream.str();
@@ -322,6 +326,7 @@ SeedFinder::find_seed()
   m_in_progress = true;
   m_search_timer.start(m_search_time - 1.0f); // The search time variable stores real time seconds.
   m_seeds_checked = 0;
+  m_seed_values_string.clear();
   MenuManager::instance().set_dialog(std::unique_ptr<Dialog>(new SeedFinderDialog(this)));
 
   // Run threads to find the seed
@@ -404,7 +409,7 @@ SeedFinder::finder(int thread_index)
 #if !defined(WIN32) && !defined(_WIN32) && !defined(__WIN32__) && !defined(__NT__)
     {
       std::stringstream out;
-      out << "SEED FINDER: " << seed << " -> " << values_to_string(randomizations) << std::endl;
+      out << "SEED FINDER: " << seed << " -> " << values_to_string(randomizations, true) << std::endl;
       std::cout << out.str();
     }
 #endif
