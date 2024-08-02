@@ -186,6 +186,7 @@ SeedFinder::SeedFinder(int init_seed) :
   m_search_time(5.0f),
   m_search_limit(10000),
   m_search_threads_count(2),
+  m_search_sequence(false),
   m_in_progress(false),
   m_search_timer(),
   m_seeds_checked(0),
@@ -338,7 +339,8 @@ void
 SeedFinder::finder(int thread_index)
 {
   RandomGenerator rng;
-  rng.srand(m_init_seed + thread_index);
+  const int init_seed = (m_search_sequence && m_init_seed == 0 ? 1 : m_init_seed);
+  rng.srand(init_seed + (m_search_sequence ? m_seeds_checked : thread_index));
 
   // Copy all randomizations over
   std::vector<Randomization> randomizations_local;
@@ -347,7 +349,7 @@ SeedFinder::finder(int thread_index)
 
   while (m_in_progress)
   {
-    const int seed = rng.srand(rng.rand());
+    const int seed = rng.srand(m_search_sequence ? init_seed + m_seeds_checked : rng.rand());
 
     std::vector<Randomization*> randomizations;
     std::vector<Randomization*> randomizations_cleanup;

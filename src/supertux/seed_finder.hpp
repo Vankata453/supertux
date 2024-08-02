@@ -122,6 +122,7 @@ private:
   float m_search_time;
   int m_search_limit;
   int m_search_threads_count;
+  bool m_search_sequence;
 
   bool m_in_progress;
   Timer m_search_timer;
