@@ -23,7 +23,7 @@ class RCrystallo final : public WalkingBadguy
 {
 public:
   RCrystallo(const ReaderMapping& reader);
-  RCrystallo(const Vector& pos, const Vector& start_pos, float vel_x, std::unique_ptr<Sprite> sprite,
+  RCrystallo(const Vector& pos, const Vector& start_pos, float vel_x, SpritePtr sprite,
              Direction dir, float radius, const std::string& script, bool fall = false);
 
   virtual void initialize() override;
@@ -32,6 +32,7 @@ public:
   virtual std::string get_class_name() const override { return class_name(); }
   static std::string display_name() { return _("Roof Crystallo"); }
   virtual std::string get_display_name() const override { return display_name(); }
+  virtual GameObjectClasses get_class_types() const override { return WalkingBadguy::get_class_types().add(typeid(RCrystallo)); }
 
   virtual void active_update(float dt_sec) override;
   virtual void draw(DrawingContext& context) override;

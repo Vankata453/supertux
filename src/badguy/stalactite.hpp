@@ -17,12 +17,12 @@
 #ifndef HEADER_SUPERTUX_BADGUY_STALACTITE_HPP
 #define HEADER_SUPERTUX_BADGUY_STALACTITE_HPP
 
-#include "badguy/badguy.hpp"
+#include "object/sticky_object.hpp"
 
-class Stalactite : public BadGuy
+class Stalactite : public StickyBadguy
 {
 public:
-  Stalactite(const ReaderMapping& reader);
+  Stalactite(const ReaderMapping& mapping);
 
   virtual void active_update(float dt_sec) override;
   virtual void collision_solid(const CollisionHit& hit) override;
@@ -31,6 +31,7 @@ public:
   virtual HitResponse collision_bullet(Bullet& bullet, const CollisionHit& hit) override;
 
   virtual GameObjectTypes get_types() const override;
+  std::string get_default_sprite_name() const override;
 
   virtual void kill_fall() override;
   virtual void draw(DrawingContext& context) override;
@@ -40,13 +41,15 @@ public:
   virtual std::string get_class_name() const override { return class_name(); }
   static std::string display_name() { return _("Stalactite"); }
   virtual std::string get_display_name() const override { return display_name(); }
+  virtual GameObjectClasses get_class_types() const override { return StickyBadguy::get_class_types().add(typeid(Stalactite)); }
+
+  virtual ObjectSettings get_settings() override;
 
   virtual void on_flip(float height) override;
 
   void squish();
 
 protected:
-  void on_type_change(int old_type) override;
   std::vector<Direction> get_allowed_directions() const override;
 
 protected:

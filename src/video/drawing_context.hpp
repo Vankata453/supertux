@@ -42,7 +42,7 @@ struct obstack;
 class DrawingContext final
 {
 public:
-  DrawingContext(VideoSystem& video_system, obstack& obst, bool overlay);
+  DrawingContext(VideoSystem& video_system, obstack& obst, bool overlay, float time_offset);
   ~DrawingContext();
 
   /** Returns the visible area in world coordinates */
@@ -77,6 +77,9 @@ public:
 
   float get_scale() const { return transform().scale; }
   void scale(float scale) { transform().scale *= scale; }
+  
+  /** Recalculates the scaling factor for parallax layers.*/
+  bool perspective_scale(float speed_x, float speed_y);
 
   /** Apply that flip in the next draws (flips are listed on surface.h). */
   void set_flip(Flip flip);
@@ -86,6 +89,10 @@ public:
   void set_alpha(float alpha);
   float get_alpha() const;
 
+  /** For position extrapolation at high frame rates: real time since last game update step */
+  void set_time_offset(float time_offset) { m_time_offset = time_offset; }
+  float get_time_offset() const { return m_time_offset; }
+
   void clear()
   {
     m_lightmap_canvas.clear();
@@ -94,13 +101,13 @@ public:
 
   void set_viewport(const Rect& viewport)
   {
-    m_viewport = viewport;
+    transform().viewport = viewport;
   }
 
-  const Rect get_viewport() const;
+  const Rect& get_viewport() const;
 
-  int get_width() const;
-  int get_height() const;
+  float get_width() const;
+  float get_height() const;
   Vector get_size() const;
   Rectf get_rect() const { return Rectf(Vector(0, 0), get_size()); }
 
@@ -122,12 +129,13 @@ private:
       rendered. */
   bool m_overlay;
 
-  Rect m_viewport;
   Color m_ambient_color;
   std::vector<DrawingTransform> m_transform_stack;
 
   Canvas m_colormap_canvas;
   Canvas m_lightmap_canvas;
+
+  float m_time_offset;
 
 private:
   DrawingContext(const DrawingContext&) = delete;

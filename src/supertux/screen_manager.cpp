@@ -20,8 +20,7 @@
 
 #include "addon/addon_manager.hpp"
 #include "audio/sound_manager.hpp"
-#include "editor/editor.hpp"
-#include "editor/particle_editor.hpp"
+#include "control/input_manager.hpp"
 #include "gui/dialog.hpp"
 #include "gui/menu_manager.hpp"
 #include "gui/mousecursor.hpp"
@@ -159,10 +158,7 @@ ScreenManager::push_screen(std::unique_ptr<Screen> screen, std::unique_ptr<Scree
 {
   log_debug << "ScreenManager::push_screen(): " << screen.get() << std::endl;
   assert(screen);
-  if (g_config->transitions_enabled)
-  {
-    m_screen_fade = std::move(screen_fade);
-  }
+  set_screen_fade(std::move(screen_fade));
   m_actions.emplace_back(Action::PUSH_ACTION, std::move(screen));
 }
 
@@ -170,10 +166,7 @@ void
 ScreenManager::pop_screen(std::unique_ptr<ScreenFade> screen_fade)
 {
   log_debug << "ScreenManager::pop_screen(): stack_size: " << m_screen_stack.size() << std::endl;
-  if (g_config->transitions_enabled)
-  {
-    m_screen_fade = std::move(screen_fade);
-  }
+  set_screen_fade(std::move(screen_fade));
   m_actions.emplace_back(Action::POP_ACTION);
 }
 
@@ -195,10 +188,7 @@ ScreenManager::quit(std::unique_ptr<ScreenFade> screen_fade)
   g_config->save();
 #endif
 
-  if (g_config->transitions_enabled)
-  {
-    m_screen_fade = std::move(screen_fade);
-  }
+  set_screen_fade(std::move(screen_fade));
   m_actions.emplace_back(Action::QUIT_ACTION);
 }
 
@@ -215,10 +205,19 @@ ScreenManager::get_speed() const
 }
 
 void
+ScreenManager::on_window_resize()
+{
+  m_menu_manager->on_window_resize();
+
+  for (const auto& screen : m_screen_stack)
+    screen->on_window_resize();
+}
+
+void
 ScreenManager::draw_fps(DrawingContext& context, FPS_Stats& fps_statistics)
 {
   // The fonts are not monospace, so the numbers need to be drawn separately
-  Vector pos(static_cast<float>(context.get_width()) - BORDER_X, BORDER_Y + 50);
+  Vector pos(context.get_width() - BORDER_X, BORDER_Y + 50);
   context.color().draw_text(Resources::small_font, "FPS  min / avg / max",
     pos, ALIGN_RIGHT, LAYER_HUD);
   static const float w2 = Resources::small_font->get_text_width("999.9 /");
@@ -259,7 +258,7 @@ ScreenManager::draw_player_pos(DrawingContext& context)
 
       context.color().draw_text(
         Resources::small_font, pos_text,
-        Vector(static_cast<float>(context.get_width()) - Resources::small_font->get_text_width("99999x99999") - BORDER_X,
+        Vector(context.get_width() - Resources::small_font->get_text_width("99999x99999") - BORDER_X,
               BORDER_Y + 60 + height), ALIGN_LEFT, LAYER_HUD);
 
       height += 30;
@@ -404,13 +403,7 @@ ScreenManager::process_events()
 
     m_menu_manager->event(event);
 
-    if (Editor::is_active()) {
-      Editor::current()->event(event);
-    }
-
-    if (ParticleEditor::is_active()) {
-      ParticleEditor::current()->event(event);
-    }
+    m_screen_stack.back()->event(event);
 
     switch (event.type)
     {
@@ -423,10 +416,7 @@ ScreenManager::process_events()
         {
           case SDL_WINDOWEVENT_RESIZED:
             m_video_system.on_resize(event.window.data1, event.window.data2);
-            m_menu_manager->on_window_resize();
-            if (Editor::is_active()) {
-              Editor::current()->resize();
-            }
+            on_window_resize();
             break;
 
           case SDL_WINDOWEVENT_HIDDEN:
@@ -573,10 +563,6 @@ ScreenManager::handle_screen_switch()
 
 void ScreenManager::loop_iter()
 {
-  // Useful if screens edit their status without switching screens
-  Integration::update_status_all(m_screen_stack.back()->get_status());
-  Integration::update_all();
-
   Uint32 ticks = SDL_GetTicks();
   elapsed_ticks += ticks - last_ticks;
   last_ticks = ticks;
@@ -588,12 +574,18 @@ void ScreenManager::loop_iter()
     elapsed_ticks = 0;
   }
 
-  if (elapsed_ticks < ms_per_step && !g_debug.draw_redundant_frames) {
+  bool always_draw = g_debug.draw_redundant_frames || g_config->frame_prediction;
+
+  if (elapsed_ticks < ms_per_step && !always_draw) {
     // Sleep a bit because not enough time has passed since the previous
     // logical game step
     SDL_Delay(ms_per_step - elapsed_ticks);
     return;
   }
+
+  // Useful if screens edit their status without switching screens
+  Integration::update_status_all(m_screen_stack.back()->get_status());
+  Integration::update_all();
 
   g_real_time = static_cast<float>(ticks) / 1000.0f;
 
@@ -606,7 +598,7 @@ void ScreenManager::loop_iter()
   float fps = m_fps_statistics->get_fps();
   if (fps != 0) {
     // Skip if fps not ready yet (during first 0.5 seconds of startup).
-    float seconds_per_frame = 1.0f / m_fps_statistics->get_fps();
+    float seconds_per_frame = 1.0f / fps;
     int max_steps_per_frame = static_cast<int>(
       ceilf(seconds_per_frame / seconds_per_step));
     if (max_steps_per_frame < 2)
@@ -635,10 +627,16 @@ void ScreenManager::loop_iter()
     elapsed_ticks -= ms_per_step;
   }
 
+  // When the game is laggy, real time may be >1 step after the game time
+  // To avoid predicting positions too far ahead, when using frame prediction,
+  // limit the draw time offset to at most one step.
+  Uint32 tick_offset = std::min(elapsed_ticks, ms_per_step);
+  float time_offset = m_speed * speed_multiplier * static_cast<float>(tick_offset) / 1000.0f;
+
   if ((steps > 0 && !m_screen_stack.empty())
-      || g_debug.draw_redundant_frames) {
+      || always_draw) {
     // Draw a frame
-    Compositor compositor(m_video_system);
+    Compositor compositor(m_video_system, g_config->frame_prediction ? time_offset : 0.0f);
     draw(compositor, *m_fps_statistics);
     m_fps_statistics->report_frame();
   }

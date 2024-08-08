@@ -22,9 +22,10 @@
 #include <iomanip>
 #include <limits>
 
+#include <simplesquirrel/table.hpp>
+
 #include "audio/sound_manager.hpp"
 #include "math/util.hpp"
-#include "squirrel/squirrel_util.hpp"
 #include "supertux/globals.hpp"
 #include "supertux/level.hpp"
 #include "supertux/resources.hpp"
@@ -93,39 +94,37 @@ Statistics::calculate_max_caption_length()
 }
 
 void
-Statistics::serialize_to_squirrel(SquirrelVM& vm) const
+Statistics::serialize_to_squirrel(ssq::Table& table) const
 {
   if (m_status != FINAL) return;
-  
-  vm.begin_table("statistics");
-  vm.store_int("coins-collected", m_coins);
-  vm.store_int("badguys-killed", m_badguys);
-  vm.store_int("secrets-found", m_secrets);
-  vm.store_float("time-needed", m_time);
-  vm.store_int("coins-collected-total", m_total_coins);
-  vm.store_int("badguys-killed-total", m_total_badguys);
-  vm.store_int("secrets-found-total", m_total_secrets);
-  vm.end_table("statistics");
+
+  ssq::Table statistics = table.addTable("statistics");
+  statistics.set("coins-collected", m_coins);
+  statistics.set("badguys-killed", m_badguys);
+  statistics.set("secrets-found", m_secrets);
+  statistics.set("time-needed", m_time);
+  statistics.set("coins-collected-total", m_total_coins);
+  statistics.set("badguys-killed-total", m_total_badguys);
+  statistics.set("secrets-found-total", m_total_secrets);
 }
 
 void
-Statistics::unserialize_from_squirrel(SquirrelVM& vm)
+Statistics::unserialize_from_squirrel(const ssq::Table& table)
 {
   try
   {
-    vm.get_table_entry("statistics");
-    vm.get_int("coins-collected", m_coins);
-    vm.get_int("badguys-killed", m_badguys);
-    vm.get_int("secrets-found", m_secrets);
-    vm.get_float("time-needed", m_time);
-    vm.get_int("coins-collected-total", m_total_coins);
-    vm.get_int("badguys-killed-total", m_total_badguys);
-    vm.get_int("secrets-found-total", m_total_secrets);
-    sq_pop(vm.get_vm(), 1);
+    const ssq::Table statistics = table.findTable("statistics");
+    statistics.get("coins-collected", m_coins);
+    statistics.get("badguys-killed", m_badguys);
+    statistics.get("secrets-found", m_secrets);
+    statistics.get("time-needed", m_time);
+    statistics.get("coins-collected-total", m_total_coins);
+    statistics.get("badguys-killed-total", m_total_badguys);
+    statistics.get("secrets-found-total", m_total_secrets);
 
     m_status = FINAL;
   }
-  catch(const std::exception&)
+  catch(const ssq::NotFoundException&)
   {
     // ignore non-existing or malformed statistics table
   }
@@ -139,14 +138,14 @@ Statistics::draw_worldmap_info(DrawingContext& context, float target_time)
   // check to see if screen size has been changed
   if (!(WMAP_INFO_TOP_Y1 == static_cast<float>(SCREEN_HEIGHT - 100))) {
     calculate_max_caption_length();
-    WMAP_INFO_LEFT_X = static_cast<float>(context.get_width() - 32 - m_max_width);
+    WMAP_INFO_LEFT_X = context.get_width() - 32.f - static_cast<float>(m_max_width);
     WMAP_INFO_RIGHT_X = WMAP_INFO_LEFT_X + static_cast<float>(m_max_width);
     WMAP_INFO_TOP_Y1 = static_cast<float>(SCREEN_HEIGHT - 100);
     WMAP_INFO_TOP_Y2 = WMAP_INFO_TOP_Y1 + 16;
   }
 
   context.color().draw_text(
-    Resources::small_font, std::string("- ") + _("Best Level Statistics") + " -",
+    Resources::small_font, "- " + _("Best Level Statistics") + " -",
     Vector((WMAP_INFO_LEFT_X + WMAP_INFO_RIGHT_X) / 2, WMAP_INFO_TOP_Y1),
     ALIGN_CENTER, LAYER_HUD,Statistics::header_color);
 
@@ -212,12 +211,12 @@ Statistics::draw_endseq_panel(DrawingContext& context, Statistics* best_stats, c
 
   int box_w = 220+110+110;
   int box_h = 30+20+20+20;
-  int box_x = static_cast<int>((context.get_width() - box_w) / 2);
+  int box_x = static_cast<int>((static_cast<int>(context.get_width()) - box_w) / 2);
   int box_y = static_cast<int>(SCREEN_HEIGHT / 2) - box_h;
 
   int bd_w = static_cast<int>(backdrop->get_width());
   int bd_h = static_cast<int>(backdrop->get_height());
-  int bd_x = static_cast<int>((context.get_width() - bd_w) / 2);
+  int bd_x = static_cast<int>((static_cast<int>(context.get_width()) - bd_w) / 2);
   int bd_y = box_y + (box_h / 2) - (bd_h / 2);
 
   float col1_x = static_cast<float>(box_x);
@@ -319,10 +318,10 @@ Statistics::draw_ingame_stats(DrawingContext& context, bool on_pause_menu)
     if (!on_pause_menu)
       x_offset *= std::min(1.f, -std::abs(m_coins_time - 2.5f) + 2.5f);
 
-    Vector pos(static_cast<float>(context.get_width()) - x_offset,
-               static_cast<float>(context.get_height()) - height * 6.f - 20.f);
+    Vector pos(context.get_width() - x_offset,
+               context.get_height() - height * 6.f - 20.f - 16.f);
 
-    context.color().draw_filled_rect(Rectf(pos.x, pos.y, pos.x + width + 21.f,
+    context.color().draw_filled_rect(Rectf(pos.x, pos.y, pos.x + width + 37.f,
                                            pos.y + height).grown(5.f),
                                      Color(0.f, 0.f, 0.f, 0.5f),
                                      10.f, LAYER_HUD - 1);
@@ -333,8 +332,7 @@ Statistics::draw_ingame_stats(DrawingContext& context, bool on_pause_menu)
                                     : Statistics::perfect_color
                               );
     context.color().draw_surface_scaled(coin_icon,
-                                        Rectf(pos.x + width + 1.f, pos.y + 1.f,
-                                              pos.x + width + 16.f, pos.y + 16.f),
+                                        Rectf(Vector(pos.x + width + 3.f, pos.y - 5.f), Sizef(32.f, 32.f)),
                                         LAYER_HUD);
   }
 
@@ -348,10 +346,10 @@ Statistics::draw_ingame_stats(DrawingContext& context, bool on_pause_menu)
     if (!on_pause_menu)
       x_offset *= std::min(1.f, -std::abs(m_badguys_time - 2.5f) + 2.5f);
 
-    Vector pos(static_cast<float>(context.get_width()) - x_offset,
-               static_cast<float>(context.get_height()) - height * 5.f - 10.f);
+    Vector pos(context.get_width() - x_offset,
+               context.get_height() - height * 5.f - 10.f - 8.f);
 
-    context.color().draw_filled_rect(Rectf(pos.x, pos.y, pos.x + width + 21.f,
+    context.color().draw_filled_rect(Rectf(pos.x, pos.y, pos.x + width + 37.f,
                                            pos.y + height).grown(5.f),
                                      Color(0.f, 0.f, 0.f, 0.5f),
                                      10.f, LAYER_HUD - 1);
@@ -362,8 +360,7 @@ Statistics::draw_ingame_stats(DrawingContext& context, bool on_pause_menu)
                                     : Statistics::perfect_color
                               );
     context.color().draw_surface_scaled(badguy_icon,
-                                        Rectf(pos.x + width + 1.f, pos.y + 1.f,
-                                              pos.x + width + 16.f, pos.y + 16.f),
+                                        Rectf(Vector(pos.x + width + 3.f, pos.y - 5.f), Sizef(32.f, 32.f)),
                                         LAYER_HUD);
   }
 
@@ -377,10 +374,10 @@ Statistics::draw_ingame_stats(DrawingContext& context, bool on_pause_menu)
     if (!on_pause_menu)
       x_offset *= std::min(1.f, -std::abs(m_secrets_time - 2.5f) + 2.5f);
 
-    Vector pos(static_cast<float>(context.get_width()) - x_offset,
-               static_cast<float>(context.get_height()) - height * 4.f);
+    Vector pos(context.get_width() - x_offset,
+               context.get_height() - height * 4.f);
 
-    context.color().draw_filled_rect(Rectf(pos.x, pos.y, pos.x + width + 21.f,
+    context.color().draw_filled_rect(Rectf(pos.x, pos.y, pos.x + width + 37.f,
                                            pos.y + height).grown(5.f),
                                      Color(0.f, 0.f, 0.f, 0.5f),
                                      10.f, LAYER_HUD - 1);
@@ -391,8 +388,7 @@ Statistics::draw_ingame_stats(DrawingContext& context, bool on_pause_menu)
                                     : Statistics::perfect_color
                               );
     context.color().draw_surface_scaled(secret_icon,
-                                        Rectf(pos.x + width + 1.f, pos.y + 1.f,
-                                              pos.x + width + 16.f, pos.y + 16.f),
+                                        Rectf(Vector(pos.x + width + 3.f, pos.y - 5.f), Sizef(32.f, 32.f)),
                                         LAYER_HUD);
   }
 }
@@ -488,11 +484,6 @@ Statistics::frags_to_string(int badguys, int total_badguys)
 std::string
 Statistics::time_to_string(float time)
 {
-  int time_csecs = static_cast<int>(time * 100);
-  int mins = (time_csecs / 6000);
-  int secs = (time_csecs % 6000) / 100;
-  int cscs = (time_csecs % 6000) % 100;
-
   std::ostringstream os;
   if (time == 0.0f)
   {
@@ -500,6 +491,10 @@ Statistics::time_to_string(float time)
   }
   else
   {
+    int time_csecs = static_cast<int>(time * 100);
+    int mins = (time_csecs / 6000);
+    int secs = (time_csecs % 6000) / 100;
+    int cscs = (time_csecs % 6000) % 100;
     os << std::setw(2) << std::setfill('0') << mins << ":" << std::setw(2) << std::setfill('0') << secs << "." << std::setw(2) << std::setfill('0') << cscs;
   }
 

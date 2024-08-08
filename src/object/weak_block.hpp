@@ -35,8 +35,14 @@ public:
   virtual std::string get_class_name() const override { return class_name(); }
   static std::string display_name() { return _("Weak Tile"); }
   virtual std::string get_display_name() const override { return display_name(); }
+  virtual GameObjectClasses get_class_types() const override { return MovingSprite::get_class_types().add(typeid(WeakBlock)); }
 
-  virtual ObjectSettings get_settings() override;
+  std::vector<std::string> get_patches() const override;
+  void update_version() override;
+  void save(Writer& writer) override;
+
+  GameObjectTypes get_types() const override;
+  std::string get_default_sprite_name() const override;
 
   virtual void on_flip(float height) override;
 
@@ -52,6 +58,11 @@ private:
   void spreadHit();
 
 private:
+  enum Type {
+    ICE,
+    HAY
+  };
+
   enum State {
     STATE_NORMAL, /**< default state */
     STATE_BURNING, /**< on fire, still solid */
@@ -60,7 +71,6 @@ private:
 
 private:
   State state;
-  bool linked;
   SpritePtr lightsprite;
 
 private:

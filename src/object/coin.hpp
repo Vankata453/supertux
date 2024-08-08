@@ -28,8 +28,7 @@ class TileMap;
 class Coin : public MovingSprite,
              public PathObject
 {
-
-friend class HeavyCoin;
+  friend class HeavyCoin;
 
 public:
   Coin(const Vector& pos, bool count_stats = true,
@@ -44,16 +43,29 @@ public:
   virtual std::string get_class_name() const override { return class_name(); }
   static std::string display_name() { return _("Coin"); }
   virtual std::string get_display_name() const override { return display_name(); }
+  virtual GameObjectClasses get_class_types() const override { return MovingSprite::get_class_types().add(typeid(PathObject)).add(typeid(Coin)); }
 
   virtual ObjectSettings get_settings() override;
+  GameObjectTypes get_types() const override;
+  std::string get_default_sprite_name() const override;
+
   virtual void after_editor_set() override;
   virtual void editor_update() override;
+
+  void save_state() override;
+  void check_state() override;
 
   virtual void move_to(const Vector& pos) override;
 
   virtual void on_flip(float height) override;
 
   void collect();
+
+private:
+  enum Type {
+    NORMAL,
+    RETRO
+  };
 
 private:
   Vector m_offset;
@@ -85,6 +97,7 @@ public:
   virtual std::string get_class_name() const override { return class_name(); }
   static std::string display_name() { return _("Heavy Coin"); }
   virtual std::string get_display_name() const override { return display_name(); }
+  virtual GameObjectClasses get_class_types() const override { return Coin::get_class_types().add(typeid(HeavyCoin)); }
 
   virtual ObjectSettings get_settings() override;
   virtual void after_editor_set() override;

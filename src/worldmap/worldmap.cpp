@@ -21,6 +21,7 @@
 #include "audio/sound_manager.hpp"
 #include "gui/menu_manager.hpp"
 #include "physfs/util.hpp"
+#include "supertux/constants.hpp"
 #include "supertux/fadetoblack.hpp"
 #include "supertux/game_manager.hpp"
 #include "supertux/gameconfig.hpp"
@@ -77,10 +78,8 @@ WorldMap::WorldMap(const std::string& filename, Savegame& savegame,
   mapping.get("name", m_name);
 
   std::string tileset_name;
-  if (mapping.get("tileset", tileset_name))
-    m_tileset = TileManager::current()->get_tileset(tileset_name);
-  else
-    m_tileset = TileManager::current()->get_tileset("images/ice_world.strf");
+  mapping.get("tileset", tileset_name, "images/ice_world.strf");
+  m_tileset = TileManager::current()->get_tileset(tileset_name);
 
   auto iter = mapping.get_iter();
   while (iter.next())
@@ -167,8 +166,7 @@ WorldMap::process_input(const Controller& controller)
     return;
   }
 
-  if (controller.pressed(Control::JUMP) ||
-      controller.pressed(Control::MENU_SELECT))
+  if (controller.pressed_any(Control::JUMP, Control::MENU_SELECT))
   {
     // some people define UP and JUMP on the same key...
     if (!controller.pressed(Control::UP)) {
@@ -176,8 +174,7 @@ WorldMap::process_input(const Controller& controller)
     }
   }
 
-  if (controller.pressed(Control::START) ||
-      controller.pressed(Control::ESCAPE))
+  if (controller.pressed_any(Control::START, Control::ESCAPE))
   {
     on_escape_press();
   }
@@ -324,7 +321,7 @@ WorldMap::set_sector(const std::string& name, const std::string& spawnpoint,
     m_sector = get_sector(0); // In that case, assign the first sector.
   }
 
-  m_sector->move_to_spawnpoint("main");
+  m_sector->move_to_spawnpoint(DEFAULT_SPAWNPOINT_NAME);
 
   // Set up the new sector.
   if (perform_full_setup)
@@ -334,6 +331,12 @@ WorldMap::set_sector(const std::string& name, const std::string& spawnpoint,
   // If a spawnpoint has been provided, move to it.
   if (!spawnpoint.empty())
     m_sector->move_to_spawnpoint(spawnpoint);
+}
+
+const std::string&
+WorldMap::get_filename() const
+{
+  return m_map_filename;
 }
 
 } // namespace worldmap

@@ -33,7 +33,7 @@ SCrystallo::SCrystallo(const ReaderMapping& reader) :
   m_radius_anchor()
 {
   walk_speed = 80;
-  max_drop_height = 16;
+  set_ledge_behavior(LedgeBehavior::SMART);
   reader.get("roof", m_roof, false);
   reader.get("radius", m_radius, 100.0f);
   reader.get("range", m_range, 250.0f);
@@ -127,7 +127,7 @@ SCrystallo::active_update(float dt_sec)
       m_physic.enable_gravity(true);
       m_physic.set_velocity_y(-250.f);
       WalkingBadguy::initialize();
-      set_action(m_dir == Direction::LEFT ? "jumping-left" : "jumping-right", -1);
+      set_action("jumping", m_dir, -1);
       m_state = SCRYSTALLO_JUMPING;
     }
     BadGuy::active_update(dt_sec);

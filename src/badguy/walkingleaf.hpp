@@ -32,8 +32,10 @@ public:
   virtual std::string get_class_name() const override { return class_name(); }
   static std::string display_name() { return _("Walking Leaf"); }
   virtual std::string get_display_name() const override { return display_name(); }
+  virtual GameObjectClasses get_class_types() const override { return WalkingBadguy::get_class_types().add(typeid(WalkingLeaf)); }
 
   GameObjectTypes get_types() const override;
+  std::string get_default_sprite_name() const override;
 
   virtual void active_update(float dt_sec) override;
   virtual bool is_snipable() const override { return true; }
