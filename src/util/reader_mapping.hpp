@@ -43,6 +43,7 @@ public:
   bool get(const char* key, bool& value, const std::optional<bool>& default_value = std::nullopt) const;
   bool get(const char* key, int& value, const std::optional<int>& default_value = std::nullopt) const;
   bool get(const char* key, uint32_t& value, const std::optional<uint32_t>& default_value = std::nullopt) const;
+  bool get(const char* key, int64_t& value, const std::optional<uint32_t>& default_value = std::nullopt) const;
   bool get(const char* key, float& value, const std::optional<float>& default_value = std::nullopt) const;
   bool get(const char* key, std::string& value, const std::optional<const char*>& default_value = std::nullopt) const;
 

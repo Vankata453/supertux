@@ -39,8 +39,6 @@ class AddonPreviewMenu final : public Menu
 private:
   AddonManager& m_addon_manager;
   const Addon& m_addon;
-  const bool m_auto_install;
-  const bool m_update;
 
   bool m_addon_enabled;
   bool m_show_screenshots;
@@ -48,14 +46,13 @@ private:
   bool m_screenshot_download_success;
 
 public:
-  AddonPreviewMenu(const Addon& addon, bool auto_install = false, bool update = false);
-  ~AddonPreviewMenu() override;
+  AddonPreviewMenu(const Addon& addon);
+
+  void refresh() override;
 
   void menu_action(MenuItem& item) override;
 
 private:
-  void rebuild_menu();
-
   void show_screenshots();
   void install_addon();
   void uninstall_addon();

@@ -21,11 +21,14 @@
 #include <fmt/format.h>
 #include <sstream>
 
+#include "addon/addon_manager.hpp"
 #include "util/gettext.hpp"
+#include "util/log.hpp"
 #include "util/reader.hpp"
 #include "util/reader_document.hpp"
 #include "util/reader_collection.hpp"
 #include "util/reader_mapping.hpp"
+#include "util/writer.hpp"
 
 static const char* s_allowed_characters = "-_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
@@ -63,6 +66,30 @@ Addon::Type addon_type_from_string(const std::string& type)
   }
 }
 
+std::string addon_type_to_string(const Addon::Type& type)
+{
+  switch (type)
+  {
+    case Addon::LEVELSET:
+      return "levelset";
+
+    case Addon::WORLDMAP:
+      return "worldmap";
+
+    case Addon::WORLD:
+      return "world";
+
+    case Addon::LANGUAGEPACK:
+      return "languagepack";
+
+    case Addon::RESOURCEPACK:
+      return "resourcepack";
+
+    default:
+      return "addon";
+  }
+}
+
 std::string addon_type_to_translated_string(Addon::Type type)
 {
   switch (type)
@@ -90,7 +117,7 @@ std::string addon_type_to_translated_string(Addon::Type type)
   }
 }
 
-std::string generate_menu_item_text(const Addon& addon)
+std::string generate_menu_item_text(const Addon& addon, bool installed)
 {
   std::string text;
   std::string type = addon_type_to_translated_string(addon.get_type());
@@ -106,6 +133,9 @@ std::string generate_menu_item_text(const Addon& addon)
     text = fmt::format("{} \"{}\"", type, addon.get_title());
   }
 
+  if (installed)
+    text += " " + _("[INSTALLED]");
+
   return text;
 }
 
@@ -117,74 +147,6 @@ std::string get_addon_plural_form(size_t count)
 } // namespace addon_string_util
 
 std::unique_ptr<Addon>
-Addon::parse(const ReaderMapping& mapping)
-{
-  std::unique_ptr<Addon> addon(new Addon);
-
-  try
-  {
-    if (!mapping.get("id", addon->m_id))
-    {
-      throw std::runtime_error("(id ...) field missing from addon description");
-    }
-
-    if (addon->m_id.empty())
-    {
-      throw std::runtime_error("Add-on id is empty");
-    }
-
-    if (addon->m_id.find_first_not_of(s_allowed_characters) != std::string::npos)
-    {
-      throw std::runtime_error("Add-on id contains illegal characters: " + addon->m_id);
-    }
-
-    mapping.get("version", addon->m_version);
-
-    std::string type;
-    mapping.get("type", type);
-    addon->m_type = addon_string_util::addon_type_from_string(type);
-
-    mapping.get("title", addon->m_title);
-    mapping.get("author", addon->m_author);
-    mapping.get("license", addon->m_license);
-    mapping.get("description", addon->m_description);
-    mapping.get("url", addon->m_url);
-    mapping.get("md5", addon->m_md5);
-    mapping.get("format", addon->m_format);
-    std::optional<ReaderCollection> screenshots_reader;
-    if (mapping.get("screenshots", screenshots_reader))
-    {
-      for (auto& obj : screenshots_reader->get_objects())
-      {
-        std::string url;
-        auto data = obj.get_mapping();
-        data.get("url", url);
-        addon->m_screenshots.push_back(url);
-      }
-    }
-    std::optional<ReaderCollection> dependencies_reader;
-    if (mapping.get("dependencies", dependencies_reader))
-    {
-      for (auto& obj : dependencies_reader->get_objects())
-      {
-        std::string id;
-        auto data = obj.get_mapping();
-        data.get("id", id);
-        addon->m_dependencies.push_back(id);
-      }
-    }
-
-    return addon;
-  }
-  catch(const std::exception& err)
-  {
-    std::stringstream msg;
-    msg << "Problem when parsing addoninfo: " << err.what();
-    throw std::runtime_error(msg.str());
-  }
-}
-
-std::unique_ptr<Addon>
 Addon::parse(const std::string& fname)
 {
   try
@@ -194,37 +156,194 @@ Addon::parse(const std::string& fname)
     auto root = doc.get_root();
     if (root.get_name() != "supertux-addoninfo")
     {
-      throw std::runtime_error("File is not a supertux-addoninfo file.");
+      throw std::runtime_error("File is not a 'supertux-addoninfo' file.");
     }
-    else
-    {
-      return parse(root.get_mapping());
-    }
+
+    return std::make_unique<Addon>(root.get_mapping());
   }
-  catch(const std::exception& err)
+  catch (const std::exception& err)
   {
     std::stringstream msg;
-    msg << "Problem when reading addoninfo '" << fname << "': " << err.what();
+    msg << "Problem when reading add-on info '" << fname << "': " << err.what();
     throw std::runtime_error(msg.str());
   }
 }
 
-Addon::Addon() :
+std::unique_ptr<Addon>
+Addon::parse_string(const std::string& str)
+{
+  try
+  {
+    //register_translation_directory(fname);
+    auto doc = ReaderDocument::from_string(str);
+    auto root = doc.get_root();
+    if (root.get_name() != "supertux-addoninfo")
+    {
+      throw std::runtime_error("Invalid add-on entry: Not a 'supertux-addoninfo' entry.");
+    }
+
+    return std::make_unique<Addon>(root.get_mapping());
+  }
+  catch (const std::exception& err)
+  {
+    std::stringstream msg;
+    msg << "Problem when reading add-on info: " << err.what();
+    throw std::runtime_error(msg.str());
+  }
+}
+
+Addon::Addon(const ReaderMapping& mapping) :
   m_id(),
-  m_version(0),
+  m_version(),
   m_type(),
   m_title(),
+  m_description(),
   m_author(),
   m_license(),
-  m_format(0),
-  m_description(),
+  m_origin_url(),
   m_url(),
+  m_upstream_url(),
   m_md5(),
   m_screenshots(),
   m_dependencies(),
+  m_dependency_ids(),
+  m_upstream_index_cache(),
+  m_upstream_addon(),
   m_install_filename(),
   m_enabled(false)
-{}
+{
+  try
+  {
+    if (!mapping.get("id", m_id))
+    {
+      throw std::runtime_error("(id ...) field missing from add-on description!");
+    }
+
+    if (m_id.empty())
+    {
+      throw std::runtime_error("Add-on ID is empty!");
+    }
+
+    if (m_id.find_first_not_of(s_allowed_characters) != std::string::npos)
+    {
+      throw std::runtime_error("Add-on ID contains illegal characters: " + m_id);
+    }
+
+    bool has_version_info = false;
+    try
+    {
+      std::optional<ReaderMapping> version_mapping;
+      has_version_info = mapping.get("version", version_mapping);
+      if (has_version_info)
+      {
+        version_mapping->get("commit", m_version.commit);
+        version_mapping->get("title", m_version.title);
+        version_mapping->get("description", m_version.description);
+        version_mapping->get("created-at", m_version.created_at);
+      }
+    }
+    catch (const std::exception&)
+    {
+      int legacy_version = 1;
+      has_version_info = mapping.get("version", legacy_version);
+      if (has_version_info)
+      {
+        log_warning << "Add-on '" << m_id << "' has legacy 'version' info." << std::endl;
+
+        m_version.commit = std::to_string(legacy_version);
+        m_version.title = "v" + m_version.commit;
+        m_version.created_at = 0;
+      }
+    }
+    if (!has_version_info)
+    {
+      throw std::runtime_error("Add-on '" + m_id + "' has no 'version' info!");
+    }
+
+    std::string type;
+    mapping.get("type", type);
+    m_type = addon_string_util::addon_type_from_string(type);
+
+    mapping.get("title", m_title);
+    mapping.get("description", m_description);
+    mapping.get("author", m_author);
+    mapping.get("license", m_license);
+    mapping.get("origin-url", m_origin_url);
+    mapping.get("url", m_url);
+    mapping.get("upstream-url", m_upstream_url);
+    mapping.get("md5", m_md5);
+
+    std::optional<ReaderMapping> screenshots_mapping;
+    if (mapping.get("screenshots", screenshots_mapping))
+    {
+      screenshots_mapping->get("base-url", m_screenshots.base_url);
+
+      std::optional<ReaderMapping> files_mapping;
+      if (screenshots_mapping->get("files", files_mapping))
+      {
+        auto iter = files_mapping->get_iter();
+        while (iter.next())
+        {
+          if (iter.get_key() != "file")
+            throw std::runtime_error("Invalid field '" + iter.get_key() + "': " + m_id);
+
+          std::string file;
+          iter.get(file);
+          m_screenshots.files.push_back(std::move(file));
+        }
+      }
+    }
+
+    std::optional<ReaderMapping> dependencies_mapping;
+    if (mapping.get("dependencies", dependencies_mapping))
+    {
+      auto iter = dependencies_mapping->get_iter();
+      while (iter.next())
+      {
+        if (iter.get_key() != "dependency")
+          throw std::runtime_error("Invalid field '" + iter.get_key() + "': " + m_id);
+
+        try
+        {
+          auto dependency = std::make_unique<Addon>(iter.as_mapping());
+          m_dependency_ids.push_back(dependency->get_id());
+          m_dependencies.push_back(std::move(dependency));
+        }
+        catch (const std::exception& err)
+        {
+          std::stringstream msg;
+          msg << "Problem when reading add-on dependency info: " << err.what();
+          throw std::runtime_error(msg.str());
+        }
+      }
+    }
+    else if (mapping.get("dependency-ids", dependencies_mapping))
+    {
+      auto iter = dependencies_mapping->get_iter();
+      while (iter.next())
+      {
+        if (iter.get_key() != "dependency")
+          throw std::runtime_error("Invalid field '" + iter.get_key() + "': " + m_id);
+
+        std::string id;
+        iter.get(id);
+        m_dependency_ids.push_back(std::move(id));
+      }
+    }
+  }
+  catch (const std::exception& err)
+  {
+    std::stringstream msg;
+    msg << "Problem when parsing add-on info: " << err.what();
+    throw std::runtime_error(msg.str());
+  }
+}
+
+const Addon*
+Addon::get_upstream_addon() const
+{
+  return AddonManager::current()->get_installed_addon(m_id).m_upstream_addon.get();
+}
 
 std::string
 Addon::get_filename() const
@@ -232,28 +351,22 @@ Addon::get_filename() const
   return get_id() + ".zip";
 }
 
-const std::string&
+std::string
 Addon::get_install_filename() const
 {
-  return m_install_filename;
+  return AddonManager::current()->get_installed_addon(m_id).m_install_filename;
 }
 
 bool
 Addon::is_installed() const
 {
-  return !m_install_filename.empty();
+  return AddonManager::current()->is_addon_installed(m_id);
 }
 
 bool
 Addon::is_enabled() const
 {
-  return m_enabled;
-}
-
-bool
-Addon::is_visible() const
-{
-  return true;
+  return AddonManager::current()->get_installed_addon(m_id).m_enabled;
 }
 
 bool
@@ -277,17 +390,65 @@ Addon::requires_restart() const
   return m_type == LANGUAGEPACK || m_type == RESOURCEPACK;
 }
 
-void
-Addon::set_install_filename(const std::string& absolute_filename, const std::string& md5)
+bool
+Addon::has_available_update() const
 {
-  m_install_filename = absolute_filename;
-  m_md5 = md5;
+  const Addon* upstream_addon = get_upstream_addon();
+  return upstream_addon &&
+         upstream_addon->get_version().commit != m_version.commit &&
+         upstream_addon->get_version().created_at > m_version.created_at;
 }
 
-void
-Addon::set_enabled(bool v)
+std::string
+Addon::write_info() const
 {
-  m_enabled = v;
+  std::stringstream stream;
+  Writer info(stream);
+
+  info.start_list("supertux-addoninfo");
+  {
+    info.write("id", m_id);
+
+    info.start_list("version");
+    {
+      info.write("commit", m_version.commit);
+      info.write("title", m_version.title);
+      info.write("description", m_version.description);
+      info.write("created-at", m_version.created_at);
+    }
+    info.end_list("version");
+
+    info.write("type", addon_string_util::addon_type_to_string(m_type));
+    info.write("title", m_title);
+    info.write("description", m_description);
+    info.write("author", m_author);
+    info.write("license", m_license);
+    info.write("origin-url", m_origin_url);
+    info.write("upstream-url", m_upstream_url);
+
+    info.start_list("screenshots");
+    {
+      info.write("base-url", m_screenshots.base_url);
+
+      info.start_list("files");
+      for (const std::string& file : m_screenshots.files)
+      {
+        info.write("file", file);
+      }
+      info.end_list("files");
+    }
+    info.end_list("screenshots");
+
+    info.start_list("dependency-ids");
+    for (const auto& dependency : m_dependencies)
+    {
+      info.write("dependency", dependency->get_id());
+    }
+    info.end_list("dependency-ids");
+  }
+  info.end_list("supertux-addoninfo");
+
+  return stream.str();
 }
 
 /* EOF */

@@ -54,6 +54,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
 namespace Partio{
 struct ZipFileHeader;
+class ZipFileReader;
 //#####################################################################
 // Functions Gzip_Out/Gzip_In - Create streams that read/write .gz
 //#####################################################################
@@ -72,6 +73,7 @@ public:
     ZipFileWriter(const std::string& filename);
     virtual ~ZipFileWriter();
     std::unique_ptr<std::ostream> Add_File(const std::string& filename,const bool binary=true);
+    void Add_Zip_Files(ZipFileReader& reader);
 //#####################################################################
 };
 

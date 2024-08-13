@@ -18,7 +18,6 @@
 
 #include <physfs.h>
 
-#include "addon/addon_manager.hpp"
 #include "gui/item_action.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
@@ -43,8 +42,6 @@ FileSystemMenu::FileSystemMenu(std::string* filename, const std::vector<std::str
   m_callback(std::move(callback)),
   m_item_processor(std::move(item_processor))
 {
-  AddonManager::current()->unmount_old_addons();
-
   if (!PHYSFS_exists(m_directory.c_str())) {
     m_directory = "/"; //The filename is probably included in an old add-on.
   }
@@ -54,7 +51,6 @@ FileSystemMenu::FileSystemMenu(std::string* filename, const std::vector<std::str
 
 FileSystemMenu::~FileSystemMenu()
 {
-  AddonManager::current()->mount_old_addons();
 }
 
 void
@@ -87,8 +83,7 @@ FileSystemMenu::refresh_items()
     else
     {
       // Do not show deprecated, or unrelated add-on files
-      if (FileSystem::extension(FileSystem::strip_extension(file)) == ".deprecated" ||
-          AddonManager::current()->is_from_old_addon(filepath))
+      if (FileSystem::extension(FileSystem::strip_extension(file)) == ".deprecated")
         return;
 
       if (has_right_suffix(file))

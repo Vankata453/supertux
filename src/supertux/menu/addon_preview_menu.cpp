@@ -22,110 +22,89 @@
 #include "addon/addon_manager.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
+#include "supertux/menu/addon_menu.hpp"
 #include "supertux/menu/download_dialog.hpp"
 #include "supertux/resources.hpp"
 #include "util/log.hpp"
 
-AddonPreviewMenu::AddonPreviewMenu(const Addon& addon, bool auto_install, bool update) :
+AddonPreviewMenu::AddonPreviewMenu(const Addon& addon) :
   m_addon_manager(*AddonManager::current()),
   m_addon(addon),
-  m_auto_install(auto_install),
-  m_update(update),
   m_addon_enabled(addon.is_enabled()),
   m_show_screenshots(false),
   m_screenshot_download_status(),
   m_screenshot_download_success(false)
 {
-  if (m_auto_install)
-  {
-    install_addon();
-    return;
-  }
-  rebuild_menu();
-}
-
-AddonPreviewMenu::~AddonPreviewMenu()
-{
+  refresh();
 }
 
 void
-AddonPreviewMenu::rebuild_menu()
+AddonPreviewMenu::refresh()
 {
-  std::string author;
-  std::string type;
-  std::string desc;
-  std::string license;
-  std::vector<std::string> dependencies;
-  bool screenshots_available = false;
-  bool info_unavailable = false;
-  try
-  {
-    const Addon& repository_addon = m_addon_manager.get_repository_addon(m_addon.get_id());
-    author = repository_addon.get_author();
-    type = addon_string_util::addon_type_to_translated_string(repository_addon.get_type());
-    desc = repository_addon.get_description();
-    license = repository_addon.get_license();
-    dependencies = repository_addon.get_dependencies();
-    screenshots_available = repository_addon.get_screenshots().size() > 0;
-  }
-  catch (std::exception& err)
-  {
-    log_warning << "Installed addon not available in repository: " << err.what() << std::endl;
-    author = m_addon.get_author();
-    type = addon_string_util::addon_type_to_translated_string(m_addon.get_type());
-    license = m_addon.get_license();
-    info_unavailable = true;
-  }
-
   clear();
 
-  add_label(fmt::format(fmt::runtime(_("{} \"{}\"")), type, m_addon.get_title()));
+  const std::string translated_type = addon_string_util::addon_type_to_translated_string(m_addon.get_type());
+  add_label(fmt::format(fmt::runtime("{} \"{}\""), translated_type, m_addon.get_title()));
   add_hl();
 
-  if (info_unavailable)
-  {
-    add_inactive(_("Some information about this add-on is not available."));
-    add_inactive(_("Perform a \"Check Online\" to try retrieving it."));
-    add_hl();
-  }
-
-  add_inactive(author.empty() ? _("No author specified.") : fmt::format(fmt::runtime(_("Author: {}")), author), !author.empty());
-  add_inactive(fmt::format(fmt::runtime(_("Type: {}")), type), true);
-  add_inactive(license.empty() ? _("No license specified.") : fmt::format(fmt::runtime(_("License: {}")), license), !license.empty());
+  add_inactive(m_addon.get_author().empty() ? _("No author specified.") : fmt::format(fmt::runtime(_("Author: {}")), m_addon.get_author()), !m_addon.get_author().empty());
+  add_inactive(fmt::format(fmt::runtime(_("Type: {}")), translated_type), true);
+  add_inactive(m_addon.get_license().empty() ? _("No license specified.") : fmt::format(fmt::runtime(_("License: {}")), m_addon.get_license()), !m_addon.get_license().empty());
   add_inactive("");
 
-  if (!dependencies.empty())
+  if (!m_addon.get_dependency_ids().empty())
   {
     add_inactive(_("Dependencies:"), true);
-    for (const std::string& id : dependencies)
+    if (m_addon.get_dependencies().empty())
     {
-      std::string text;
-      try
+      for (const std::string& dependency_id : m_addon.get_dependency_ids())
       {
-        const Addon& dependency = m_addon_manager.get_repository_addon(id);
-        text = fmt::format(fmt::runtime("\"{}\" ({}): {}"), dependency.get_title(),
-                            addon_string_util::addon_type_to_translated_string(dependency.get_type()),
-                            m_addon_manager.is_addon_installed(id) ? _("Installed") : _("Not installed"));
+        std::string text;
+        try
+        {
+          const Addon& dependency = m_addon_manager.get_installed_addon(dependency_id);
+          text = fmt::format(fmt::runtime(_("\"{}\" ({}): Installed")), dependency.get_title(),
+                              addon_string_util::addon_type_to_translated_string(dependency.get_type()));
+        }
+        catch (std::exception& err)
+        {
+          log_warning << "Dependency '" << dependency_id << "' not locally available: " << err.what() << std::endl;
+          text = fmt::format(fmt::runtime("\"{}\": Not installed!"), dependency_id);
+        }
+        add_inactive(text, true);
       }
-      catch (std::exception& err)
+    }
+    else
+    {
+      for (const auto& dependency : m_addon.get_dependencies())
       {
-        log_warning << "Dependency not available in repository: " << err.what() << std::endl;
-        text = fmt::format(fmt::runtime("\"{}\": {}"), id, _("Not available!"));
+        std::string text;
+        if (dependency->is_installed())
+        {
+          text = fmt::format(fmt::runtime(_("\"{}\" ({}): Installed")), dependency->get_title(),
+                              addon_string_util::addon_type_to_translated_string(dependency->get_type()));
+        }
+        else
+        {
+          text = fmt::format(fmt::runtime(_("\"{}\" ({}): Not installed!")), dependency->get_title(),
+                              addon_string_util::addon_type_to_translated_string(dependency->get_type()));
+        }
+        add_inactive(text, true);
       }
-      add_inactive(text, true);
     }
     add_inactive("");
   }
 
   add_inactive(_("Description:"), true);
-  if (desc.empty())
+  if (m_addon.get_description().empty())
   {
     add_inactive(_("No description available."));
   }
   else
   {
+    // TODO: Support multiline format
     std::string overflow;
-    add_inactive(Resources::normal_font->wrap_to_width(desc, 600.f, &overflow), true);
+    add_inactive(Resources::normal_font->wrap_to_width(m_addon.get_description(), 600.f, &overflow), true);
     while (!overflow.empty())
     {
       add_inactive(Resources::normal_font->wrap_to_width(overflow, 600.f, &overflow), true);
@@ -133,7 +112,7 @@ AddonPreviewMenu::rebuild_menu()
   }
   add_inactive("");
 
-  if (screenshots_available && !m_auto_install)
+  if (!m_addon.get_screenshots().files.empty())
   {
     if (m_show_screenshots)
     {
@@ -144,25 +123,13 @@ AddonPreviewMenu::rebuild_menu()
       }
       else
       {
-        add_inactive(_("Failed to load all available screenshot previews."));
+        add_inactive(_("Failed to load all available screenshot previews!"));
       }
     }
     else
     {
-      const std::string show_screenshots_text = _("Show screenshots");
-      if (m_auto_install)
-      {
-        add_inactive(show_screenshots_text);
-      }
-      else
-      {
-        add_entry(MNID_SHOW_SCREENSHOTS, show_screenshots_text);
-      }
+      add_entry(MNID_SHOW_SCREENSHOTS, _("Show screenshots"));
     }
-  }
-  else if (m_auto_install)
-  {
-    add_inactive(_("Screenshot previews are disabled for automatic installs."));
   }
   else
   {
@@ -171,23 +138,17 @@ AddonPreviewMenu::rebuild_menu()
 
   add_hl();
 
-  bool addon_installed = m_addon.is_installed();
-  if ((!addon_installed || m_update) && !info_unavailable)
+  if (m_addon.is_installed())
   {
-    const std::string action = m_update ? _("Update") : _("Install");
-    if (m_auto_install)
-    {
-      add_inactive(action);
-    }
-    else
-    {
-      add_entry(MNID_INSTALL, action);
-    }
-  }
-  if (addon_installed)
-  {
+    if (m_addon.has_available_update())
+      add_entry(MNID_INSTALL, _("Update"));
+
     add_toggle(MNID_TOGGLE, _("Enabled"), &m_addon_enabled, true);
     add_entry(MNID_UNINSTALL, _("Uninstall"));
+  }
+  else
+  {
+    add_entry(MNID_INSTALL, _("Install"));
   }
 
   add_back(_("Back"));
@@ -264,14 +225,14 @@ AddonPreviewMenu::show_screenshots()
     return;
   }
 
-  m_screenshot_download_status = m_addon_manager.request_download_addon_screenshots(m_addon.get_id());
+  m_screenshot_download_status = m_addon_manager.request_download_addon_screenshots(m_addon);
 
   if (!m_screenshot_download_status->is_active()) // If no screenshots have been scheduled for download (all are downloaded).
   {
     // Directly reload the menu with screenshots.
     m_screenshot_download_success = true;
     m_show_screenshots = true;
-    rebuild_menu();
+    refresh();
     return;
   }
 
@@ -286,7 +247,7 @@ AddonPreviewMenu::show_screenshots()
     // Reload the menu with screenshots.
     m_screenshot_download_success = success;
     m_show_screenshots = true;
-    rebuild_menu();
+    refresh();
   });
   MenuManager::instance().set_dialog(std::move(dialog));
 }
@@ -294,24 +255,16 @@ AddonPreviewMenu::show_screenshots()
 void
 AddonPreviewMenu::install_addon()
 {
-  auto addon_id = m_addon.get_id();
-  TransferStatusListPtr status = m_addon_manager.request_install_addon(addon_id);
+  TransferStatusListPtr status = m_addon_manager.request_install_addon(m_addon);
   auto dialog = std::make_unique<DownloadDialog>(status, false);
-  const std::string action = m_update ? _("Updating") : _("Downloading");
-  const Addon& repository_addon = m_addon_manager.get_repository_addon(addon_id);
-  dialog->set_title(fmt::format(fmt::runtime("{} {}"), action, addon_string_util::generate_menu_item_text(repository_addon)));
-  status->then([this, addon_id](bool success)
+  const std::string action = m_addon.is_installed() ? _("Updating") : _("Downloading");
+  dialog->set_title(fmt::format(fmt::runtime("{} {}"), action, addon_string_util::generate_menu_item_text(m_addon, false)));
+  status->then([this](bool success)
   {
-    if (m_auto_install)
-    {
-      MenuManager::instance().set_dialog({});
-      MenuManager::instance().clear_menu_stack();
-      return;
-    }
     if (success)
     {
       MenuManager::instance().pop_menu(true);
-      if (!m_update) MenuManager::instance().pop_menu(true);
+      //MenuManager::instance().pop_menu(true);
       MenuManager::instance().current_menu()->refresh();
     }
   });
@@ -325,9 +278,9 @@ AddonPreviewMenu::uninstall_addon()
   try
   {
     m_addon_manager.uninstall_addon(addon_id);
-    Dialog::show_message(_("Add-on uninstalled successfully."));
+    Dialog::show_message(_("Add-on uninstalled successfully!"));
   }
-  catch (std::exception& err)
+  catch (const std::exception& err)
   {
     log_warning << "Error uninstalling add-on: " << err.what() << std::endl;
     Dialog::show_message(fmt::format(fmt::runtime(_("Error uninstalling add-on:\n{}")), err.what()));
@@ -340,27 +293,17 @@ void
 AddonPreviewMenu::toggle_addon()
 {
   const AddonId& addon_id = m_addon.get_id();
-  try
-  {
-    if (m_addon.is_enabled())
-    {
-      m_addon_manager.disable_addon(addon_id);
-    }
-    else
-    {
-      m_addon_manager.enable_addon(addon_id);
-    }
-  }
-  catch (std::exception& err)
-  {
-    throw std::runtime_error(err.what());
-  }
+  if (m_addon.is_enabled())
+    m_addon_manager.disable_addon(addon_id);
+  else
+    m_addon_manager.enable_addon(addon_id);
 
   if (m_addon.requires_restart())
-  {
-    Dialog::show_message(_("Please restart SuperTux\nfor these changes to take effect."));
-  }
-  MenuManager::instance().previous_menu()->refresh();
+    Dialog::show_message(_("Please restart SuperTux for these changes to take effect!"));
+
+  AddonMenu* addon_menu = dynamic_cast<AddonMenu*>(MenuManager::instance().previous_menu());
+  if (addon_menu)
+    addon_menu->refresh();
 }
 
 /* EOF */

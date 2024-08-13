@@ -17,6 +17,7 @@
 #ifndef HEADER_SUPERTUX_UTIL_WRITER_HPP
 #define HEADER_SUPERTUX_UTIL_WRITER_HPP
 
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -35,11 +36,15 @@ public:
 
   void start_list(const std::string& listname, bool string = false);
 
-  void write(const std::string& name, bool value);
-  void write(const std::string& name, int value);
-  void write(const std::string& name, float value);
+  template<typename T>
+  void write(const std::string& name, T value)
+  {
+    indent();
+    *out << '(' << name << ' ' << value << ")\n";
+  }
   void write(const std::string& name, const char* value);
   void write(const std::string& name, const std::string& value, bool translatable = false);
+  void write(const std::string& name, bool value);
   void write(const std::string& name, const std::vector<int>& value);
   void write(const std::string& name, const std::vector<unsigned int>& value, int width = 0);
   void write(const std::string& name, const std::vector<float>& value);

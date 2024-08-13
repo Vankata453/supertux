@@ -18,25 +18,63 @@
 #ifndef HEADER_SUPERTUX_ADDON_ADDON_MANAGER_HPP
 #define HEADER_SUPERTUX_ADDON_ADDON_MANAGER_HPP
 
-#include <memory>
-#include <string>
-#include <map>
 #include <vector>
 
+#include "addon/addon_map.hpp"
 #include "addon/downloader.hpp"
 #include "supertux/gameconfig.hpp"
 #include "util/currenton.hpp"
 
-class Addon;
-class AddonDependencyManager;
-
-typedef std::string AddonId;
+class AddonIndex;
 
 /** Checks for, installs and removes Add-ons */
 class AddonManager final : public Currenton<AddonManager>
 {
 public:
-  using AddonMap = std::map<AddonId, std::unique_ptr<Addon> >;
+  AddonManager(const std::string& addon_directory,
+               std::vector<Config::Addon>& addon_config);
+  ~AddonManager() override;
+
+  void empty_cache_directory();
+
+  void update();
+
+  TransferStatusPtr request_index(std::unique_ptr<AddonIndex>& index, int limit);
+  TransferStatusPtr request_index_page(std::unique_ptr<AddonIndex>& index, bool next_page);
+  TransferStatusListPtr request_upstream_addons();
+
+  std::vector<AddonId> get_installed_addons() const;
+  Addon& get_installed_addon(const AddonId& addon) const;
+
+  TransferStatusListPtr request_install_addon(const Addon& repository_addon);
+  TransferStatusListPtr request_install_addon_dependencies(const Addon& repository_addon);
+  void uninstall_addon(const AddonId& addon_id);
+  void install_addon_from_local_file(const std::string& filename);
+
+  TransferStatusListPtr request_download_addon_screenshots(const Addon& addon);
+  std::vector<std::string> get_local_addon_screenshots(const AddonId& addon_id) const;
+
+  void enable_addon(const AddonId& addon_id);
+  void disable_addon(const AddonId& addon_id);
+
+  bool is_addon_installed(const AddonId& addon_id) const;
+
+  std::vector<AddonId> get_depending_addons(const AddonId& id) const;
+
+private:
+  TransferStatusPtr request_index(std::unique_ptr<AddonIndex>& index, const std::string& url);
+  TransferStatusPtr request_upstream_addon(Addon& addon);
+
+  std::vector<std::string> scan_for_archives() const;
+  void add_installed_addons();
+
+  /** add \a archive, given as physfs path, to the list of installed
+      archives */
+  void add_installed_archive(const std::string& archive, bool user_install = false);
+
+  /** search for an .nfo file in the top level directory that
+      originates from \a archive, \a archive is a OS path */
+  std::string scan_for_info(const std::string& archive) const;
 
 private:
   Downloader m_downloader;
@@ -47,70 +85,12 @@ private:
   std::vector<Config::Addon>& m_addon_config;
 
   AddonMap m_installed_addons;
-  AddonMap m_repository_addons;
 
   bool m_initialized;
-  bool m_has_been_updated;
 
   TransferStatusListPtr m_transfer_statuses;
 
-public:
-  AddonManager(const std::string& addon_directory,
-               std::vector<Config::Addon>& addon_config);
-  ~AddonManager() override;
-
-  void empty_cache_directory();
-
-  bool has_online_support() const;
-  bool has_been_updated() const;
-  void check_online();
-  TransferStatusPtr request_check_online();
-
-  std::vector<AddonId> get_repository_addons() const;
-  std::vector<AddonId> get_installed_addons() const;
-
-  Addon& get_repository_addon(const AddonId& addon) const;
-  Addon& get_installed_addon(const AddonId& addon) const;
-
-  TransferStatusListPtr request_install_addon(const AddonId& addon_id);
-  TransferStatusListPtr request_install_addon_dependencies(const AddonId& addon_id);
-  void install_addon(const AddonId& addon_id);
-  void uninstall_addon(const AddonId& addon_id);
-  void install_addon_from_local_file(const std::string& filename);
-
-  TransferStatusListPtr request_download_addon_screenshots(const AddonId& addon_id);
-  std::vector<std::string> get_local_addon_screenshots(const AddonId& addon_id);
-
-  void enable_addon(const AddonId& addon_id);
-  void disable_addon(const AddonId& addon_id);
-
-  bool is_old_enabled_addon(const std::unique_ptr<Addon>& addon) const;
-  bool is_old_addon_enabled() const;
-  void disable_old_addons();
-  void mount_old_addons();
-  void unmount_old_addons();
-  bool is_from_old_addon(const std::string& filename) const;
-  bool is_addon_installed(const std::string& id) const;
-
-  std::vector<AddonId> get_depending_addons(const std::string& id) const;
-
-  void update();
-  void check_for_langpack_updates();
-
-private:
-  TransferStatusListPtr request_install_addon_dependencies(const Addon& addon);
-
-  std::vector<std::string> scan_for_archives() const;
-  void add_installed_addons();
-  AddonMap parse_addon_infos(const std::string& filename) const;
-
-  /** add \a archive, given as physfs path, to the list of installed
-      archives */
-  void add_installed_archive(const std::string& archive, const std::string& md5, bool user_install = false);
-
-  /** search for an .nfo file in the top level directory that
-      originates from \a archive, \a archive is a OS path */
-  std::string scan_for_info(const std::string& archive) const;
+  std::string m_index_page_cache;
 
 private:
   AddonManager(const AddonManager&) = delete;

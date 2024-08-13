@@ -133,17 +133,14 @@ MenuStorage::create(MenuId menu_id)
     case ADDON_MENU:
       return std::make_unique<AddonMenu>();
 
-    case LANGPACK_MENU:
-      return std::unique_ptr<Menu>(new AddonMenu(true));
+    case LANGPACK_MENU: // TODO: Open a browse menu with a langpack filter
+      return std::make_unique<AddonBrowseMenu>();
 
     case EDITOR_LEVELSET_SELECT_MENU:
       return std::make_unique<EditorLevelsetSelectMenu>();
 
     case EDITOR_NEW_LEVELSET_MENU:
       return std::make_unique<EditorNewLevelsetMenu>();
-
-    case LANGPACK_AUTO_UPDATE_MENU:
-      return std::unique_ptr<Menu>(new AddonBrowseMenu(true, true));
 
     case EDITOR_LEVEL_SELECT_MENU:
       return std::make_unique<EditorLevelSelectMenu>();

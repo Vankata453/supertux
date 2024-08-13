@@ -96,6 +96,12 @@ ReaderMapping::get(const char* key, uint32_t& value, const std::optional<uint32_
 }
 
 bool
+ReaderMapping::get(const char* key, int64_t& value, const std::optional<uint32_t>& default_value) const
+{
+  GET_VALUE_MACRO("int64_t", is_integer, as_int)
+}
+
+bool
 ReaderMapping::get(const char* key, float& value, const std::optional<float>& default_value) const
 {
   GET_VALUE_MACRO("float", is_real, as_float)

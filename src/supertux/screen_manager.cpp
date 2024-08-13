@@ -305,6 +305,7 @@ ScreenManager::update_gamelogic(float dt_sec)
     m_mobile_controller.apply(controller);
   }
 
+  AddonManager::current()->update();
   SquirrelVirtualMachine::current()->update(g_game_time);
 
   if (!m_screen_stack.empty())

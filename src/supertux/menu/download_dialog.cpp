@@ -89,7 +89,7 @@ DownloadDialog::update_text()
   int dltotal = m_complete ? m_download_total : m_status->get_download_total();
   if (dltotal == 0)
   {
-    out << "---\n---";
+    out << "---\n" << (m_complete ? "100%" : "---");
   }
   else
   {

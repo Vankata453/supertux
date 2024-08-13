@@ -19,35 +19,36 @@
 
 #include "gui/menu.hpp"
 
-class Addon;
+#include "addon/addon_index.hpp"
+#include "addon/downloader_defines.hpp"
+
 class AddonManager;
 
 class AddonBrowseMenu final : public Menu
 {
+public:
+  AddonBrowseMenu();
+
+  void refresh() override;
+
+  void menu_action(MenuItem& item) override;
+
+private:
+  void rebuild_menu();
+
 private:
   enum {
     MNID_PREV_PAGE = 1,
-    MNID_NEXT_PAGE = 2,
-    MNID_CHECK_ONLINE = 3,
-    MNID_ADDON_LIST_START = 4,
+    MNID_NEXT_PAGE,
+    MNID_ADDON_LIST_START
   };
 
 private:
   AddonManager& m_addon_manager;
-  std::vector<std::string> m_repository_addons;
-  const bool m_langpacks_only;
-  const bool m_auto_install_langpack;
+  std::unique_ptr<AddonIndex> m_addon_index;
+
   int m_browse_page;
-  const int m_max_addons_on_page;
-
-public:
-  AddonBrowseMenu(bool langpacks_only, bool auto_install_langpack);
-  ~AddonBrowseMenu() override;
-
-  void refresh() override;
-  void rebuild_menu();
-  void check_online();
-  void menu_action(MenuItem& item) override;
+  TransferStatusPtr m_index_download_status;
 
 private:
   AddonBrowseMenu(const AddonBrowseMenu&) = delete;

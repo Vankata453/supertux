@@ -481,6 +481,17 @@ Add_File(const std::string& filename,const bool)
     return std::make_unique<ZIP_FILE_OSTREAM>(files.back(),ostream);
 }
 //#####################################################################
+// Function ZipFileWriter
+//#####################################################################
+void ZipFileWriter::
+Add_Zip_Files(ZipFileReader& reader)
+{
+    std::map<std::string,ZipFileHeader*>::const_iterator i=reader.filename_to_header.begin();
+    ++i; // Skip archive root entry
+    for(;i!=reader.filename_to_header.end();++i)
+        *Add_File(i->first.substr(i->first.find("/") + 1)) << reader.Get_File(i->first)->rdbuf();
+}
+//#####################################################################
 // Function ZipFileReader
 //#####################################################################
 ZipFileReader::

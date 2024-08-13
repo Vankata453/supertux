@@ -90,20 +90,6 @@ Writer::end_list(const std::string& listname)
   *out << ")\n";
 }
 
-void
-Writer::write(const std::string& name, int value)
-{
-  indent();
-  *out << '(' << name << ' ' << value << ")\n";
-}
-
-void
-Writer::write(const std::string& name, float value)
-{
-  indent();
-  *out << '(' << name << ' ' << value << ")\n";
-}
-
 /** This function is needed to properly resolve the overloaded write()
     function, without it the call write("foo", "bar") would call
     write(name, bool), not write(name, string, bool) */

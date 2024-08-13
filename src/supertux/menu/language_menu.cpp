@@ -16,18 +16,19 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "supertux/menu/language_menu.hpp"
-#include "addon/addon_manager.hpp"
 
 extern "C" {
 #include <findlocale.h>
 }
+
+#include "addon/addon_manager.hpp"
+#include "gui/dialog.hpp"
 #include "gui/item_action.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
 #include "supertux/resources.hpp"
-#include "supertux/menu/menu_storage.hpp"
 #include "supertux/title_screen.hpp"
 #include "util/gettext.hpp"
 #include "video/ttf_font.hpp"
@@ -109,12 +110,9 @@ LanguageMenu::menu_action(MenuItem& item)
   if (g_dictionary_manager->get_language().get_language() != "en" &&
       !AddonManager::current()->is_addon_installed("language-pack"))
   {
-    MenuManager::instance().push_menu(MenuStorage::LANGPACK_AUTO_UPDATE_MENU, true);
+    Dialog::show_message(_("To get the latest localization updates, download the \"SuperTux Localization Pack\" add-on!"));
   }
-  else
-  {
-    MenuManager::instance().clear_menu_stack();
-  }
+  MenuManager::instance().clear_menu_stack();
 }
 
 /* EOF */
