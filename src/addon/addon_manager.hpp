@@ -72,10 +72,6 @@ private:
       archives */
   void add_installed_archive(const std::string& archive, bool user_install = false);
 
-  /** search for an .nfo file in the top level directory that
-      originates from \a archive, \a archive is a OS path */
-  std::string scan_for_info(const std::string& archive) const;
-
 private:
   Downloader m_downloader;
   const std::string m_addon_directory;

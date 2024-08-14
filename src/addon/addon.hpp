@@ -29,7 +29,7 @@ class Addon final
   friend class AddonManager;
 
 public:
-  static std::unique_ptr<Addon> parse(const std::string& fname);
+  static std::unique_ptr<Addon> parse(std::istream& stream);
   static std::unique_ptr<Addon> parse_string(const std::string& str);
 
   enum Type { WORLD, WORLDMAP, LEVELSET, LANGUAGEPACK, RESOURCEPACK, ADDON };
