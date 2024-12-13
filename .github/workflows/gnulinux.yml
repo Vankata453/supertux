@@ -188,6 +188,19 @@ jobs:
           make -j3 VERBOSE=1
           make install DESTDIR="/tmp/supertux" VERBOSE=1
 
+      - name: Cache build
+        id: cache-build
+        uses: actions/cache/save@v4
+        if: ${{ github.ref == 'refs/heads/master' }}
+        with:
+          path: |
+            build/**
+            !build/docs
+            !build/lib*
+            !build/supertux2*
+            !build/test_supertux2
+          key: ${{ runner.os }}-${{ matrix.arch }}-${{ matrix.build_type }}-${{ matrix.glbinding }}-build-${{ hashFiles('.github/workflows/gnulinux.yml') }}
+
       - name: Run tests
         # FIXME: GoogleTest isn't detected by CMake on Ubuntu 18.04
         # (also check the step that invokes CMake with -DBUILD_TESTS)
