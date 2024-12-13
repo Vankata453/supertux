@@ -185,7 +185,7 @@ jobs:
         run: |
           cmake --version
           $CXX --version
-          mkdir "build"
+          mkdir -p "build"
           cd "build"
           cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE $ARCH -DBUILD_TESTS=$TESTS   \
                    -DWARNINGS=ON -DWERROR=ON -DGLBINDING_ENABLED=$GLBINDING    \
