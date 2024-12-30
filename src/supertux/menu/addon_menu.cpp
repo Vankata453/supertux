@@ -23,6 +23,8 @@
 #include "gui/dialog.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
+#include "supertux/gameconfig.hpp"
+#include "supertux/globals.hpp"
 #include "supertux/menu/addon_browse_menu.hpp"
 #include "supertux/menu/addon_file_install_menu.hpp"
 #include "supertux/menu/addon_preview_menu.hpp"
@@ -142,7 +144,10 @@ AddonMenu::menu_action(MenuItem& item)
   }
   else if (index == MNID_BROWSE)
   {
-    MenuManager::instance().push_menu(std::make_unique<AddonBrowseMenu>());
+    if (g_config->disable_network)
+      Dialog::show_message(_("To browse through the add-on catalog, you must enable networking."));
+    else
+      MenuManager::instance().push_menu(std::make_unique<AddonBrowseMenu>());
   }
   else if (index == MNID_INSTALL_FROM_FILE)
   { 
@@ -166,9 +171,18 @@ AddonMenu::menu_action(MenuItem& item)
 void
 AddonMenu::check_for_updates()
 {
+  if (g_config->disable_network)
+  {
+    Dialog::show_message(_("To check for add-on updates, you must enable networking."));
+    return;
+  }
+
   try
   {
     TransferStatusListPtr status = m_addon_manager.request_upstream_addons();
+    auto dialog = std::make_unique<DownloadDialog>(status, false);
+    dialog->set_title(_("Checking for updates..."));
+    MenuManager::instance().set_dialog(std::move(dialog));
     status->then([this](bool success)
     {
       if (success)
@@ -176,9 +190,6 @@ AddonMenu::check_for_updates()
 
       set_active_item(MNID_UPDATE_CHECK);
     });
-    auto dialog = std::make_unique<DownloadDialog>(status, false);
-    dialog->set_title(_("Checking for updates..."));
-    MenuManager::instance().set_dialog(std::move(dialog));
   }
   catch (const std::exception& err)
   {

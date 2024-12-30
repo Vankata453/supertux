@@ -22,6 +22,8 @@
 #include "addon/addon_manager.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
+#include "supertux/gameconfig.hpp"
+#include "supertux/globals.hpp"
 #include "supertux/menu/addon_menu.hpp"
 #include "supertux/menu/download_dialog.hpp"
 #include "supertux/resources.hpp"
@@ -112,6 +114,9 @@ AddonPreviewMenu::refresh()
   }
   add_inactive("");
 
+  add_inactive(_("Overrides Data: ") + (m_addon.overrides_data() ? _("Yes") : _("No")), true);
+  add_inactive("");
+
   if (!m_addon.get_screenshots().files.empty())
   {
     if (m_show_screenshots)
@@ -125,6 +130,10 @@ AddonPreviewMenu::refresh()
       {
         add_inactive(_("Failed to load all available screenshot previews!"));
       }
+    }
+    else if (g_config->disable_network)
+    {
+      add_inactive(_("To fetch add-on screenshots, you must enable networking."));
     }
     else
     {

@@ -32,7 +32,15 @@ public:
   static std::unique_ptr<Addon> parse(std::istream& stream);
   static std::unique_ptr<Addon> parse_string(const std::string& str);
 
-  enum Type { WORLD, WORLDMAP, LEVELSET, LANGUAGEPACK, RESOURCEPACK, ADDON };
+  enum Type {
+    WORLD,
+    WORLDMAP,
+    LEVELSET,
+    LANGUAGEPACK,
+    RESOURCEPACK,
+    WEAKRESOURCEPACK,
+    ADDON
+  };
 
   struct Version final
   {
@@ -73,20 +81,22 @@ public:
   Addon(const ReaderMapping& mapping);
 
 public:
-  const std::string& get_id() const { return m_id; }
-  const Version& get_version() const { return m_version; }
-  Type get_type() const { return m_type; }
-  const std::string& get_title() const { return m_title; }
-  const std::string& get_description() const { return m_description; }
-  const std::string& get_author() const { return m_author; }
-  const std::string& get_license() const { return m_license; }
-  const std::string& get_origin_url() const { return m_origin_url; }
-  const std::string& get_url() const { return m_url; }
-  const std::string& get_upstream_url() const { return m_upstream_url; }
-  const std::string& get_md5() const { return m_md5; }
-  const Screenshots& get_screenshots() const { return m_screenshots; }
-  const std::vector<std::unique_ptr<Addon>>& get_dependencies() const { return m_dependencies; }
-  const std::vector<std::string>& get_dependency_ids() const { return m_dependency_ids; }
+  inline const std::string& get_id() const { return m_id; }
+  inline const Version& get_version() const { return m_version; }
+
+  inline Type get_type() const { return m_type; }
+  inline const std::string& get_title() const { return m_title; }
+  inline const std::string& get_description() const { return m_description; }
+  inline const std::string& get_author() const { return m_author; }
+  inline const std::string& get_license() const { return m_license; }
+
+  inline const std::string& get_origin_url() const { return m_origin_url; }
+  inline const std::string& get_url() const { return m_url; }
+  inline const std::string& get_upstream_url() const { return m_upstream_url; }
+  inline const std::string& get_md5() const { return m_md5; }
+  inline const Screenshots& get_screenshots() const { return m_screenshots; }
+  inline const std::vector<std::unique_ptr<Addon>>& get_dependencies() const { return m_dependencies; }
+  inline const std::vector<std::string>& get_dependency_ids() const { return m_dependency_ids; }
 
   const Addon* get_upstream_addon() const;
   std::string get_filename() const;
