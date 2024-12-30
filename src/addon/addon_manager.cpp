@@ -641,6 +641,36 @@ AddonManager::scan_for_archives() const
   return archives;
 }
 
+std::string
+AddonManager::scan_for_info(const std::string& archive_os_path) const
+{
+  std::string nfoFilename = "";
+  physfsutil::enumerate_files("/", [archive_os_path, &nfoFilename](const std::string& file) {
+    if (StringUtil::has_suffix(file, ".nfo"))
+    {
+      std::string nfo_filename = FileSystem::join("/", file);
+
+      // Make sure it's in the current archive_os_path.
+      const char* realdir = PHYSFS_getRealDir(nfo_filename.c_str());
+      if (!realdir)
+      {
+        log_warning << "PHYSFS_getRealDir() failed for " << nfo_filename << ": " << physfsutil::get_last_error() << std::endl;
+      }
+      else
+      {
+        if (realdir == archive_os_path)
+        {
+          nfoFilename = nfo_filename;
+          return true;
+        }
+      }
+    }
+    return false;
+  });
+
+  return nfoFilename;
+}
+
 void
 AddonManager::add_installed_archive(const std::string& archive, bool user_install)
 {
@@ -652,34 +682,26 @@ AddonManager::add_installed_archive(const std::string& archive, bool user_instal
   }
   else
   {
-    const std::string os_path = FileSystem::join(realdir, archive);
-    Partio::ZipFileReader archive_reader(os_path);
+    bool has_error = false;
+    std::string os_path = FileSystem::join(realdir, archive);
 
-    std::string nfo_filename;
-    for (const auto& [filename, _] : archive_reader.filename_to_header)
-    {
-      if (StringUtil::has_suffix(filename, ".nfo"))
-      {
-        nfo_filename = filename;
-        break;
-      }
-    }
+    PHYSFS_mount(os_path.c_str(), nullptr, 1);
+
+    std::string nfo_filename = scan_for_info(os_path);
 
     if (nfo_filename.empty())
     {
       log_warning << "Couldn't find .nfo file for " << os_path << std::endl;
+      has_error = true;
     }
     else
     {
       try
       {
-        std::stringstream nfo_stream;
-        nfo_stream << archive_reader.Get_File(nfo_filename)->rdbuf();
-
-        std::unique_ptr<Addon> addon = Addon::parse(nfo_stream);
+        std::unique_ptr<Addon> addon = Addon::parse(nfo_filename);
         addon->m_install_filename = os_path;
+        const auto& addon_id = addon->get_id();
 
-        const AddonId& addon_id = addon->get_id();
         try
         {
           get_installed_addon(addon_id);
@@ -717,7 +739,13 @@ AddonManager::add_installed_archive(const std::string& archive, bool user_instal
       catch (const std::runtime_error& e)
       {
         log_warning << "Could not load add-on info for " << archive << ": " << e.what() << std::endl;
+        has_error = true;
       }
+    }
+
+    if(!user_install || has_error)
+    {
+      PHYSFS_unmount(os_path.c_str());
     }
   }
 }

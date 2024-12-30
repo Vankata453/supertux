@@ -152,15 +152,16 @@ std::string get_addon_plural_form(size_t count)
 } // namespace addon_string_util
 
 std::unique_ptr<Addon>
-Addon::parse(std::istream& stream)
+Addon::parse(const std::string& fname)
 {
   try
   {
-    auto doc = ReaderDocument::from_stream(stream);
+    register_translation_directory(fname);
+    auto doc = ReaderDocument::from_file(fname);
     auto root = doc.get_root();
     if (root.get_name() != "supertux-addoninfo")
     {
-      throw std::runtime_error("Invalid add-on entry: Not a 'supertux-addoninfo' entry.");
+      throw std::runtime_error("File is not a 'supertux-addoninfo' file.");
     }
 
     return std::make_unique<Addon>(root.get_mapping());
@@ -168,7 +169,7 @@ Addon::parse(std::istream& stream)
   catch (const std::exception& err)
   {
     std::stringstream msg;
-    msg << "Problem when reading add-on info: " << err.what();
+    msg << "Problem when reading add-on info '" << fname << "': " << err.what();
     throw std::runtime_error(msg.str());
   }
 }
@@ -178,6 +179,7 @@ Addon::parse_string(const std::string& str)
 {
   try
   {
+    //register_translation_directory(fname);
     auto doc = ReaderDocument::from_string(str);
     auto root = doc.get_root();
     if (root.get_name() != "supertux-addoninfo")
