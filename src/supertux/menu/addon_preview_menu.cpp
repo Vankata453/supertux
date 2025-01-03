@@ -32,7 +32,7 @@
 AddonPreviewMenu::AddonPreviewMenu(const Addon& addon) :
   m_addon_manager(*AddonManager::current()),
   m_addon(addon),
-  m_addon_enabled(addon.is_enabled()),
+  m_addon_enabled(addon.is_installed() ? addon.is_enabled() : false),
   m_show_screenshots(false),
   m_screenshot_download_status(),
   m_screenshot_download_success(false)
@@ -182,7 +182,7 @@ AddonPreviewMenu::menu_action(MenuItem& item)
     case MNID_UNINSTALL:
     {
       std::string confirmation_message = fmt::format(fmt::runtime(_("Are you sure you want to uninstall \"{}\"?")), m_addon.get_title());
-      if (m_addon.is_levelset()) confirmation_message += _("\nYour progress won't be lost.");
+      if (m_addon.is_levelset()) confirmation_message += "\n" + _("Your progress won't be lost.");
 
       Dialog::show_confirmation(confirmation_message, [this]()
       {
