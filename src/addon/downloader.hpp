@@ -40,7 +40,7 @@ class TransferStatus final
 public:
   Downloader& m_downloader;
   TransferId id;
-  const std::string file;
+  const std::string url;
   std::vector<std::function<void (bool)> > callbacks;
 
   int dltotal;
@@ -54,7 +54,7 @@ private:
   TransferStatusList* parent_list;
 
 public:
-  TransferStatus(Downloader& downloader, TransferId id_,
+  TransferStatus(Downloader& downloader, TransferId id,
                  const std::string& url);
 
   void abort();

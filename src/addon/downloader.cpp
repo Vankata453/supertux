@@ -71,10 +71,10 @@ size_t my_curl_physfs_write(void* ptr, size_t size, size_t nmemb, void* userdata
 } // namespace
 
 TransferStatus::TransferStatus(Downloader& downloader, TransferId id_,
-                               const std::string& url) :
+                               const std::string& url_) :
   m_downloader(downloader),
   id(id_),
-  file(FileSystem::basename(url)),
+  url(url_),
   callbacks(),
   dltotal(0),
   dlnow(0),
@@ -184,9 +184,11 @@ TransferStatusList::on_transfer_complete(TransferStatusPtr this_status, bool suc
   else
   {
     std::stringstream err;
-    err << "Downloading \"" << this_status->file << "\" failed: " << this_status->error_msg;
+    err << "Downloading \"" << FileSystem::basename(this_status->url) << "\" failed: " << this_status->error_msg;
     m_error_msg = err.str();
-    log_warning << "Exception in Downloader: TransferStatusList: " << m_error_msg << std::endl;
+
+    log_warning << "Exception in Downloader: TransferStatusList: "
+                << "Downloading \"" << this_status->url << "\" failed: " << this_status->error_msg << std::endl;
 
     // Execute all callbacks.
     for (const auto& callback : m_callbacks)
@@ -268,7 +270,7 @@ public:
     }
     else
     {
-      curl_easy_setopt(m_handle, CURLOPT_URL, url.c_str());
+      curl_easy_setopt(m_handle, CURLOPT_URL, StringUtil::replace_all(url, " ", "%20").c_str());
       // cppcheck-suppress unknownMacro
       curl_easy_setopt(m_handle, CURLOPT_USERAGENT, "SuperTux/" PACKAGE_VERSION " libcURL");
 
