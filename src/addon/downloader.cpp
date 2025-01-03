@@ -296,31 +296,31 @@ public:
 #endif
   }
 
-  TransferStatusPtr get_status() const
+  inline TransferStatusPtr get_status() const
   {
     return m_status;
   }
 
 #ifndef EMSCRIPTEN
-  const char* get_error_buffer() const
+  inline const char* get_error_buffer() const
   {
     return m_error_buffer.data();
   }
 #endif
 
-  TransferId get_id() const
+  inline TransferId get_id() const
   {
     return m_id;
   }
 
 #ifndef EMSCRIPTEN
-  CURL* get_curl_handle() const
+  inline CURL* get_curl_handle() const
   {
     return m_handle;
   }
 #endif
 
-  const std::string& get_url() const
+  inline const std::string& get_url() const
   {
     return m_url;
   }
