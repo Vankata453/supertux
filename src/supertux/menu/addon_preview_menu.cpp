@@ -25,8 +25,10 @@
 #include "supertux/gameconfig.hpp"
 #include "supertux/globals.hpp"
 #include "supertux/menu/addon_menu.hpp"
+#include "supertux/menu/addon_update_details_menu.hpp"
 #include "supertux/menu/download_dialog.hpp"
 #include "supertux/resources.hpp"
+#include "util/file_system.hpp"
 #include "util/log.hpp"
 
 AddonPreviewMenu::AddonPreviewMenu(const Addon& addon) :
@@ -145,12 +147,15 @@ AddonPreviewMenu::refresh()
     add_inactive(_("No screenshot previews available."));
   }
 
+  if (!m_addon.get_origin_url().empty())
+    add_entry(MNID_VIEW_REPOSITORY, _("View Repository"));
+
   add_hl();
 
   if (m_addon.is_installed())
   {
     if (m_addon.has_available_update())
-      add_entry(MNID_INSTALL, _("Update"));
+      add_entry(MNID_UPDATE_DETAILS, _("See Update Details"));
 
     add_toggle(MNID_TOGGLE, _("Enabled"), &m_addon_enabled, true);
     add_entry(MNID_UNINSTALL, _("Uninstall"));
@@ -161,6 +166,25 @@ AddonPreviewMenu::refresh()
   }
 
   add_back(_("Back"));
+}
+
+void
+AddonPreviewMenu::install_addon(const Addon& addon)
+{
+  TransferStatusListPtr status = AddonManager::current()->request_install_addon(addon);
+  auto dialog = std::make_unique<DownloadDialog>(status, false);
+  const std::string action = addon.is_installed() ? _("Updating") : _("Downloading");
+  dialog->set_title(fmt::format(fmt::runtime("{} {}"), action, addon_string_util::generate_menu_item_text(addon, false)));
+  status->then([](bool success)
+  {
+    if (success)
+    {
+      MenuManager::instance().pop_menu(true);
+      //MenuManager::instance().pop_menu(true);
+      MenuManager::instance().current_menu()->refresh();
+    }
+  });
+  MenuManager::instance().set_dialog(std::move(dialog));
 }
 
 void
@@ -175,8 +199,18 @@ AddonPreviewMenu::menu_action(MenuItem& item)
       show_screenshots();
       break;
 
+    case MNID_VIEW_REPOSITORY:
+      Dialog::show_confirmation(fmt::format(fmt::runtime(_("This will take you to {}.\nAre you sure?")), m_addon.get_origin_url()), [this] {
+        FileSystem::open_url(m_addon.get_origin_url());
+      });
+      break;
+
     case MNID_INSTALL:
-      install_addon();
+      install_addon(m_addon);
+      break;
+
+    case MNID_UPDATE_DETAILS:
+      MenuManager::instance().push_menu(std::make_unique<AddonUpdateDetailsMenu>(m_addon));
       break;
 
     case MNID_UNINSTALL:
@@ -257,25 +291,6 @@ AddonPreviewMenu::show_screenshots()
     m_screenshot_download_success = success;
     m_show_screenshots = true;
     refresh();
-  });
-  MenuManager::instance().set_dialog(std::move(dialog));
-}
-
-void
-AddonPreviewMenu::install_addon()
-{
-  TransferStatusListPtr status = m_addon_manager.request_install_addon(m_addon);
-  auto dialog = std::make_unique<DownloadDialog>(status, false);
-  const std::string action = m_addon.is_installed() ? _("Updating") : _("Downloading");
-  dialog->set_title(fmt::format(fmt::runtime("{} {}"), action, addon_string_util::generate_menu_item_text(m_addon, false)));
-  status->then([this](bool success)
-  {
-    if (success)
-    {
-      MenuManager::instance().pop_menu(true);
-      //MenuManager::instance().pop_menu(true);
-      MenuManager::instance().current_menu()->refresh();
-    }
   });
   MenuManager::instance().set_dialog(std::move(dialog));
 }

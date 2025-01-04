@@ -17,6 +17,7 @@
 #include "string_util.hpp"
 
 #include <algorithm>
+#include <iomanip>
 #include <string>
 #include <sstream>
 #include <string.h>
@@ -120,6 +121,14 @@ StringUtil::split(std::vector<std::string>& output, const std::string& str, char
   std::string element;
   while(getline(stream, element, ch))
     output.push_back(element);
+}
+
+std::string
+StringUtil::timestamp_to_date_string(std::time_t timestamp, const char* format)
+{
+  std::stringstream out;
+  out << std::put_time(std::localtime(&timestamp), format);
+  return out.str();
 }
 
 /* EOF */

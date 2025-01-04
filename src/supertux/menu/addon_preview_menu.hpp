@@ -28,10 +28,16 @@ class AddonManager;
 
 class AddonPreviewMenu final : public Menu
 {
+public:
+  static void install_addon(const Addon& addon);
+
+private:
   enum {
     MNID_SCREENSHOTS,
     MNID_SHOW_SCREENSHOTS,
+    MNID_VIEW_REPOSITORY,
     MNID_INSTALL,
+    MNID_UPDATE_DETAILS,
     MNID_UNINSTALL,
     MNID_TOGGLE
   };
@@ -54,7 +60,6 @@ public:
 
 private:
   void show_screenshots();
-  void install_addon();
   void uninstall_addon();
   void toggle_addon();
 

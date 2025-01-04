@@ -18,9 +18,10 @@
 #ifndef HEADER_SUPERTUX_ADDON_ADDON_HPP
 #define HEADER_SUPERTUX_ADDON_ADDON_HPP
 
+#include <ctime>
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
 
 class ReaderMapping;
 
@@ -47,7 +48,7 @@ public:
     std::string commit;
     std::string title;
     std::string description;
-    int64_t created_at;
+    std::time_t created_at;
   };
   struct Screenshots final
   {

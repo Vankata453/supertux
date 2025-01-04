@@ -43,7 +43,7 @@
 
 namespace {
 
-static const std::string ADDON_REPOSITORY_URL = "http://localhost:3000/api/v1/repos/addons";
+static const std::string ADDON_REPOSITORY_URL = "http://192.168.247.1:3000/api/v1/repos/addons";
 static const std::string LANGUAGE_ADDON_ID = "language-pack";
 
 MD5 md5_from_file(const std::string& filename)

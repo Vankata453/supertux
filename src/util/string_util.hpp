@@ -17,6 +17,7 @@
 #ifndef HEADER_SUPERTUX_UTIL_STRING_UTIL_HPP
 #define HEADER_SUPERTUX_UTIL_STRING_UTIL_HPP
 
+#include <ctime>
 #include <string>
 #include <vector>
 
@@ -38,6 +39,8 @@ public:
                                  const std::string& replacement);
 
   static void split(std::vector<std::string>& result, const std::string& str, char ch);
+
+  static std::string timestamp_to_date_string(std::time_t timestamp, const char* format);
 };
 
 #endif
