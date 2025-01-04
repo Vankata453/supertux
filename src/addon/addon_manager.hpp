@@ -46,8 +46,8 @@ public:
   std::vector<AddonId> get_installed_addons() const;
   Addon& get_installed_addon(const AddonId& addon) const;
 
-  TransferStatusListPtr request_install_addon(const Addon& repository_addon);
-  TransferStatusListPtr request_install_addon_dependencies(const Addon& repository_addon);
+  TransferStatusListPtr request_install_addon(const Addon& addon);
+  TransferStatusListPtr request_install_addon_dependencies(const Addon& addon);
   void uninstall_addon(const AddonId& addon_id);
   void install_addon_from_local_file(const std::string& filename);
 

@@ -398,10 +398,13 @@ Addon::requires_restart() const
 bool
 Addon::has_available_update() const
 {
-  const Addon* upstream_addon = get_upstream_addon();
-  return upstream_addon &&
-         upstream_addon->get_version().commit != m_version.commit &&
-         upstream_addon->get_version().created_at > m_version.created_at;
+  if (!is_installed())
+    return false;
+
+  const Addon& local_addon = AddonManager::current()->get_installed_addon(m_id);
+  return local_addon.m_upstream_addon &&
+         local_addon.m_upstream_addon->get_version().commit != local_addon.m_version.commit &&
+         local_addon.m_upstream_addon->get_version().created_at > local_addon.m_version.created_at;
 }
 
 std::string

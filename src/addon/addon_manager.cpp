@@ -325,38 +325,37 @@ AddonManager::request_upstream_addon(Addon& addon)
 }
 
 TransferStatusListPtr
-AddonManager::request_install_addon(const Addon& repository_addon)
+AddonManager::request_install_addon(const Addon& addon)
 {
-  // Remove add-on, if it already exists.
-  auto it = m_installed_addons.find(repository_addon.get_id());
+  const Addon& upstream_addon = addon.has_available_update() ? *addon.get_upstream_addon() : addon;
+
+  // Disable add-on, if it already exists.
+  auto it = m_installed_addons.find(upstream_addon.get_id());
   if (it != m_installed_addons.end())
   {
-    log_debug << "Reinstalling add-on " << repository_addon.get_id() << std::endl;
+    log_debug << "Reinstalling add-on " << upstream_addon.get_id() << std::endl;
     if (it->second->m_enabled)
-    {
       disable_addon(it->first);
-    }
-    m_installed_addons.erase(it);
   }
   else
   {
-    log_debug << "Installing add-on " << repository_addon.get_id() << std::endl;
+    log_debug << "Installing add-on " << upstream_addon.get_id() << std::endl;
   }
 
-  const std::string cache_install_filename = FileSystem::join(m_cache_directory, repository_addon.get_filename());
+  const std::string cache_install_filename = FileSystem::join(m_cache_directory, upstream_addon.get_filename());
 
   // Install add-on dependencies, if any.
-  request_install_addon_dependencies(repository_addon);
+  request_install_addon_dependencies(upstream_addon);
 
   // Install the add-on.
-  TransferStatusPtr status = m_downloader.request_download(repository_addon.get_url(), cache_install_filename);
-  status->then([this, cache_install_filename, &repository_addon](bool success)
+  TransferStatusPtr status = m_downloader.request_download(upstream_addon.get_url(), cache_install_filename);
+  status->then([this, cache_install_filename, &upstream_addon](bool success)
     {
       if (!success) return;
 
       // Complete the add-on installation.
       MD5 md5 = md5_from_file(cache_install_filename);
-      if (repository_addon.get_md5() != md5.hex_digest())
+      if (upstream_addon.get_md5() != md5.hex_digest())
       {
         if (PHYSFS_delete(cache_install_filename.c_str()) == 0)
         {
@@ -366,14 +365,14 @@ AddonManager::request_install_addon(const Addon& repository_addon)
         throw std::runtime_error("Downloading add-on failed: MD5 checksums differ");
       }
 
-      const std::string install_filename = FileSystem::join(m_addon_directory, repository_addon.get_filename());
+      const std::string install_filename = FileSystem::join(m_addon_directory, upstream_addon.get_filename());
       try
       {
         Partio::ZipFileReader zip_reader(FileSystem::join(PHYSFS_getWriteDir(), cache_install_filename));
         Partio::ZipFileWriter zip_writer(FileSystem::join(PHYSFS_getWriteDir(), install_filename));
 
         zip_writer.Add_Zip_Files(zip_reader);
-        *zip_writer.Add_File(repository_addon.get_id() + ".nfo") << repository_addon.write_info();
+        *zip_writer.Add_File(upstream_addon.get_id() + ".nfo") << upstream_addon.write_info();
       }
       catch (const std::exception& err)
       {
@@ -392,12 +391,15 @@ AddonManager::request_install_addon(const Addon& repository_addon)
         throw std::runtime_error("PHYSFS_getRealDir failed: " + install_filename);
       }
 
+      // If add_installed_archive() succeeds, upstream_addon will no longer be valid, if updating!
+      const AddonId id = upstream_addon.get_id();
+
       add_installed_archive(install_filename);
 
       // Attempt to enable the add-on.
       try
       {
-        enable_addon(repository_addon.get_id());
+        enable_addon(id);
       }
       catch (const std::exception& err)
       {
