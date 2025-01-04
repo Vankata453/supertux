@@ -33,7 +33,7 @@
 
 AddonPreviewMenu::AddonPreviewMenu(const Addon& addon) :
   m_addon_manager(*AddonManager::current()),
-  m_addon(addon),
+  m_addon(addon.has_available_update() ? *addon.get_upstream_addon() : addon),
   m_addon_enabled(addon.is_installed() ? addon.is_enabled() : false),
   m_show_screenshots(false),
   m_screenshot_download_status(),
@@ -171,10 +171,12 @@ AddonPreviewMenu::refresh()
 void
 AddonPreviewMenu::install_addon(const Addon& addon)
 {
-  TransferStatusListPtr status = AddonManager::current()->request_install_addon(addon);
+  const bool update = addon.has_available_update();
+  const Addon& upstream_addon = update ? *addon.get_upstream_addon() : addon;
+
+  TransferStatusListPtr status = AddonManager::current()->request_install_addon(upstream_addon);
   auto dialog = std::make_unique<DownloadDialog>(status, false);
-  const std::string action = addon.is_installed() ? _("Updating") : _("Downloading");
-  dialog->set_title(fmt::format(fmt::runtime("{} {}"), action, addon_string_util::generate_menu_item_text(addon, false)));
+  dialog->set_title((update ? _("Updating") : _("Downloading")) + " " + addon_string_util::generate_menu_item_text(upstream_addon, false));
   status->then([](bool success)
   {
     if (success)

@@ -19,6 +19,7 @@
 #include <fmt/format.h>
 
 #include "addon/addon.hpp"
+#include "addon/addon_manager.hpp"
 #include "gui/menu_item.hpp"
 #include "gui/menu_manager.hpp"
 #include "supertux/menu/addon_preview_menu.hpp"
@@ -27,12 +28,13 @@
 #include "util/string_util.hpp"
 
 AddonUpdateDetailsMenu::AddonUpdateDetailsMenu(const Addon& addon) :
-  m_addon(addon)
+  m_addon(*addon.get_upstream_addon())
 {
   assert(addon.has_available_update());
 
-  const Addon::Version& local_version = m_addon.get_version();
-  const Addon::Version& upstream_version = m_addon.get_upstream_addon()->get_version();
+  const Addon& local_addon = AddonManager::current()->get_installed_addon(m_addon.get_id());
+  const Addon::Version& local_version = local_addon.get_version();
+  const Addon::Version& upstream_version = local_addon.get_upstream_addon()->get_version();
 
   add_label(fmt::format(fmt::runtime(_("Update Details for \"{}\"")), m_addon.get_title()));
   add_hl();
