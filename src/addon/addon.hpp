@@ -27,6 +27,7 @@ class ReaderMapping;
 
 class Addon final
 {
+  friend class AddonIndex;
   friend class AddonManager;
 
 public:
@@ -81,6 +82,7 @@ private:
 public:
   Addon(const ReaderMapping& mapping);
 
+
 public:
   inline const std::string& get_id() const { return m_id; }
   inline const Version& get_version() const { return m_version; }
@@ -113,6 +115,9 @@ public:
   bool has_available_update() const;
 
   std::string write_info() const;
+
+private:
+  void set_upstream_addon(std::unique_ptr<Addon> addon) const;
 
 private:
   Addon(const Addon&) = delete;

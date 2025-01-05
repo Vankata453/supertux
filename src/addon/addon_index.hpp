@@ -28,19 +28,20 @@ class ReaderMapping;
 class AddonIndex final
 {
 public:
-  static std::unique_ptr<AddonIndex> parse(const std::string& index);
+  /** @param bool $assign_upstream Whether to assign add-ons with the same ID as installed ones as their upstream counterparts. */
+  static std::unique_ptr<AddonIndex> parse(const std::string& index, bool assign_upstream = false);
 
   /** Finds and parses the add-on with the provided ID from a full add-on index. */
   static std::unique_ptr<Addon> parse_addon(const std::string& index, const std::string& addon_id);
 
 public:
-  AddonIndex(const ReaderMapping& mapping);
+  AddonIndex(const ReaderMapping& mapping, bool assign_upstream);
 
-  const std::vector<std::unique_ptr<Addon>>& get_addons() const { return m_addons; }
+  inline const std::vector<std::unique_ptr<Addon>>& get_addons() const { return m_addons; }
 
-  const std::string& get_previous_page_url() const { return m_previous_page_url; }
-  const std::string& get_next_page_url() const { return m_next_page_url; }
-  int get_total_pages() const { return m_total_pages; }
+  inline const std::string& get_previous_page_url() const { return m_previous_page_url; }
+  inline const std::string& get_next_page_url() const { return m_next_page_url; }
+  inline int get_total_pages() const { return m_total_pages; }
 
 private:
   std::vector<std::unique_ptr<Addon>> m_addons;

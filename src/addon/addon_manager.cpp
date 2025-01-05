@@ -252,7 +252,7 @@ AddonManager::request_index(std::unique_ptr<AddonIndex>& index, const std::strin
 
       try
       {
-        index = AddonIndex::parse(m_index_page_cache);
+        index = AddonIndex::parse(m_index_page_cache, true);
       }
       catch (const std::exception& err)
       {

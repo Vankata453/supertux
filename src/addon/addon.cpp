@@ -138,8 +138,12 @@ std::string generate_menu_item_text(const Addon& addon, bool installed)
     text = fmt::format("{} \"{}\"", type, addon.get_title());
   }
 
-  if (installed)
+  if (installed && addon.is_installed())
+  {
     text += " " + _("[INSTALLED]");
+    if (addon.has_available_update())
+      text += " " + _("*UPDATE*");
+  }
 
   return text;
 }
@@ -348,6 +352,12 @@ const Addon*
 Addon::get_upstream_addon() const
 {
   return AddonManager::current()->get_installed_addon(m_id).m_upstream_addon.get();
+}
+
+void
+Addon::set_upstream_addon(std::unique_ptr<Addon> addon) const
+{
+  AddonManager::current()->get_installed_addon(m_id).m_upstream_addon = std::move(addon);
 }
 
 std::string

@@ -25,7 +25,7 @@
 #include "util/reader_mapping.hpp"
 
 std::unique_ptr<AddonIndex>
-AddonIndex::parse(const std::string& index)
+AddonIndex::parse(const std::string& index, bool assign_upstream)
 {
   try
   {
@@ -37,7 +37,7 @@ AddonIndex::parse(const std::string& index)
       throw std::runtime_error("Not a \"supertux-addons\" index!");
     }
 
-    return std::make_unique<AddonIndex>(root.get_mapping());
+    return std::make_unique<AddonIndex>(root.get_mapping(), assign_upstream);
   }
   catch (const std::exception& e)
   {
@@ -83,7 +83,7 @@ AddonIndex::parse_addon(const std::string& index, const std::string& addon_id)
   return nullptr;
 }
 
-AddonIndex::AddonIndex(const ReaderMapping& mapping) :
+AddonIndex::AddonIndex(const ReaderMapping& mapping, bool assign_upstream) :
   m_addons(),
   m_previous_page_url(),
   m_next_page_url(),
@@ -101,17 +101,38 @@ AddonIndex::AddonIndex(const ReaderMapping& mapping) :
       iter.get(m_total_pages);
     else if (key == "supertux-addoninfo")
     {
+      auto addon_mapping = iter.as_mapping();
+
+      std::unique_ptr<Addon> addon;
       try
       {
-        m_addons.push_back(std::make_unique<Addon>(iter.as_mapping()));
+        addon = std::make_unique<Addon>(addon_mapping);
       }
       catch (const std::exception& err)
       {
         log_warning << "Error parsing add-on from index: " << err.what() << std::endl;
+        continue;
       }
+
+      if (assign_upstream && addon->is_installed())
+      {
+        try
+        {
+          addon->set_upstream_addon(std::make_unique<Addon>(addon_mapping));
+        }
+        catch (const std::exception& err)
+        {
+          log_warning << "Error parsing upstream add-on from index: " << err.what() << std::endl;
+          continue;
+        }
+      }
+
+      m_addons.push_back(std::move(addon));
     }
     else
+    {
       throw std::runtime_error("Unknown entry '" + key + "'!");
+    }
   }
 }
 
