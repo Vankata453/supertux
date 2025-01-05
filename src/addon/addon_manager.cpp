@@ -704,39 +704,27 @@ AddonManager::add_installed_archive(const std::string& archive, bool user_instal
         addon->m_install_filename = os_path;
         const auto& addon_id = addon->get_id();
 
-        try
+        // Save add-on title and author on stack before std::move.
+        const std::string addon_title = addon->get_title();
+        const std::string addon_author = addon->get_author();
+        m_installed_addons[addon_id] = std::move(addon);
+        if(user_install)
         {
-          get_installed_addon(addon_id);
-          if(user_install)
+          try
           {
-            Dialog::show_message(fmt::format(_("Add-on {} by {} is already installed."),
-                                             addon->get_title(), addon->get_author()));
+            enable_addon(addon_id);
           }
-        }
-        catch(...)
-        {
-          // Save add-on title and author on stack before std::move.
-          const std::string addon_title = addon->get_title();
-          const std::string addon_author = addon->get_author();
-          m_installed_addons[addon_id] = std::move(addon);
-          if(user_install)
+          catch(const std::exception& err)
           {
-            try
-            {
-              enable_addon(addon_id);
-            }
-            catch(const std::exception& err)
-            {
-              log_warning << "Failed to enable add-on archive '" << addon_id << "': " << err.what() << std::endl;
-            }
-            Dialog::show_message(fmt::format(_("Add-on {} by {} successfully installed."),
-                                             addon_title, addon_author));
-            // If currently opened menu is add-ons menu refresh it.
-            AddonMenu* addon_menu = dynamic_cast<AddonMenu*>(MenuManager::instance().current_menu());
-            if (addon_menu)
-              addon_menu->refresh();
+            log_warning << "Failed to enable add-on archive '" << addon_id << "': " << err.what() << std::endl;
           }
-        }
+          Dialog::show_message(fmt::format(_("Add-on {} by {} successfully installed."),
+                                           addon_title, addon_author));
+          // If currently opened menu is add-ons menu refresh it.
+          AddonMenu* addon_menu = dynamic_cast<AddonMenu*>(MenuManager::instance().current_menu());
+          if (addon_menu)
+            addon_menu->refresh();
+          }
       }
       catch (const std::runtime_error& e)
       {
