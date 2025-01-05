@@ -592,35 +592,24 @@ Menu::event(const SDL_Event& ev)
     break;
 
     case SDL_MOUSEBUTTONDOWN:
-    if (ev.button.button == SDL_BUTTON_LEFT)
-    {
-      Vector mouse_pos = VideoSystem::current()->get_viewport().to_logical(ev.motion.x, ev.motion.y);
-
-      if (mouse_pos.x > m_pos.x - get_width() / 2.0f &&
-          mouse_pos.x < m_pos.x + get_width() / 2.0f &&
-          mouse_pos.y > m_pos.y - get_height() / 2.0f &&
-          mouse_pos.y < m_pos.y + get_height() / 2.0f)
-      {
-        process_action(MenuAction::HIT);
-      }
-    }
-    break;
-
+      if (ev.button.button != SDL_BUTTON_LEFT)
+        break;
+      [[fallthrough]];
     case SDL_MOUSEMOTION:
     {
       Vector mouse_pos = VideoSystem::current()->get_viewport().to_logical(ev.motion.x, ev.motion.y);
       float x = mouse_pos.x;
       float y = mouse_pos.y;
 
-      if (x > m_pos.x - get_width()/2 &&
-         x < m_pos.x + get_width()/2 &&
-         y > m_pos.y - get_height()/2 &&
-         y < m_pos.y + get_height()/2)
+      if (x > m_pos.x - get_width() / 2.0f &&
+          x < m_pos.x + get_width() / 2.0f &&
+          y > m_pos.y - get_height() / 2.0f &&
+          y < m_pos.y + get_height() / 2.0f)
       {
         int new_active_item = 0;
         // This is probably not the most efficient way of finding active item
         // but I can't think of something better right now ~ mrkubax10
-        float item_y = m_pos.y - get_height()/2;
+        float item_y = m_pos.y - get_height() / 2.0f;
         for (unsigned i = 0; i < m_items.size(); i++)
         {
           if (y >= item_y && y <= item_y + static_cast<float>(m_items[i]->get_height()))
@@ -632,17 +621,25 @@ Menu::event(const SDL_Event& ev)
         }
 
         /* only change the mouse focus to a selectable item */
-        if (!m_items[new_active_item]->skippable() &&
-            new_active_item != m_active_item) {
-          // Selection caused by mouse movement
-          if (m_active_item != -1)
-            process_action(MenuAction::UNSELECT);
-          m_active_item = new_active_item;
-          process_action(MenuAction::SELECT);
+        const bool skippable = m_items[new_active_item]->skippable();
+        if (!skippable)
+        {
+          if (ev.type == SDL_MOUSEBUTTONDOWN)
+          {
+            process_action(MenuAction::HIT);
+          }
+          else if (new_active_item != m_active_item)
+          {
+            // Selection caused by mouse movement
+            if (m_active_item != -1)
+              process_action(MenuAction::UNSELECT);
+            m_active_item = new_active_item;
+            process_action(MenuAction::SELECT);
+          }
         }
 
         if (MouseCursor::current())
-          MouseCursor::current()->set_state(MouseCursorState::LINK);
+          MouseCursor::current()->set_state(skippable ? MouseCursorState::NORMAL : MouseCursorState::LINK);
       }
       else
       {
