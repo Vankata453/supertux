@@ -288,7 +288,7 @@ SeedFinder::values_to_string(const std::vector<Randomization*>& rands, bool time
     for (float value : rand->get_values())
     {
       stream << value;
-      if (timeframes)
+      if (rand->get_temp_time() != 0.f && timeframes)
         stream << " (" << rand->get_temp_time() << ")";
       stream << ", ";
     }
