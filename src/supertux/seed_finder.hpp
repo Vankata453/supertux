@@ -21,8 +21,6 @@
 #include <memory>
 #include <thread>
 
-#include <boost/optional.hpp>
-
 #include "gui/dialog.hpp"
 
 #include "math/random_generator.hpp"
@@ -63,8 +61,9 @@ public:
     int m_value_type;
     std::vector<float> m_desired_values;
     float m_precision;
+    float m_repeat_times;
 
-    boost::optional<float> m_value;
+    std::vector<float> m_values;
     float m_temp_time;
 
     bool m_pilot_timeframe;
@@ -73,7 +72,7 @@ public:
   public:
     Randomization(float range_start, float range_end, RandType type, float time = -1.f,
                   boost::optional<float> desired_value = boost::none,
-                  float precision = 0.01f);
+                  float precision = 0.01f, float repeat_times = 1);
     Randomization(ReaderMapping& mapping);
 
     void rand(RandomGenerator& rng);
@@ -83,17 +82,20 @@ public:
 
     std::string to_string() const;
 
-    float get_time() const { return m_time; }
-    float get_value() const { return *m_value; }
-    bool has_value() const { return m_value != boost::none; }
-    bool has_match() const;
+    inline float get_time() const { return m_time; }
+    inline float get_value() const { return m_values.back(); }
+    inline const std::vector<float>& get_values() const { return m_values; }
+    inline bool has_value() const { return !m_values.empty(); }
+    inline bool has_match() const;
 
-    bool has_pilot_timeframe() const { return m_pilot_timeframe; }
-    bool has_pilot_timeframe_time() const { return m_pilot_timeframe_time > 0.f; }
-    float get_pilot_timeframe_time() const { return m_pilot_timeframe_time; }
+    inline float get_repeat_times() const { return m_repeat_times; }
 
-    float get_temp_time() const { return m_temp_time; }
-    void set_temp_time(const float& temp_time) { m_temp_time = temp_time; }
+    inline bool has_pilot_timeframe() const { return m_pilot_timeframe; }
+    inline bool has_pilot_timeframe_time() const { return m_pilot_timeframe_time > 0.f; }
+    inline float get_pilot_timeframe_time() const { return m_pilot_timeframe_time; }
+
+    inline float get_temp_time() const { return m_temp_time; }
+    inline void set_temp_time(const float& temp_time) { m_temp_time = temp_time; }
 
   private:
     bool has_value_match(float desired_value) const;
@@ -143,9 +145,10 @@ public:
   void find_seed();
   void update();
 
-  int get_seed() const { return m_seed; }
-  int get_seeds_checked() const { return m_seeds_checked; }
-  const std::string& get_seed_values_string() const { return m_seed_values_string; }
+  inline int get_seed() const { return m_seed; }
+  inline int get_seeds_checked() const { return m_seeds_checked; }
+  inline const std::string& get_seed_values_string() const { return m_seed_values_string; }
+
   Status get_status() const;
 
 private:

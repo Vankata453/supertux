@@ -33,7 +33,7 @@
 const std::vector<std::string> SeedFinder::Randomization::s_rand_types = { _("Integer"), _("Float") };
 
 SeedFinder::Randomization::Randomization(float range_start, float range_end, RandType type, float time,
-                                         boost::optional<float> desired_value, float precision) :
+                                         boost::optional<float> desired_value, float precision, float repeat_times) :
   m_range_start(range_start),
   m_range_end(range_end),
   m_time(time),
@@ -41,7 +41,8 @@ SeedFinder::Randomization::Randomization(float range_start, float range_end, Ran
   m_value_type(RANDVALUE_EQUAL),
   m_desired_values(),
   m_precision(precision),
-  m_value(),
+  m_repeat_times(repeat_times),
+  m_values(),
   m_temp_time(),
   m_pilot_timeframe(false),
   m_pilot_timeframe_time(-1.f)
@@ -60,7 +61,8 @@ SeedFinder::Randomization::Randomization(ReaderMapping& mapping) :
   m_value_type(),
   m_desired_values(),
   m_precision(0.01f),
-  m_value(),
+  m_repeat_times(1),
+  m_values(),
   m_temp_time(),
   m_pilot_timeframe(false),
   m_pilot_timeframe_time(-1.f)
@@ -77,6 +79,7 @@ SeedFinder::Randomization::Randomization(ReaderMapping& mapping) :
     mapping.get("desired-value", m_desired_values); // Retro-compatibility
 
   mapping.get("precision", m_precision);
+  mapping.get("repeat", m_repeat_times);
 
   mapping.get("pilot-timeframe", m_pilot_timeframe);
   mapping.get("pilot-timeframe-time", m_pilot_timeframe_time);
@@ -100,6 +103,8 @@ SeedFinder::Randomization::save(Writer& writer)
     writer.write("precision", m_precision);
   }
 
+  writer.write("repeat", m_repeat_times);
+
   if (m_pilot_timeframe)
   {
     writer.write("pilot-timeframe", m_pilot_timeframe);
@@ -114,10 +119,10 @@ SeedFinder::Randomization::rand(RandomGenerator& rng)
   switch (m_type)
   {
     case RANDTYPE_INT:
-      m_value = rng.rand(m_range_start, m_range_end);
+      m_values.push_back(rng.rand(m_range_start, m_range_end));
       break;
     case RANDTYPE_FLOAT:
-      m_value = rng.randf(m_range_start, m_range_end);
+      m_values.push_back(rng.randf(m_range_start, m_range_end));
       break;
   }
 }
@@ -125,7 +130,7 @@ SeedFinder::Randomization::rand(RandomGenerator& rng)
 void
 SeedFinder::Randomization::reset()
 {
-  m_value.reset();
+  m_values.clear();
 }
 
 std::string
@@ -147,8 +152,8 @@ SeedFinder::Randomization::has_match() const
 
   if (m_value_type == RANDVALUE_BETWEEN)
   {
-    return *m_value > m_desired_values[0] &&
-      (m_desired_values.size() == 1 ? true : *m_value < m_desired_values[1]);
+    return m_values.back() > m_desired_values[0] &&
+      (m_desired_values.size() == 1 ? true : m_values.back() < m_desired_values[1]);
   }
 
   for (float desired_value : m_desired_values)
@@ -162,17 +167,17 @@ SeedFinder::Randomization::has_match() const
 bool
 SeedFinder::Randomization::has_value_match(float desired_value) const
 {
-  if (m_value == boost::none)
+  if (m_values.empty())
     return false;
 
   switch (m_value_type)
   {
     case RANDVALUE_EQUAL:
-      return std::fabs(*m_value - desired_value) < m_precision;
+      return std::fabs(m_values.back() - desired_value) < m_precision;
     case RANDVALUE_LESSTHAN:
-      return *m_value <= desired_value;
+      return m_values.back() <= desired_value;
     case RANDVALUE_MORETHAN:
-      return *m_value >= desired_value;
+      return m_values.back() >= desired_value;
   }
   return false;
 }
@@ -280,10 +285,13 @@ SeedFinder::values_to_string(const std::vector<Randomization*>& rands, bool time
     if (!rand->has_value())
       break;
 
-    stream << rand->get_value();
-    if (timeframes)
-      stream << " (" << rand->get_temp_time() << ")";
-    stream << ", ";
+    for (float value : rand->get_values())
+    {
+      stream << value;
+      if (timeframes)
+        stream << " (" << rand->get_temp_time() << ")";
+      stream << ", ";
+    }
   }
 
   const std::string result = stream.str();
@@ -366,44 +374,47 @@ SeedFinder::finder(int thread_index)
     for (size_t i = 0; i < randomizations.size(); i++)
     {
       Randomization* rand = randomizations[i];
-      rand->rand(rng);
-      if (!rand->has_match())
+      for (int r = 0; r < rand->get_repeat_times(); ++r)
       {
-        has_match = false;
-        break;
-      }
-
-      if (rand->has_pilot_timeframe()) // Timeframe for pilot puff timer
-      {
-        // If time until update is more than the maximum allowed time, do not add pilot update cycle.
-        if (rand->has_pilot_timeframe_time() && rand->get_value() > rand->get_pilot_timeframe_time())
+        rand->rand(rng);
+        if (!rand->has_match())
         {
-          excluded_timeframes.push_back(static_cast<int>(i));
-          continue;
+          has_match = false;
+          break;
         }
 
-        int update_time = rand->get_time() + rand->get_value();
+        if (rand->has_pilot_timeframe()) // Timeframe for pilot puff timer
+        {
+          // If time until update is more than the maximum allowed time, do not add pilot update cycle.
+          if (rand->has_pilot_timeframe_time() && rand->get_value() > rand->get_pilot_timeframe_time())
+          {
+            excluded_timeframes.push_back(static_cast<int>(i));
+            continue;
+          }
 
-        auto new_rand = new Randomization(-10, 10, Randomization::RANDTYPE_FLOAT);
-        new_rand->set_temp_time(update_time);
-        randomizations.push_back(new_rand);
-        randomizations_cleanup.push_back(new_rand);
+          int update_time = rand->get_time() + rand->get_value();
 
-        auto new_rand2 = new Randomization(4.0f, 8.0f, Randomization::RANDTYPE_FLOAT);
-        new_rand2->set_temp_time(update_time);
-        randomizations.push_back(new_rand2);
-        randomizations_cleanup.push_back(new_rand2);
+          auto new_rand = new Randomization(-10, 10, Randomization::RANDTYPE_FLOAT);
+          new_rand->set_temp_time(update_time);
+          randomizations.push_back(new_rand);
+          randomizations_cleanup.push_back(new_rand);
 
-        auto new_rand3 = new Randomization(0.95, 1.05, Randomization::RANDTYPE_FLOAT);
-        new_rand3->set_temp_time(update_time);
-        randomizations.push_back(new_rand3);
-        randomizations_cleanup.push_back(new_rand3);
+          auto new_rand2 = new Randomization(4.0f, 8.0f, Randomization::RANDTYPE_FLOAT);
+          new_rand2->set_temp_time(update_time);
+          randomizations.push_back(new_rand2);
+          randomizations_cleanup.push_back(new_rand2);
 
-        // Re-sort randomizations, including the newly added ones.
-        std::stable_sort(randomizations.begin(), randomizations.end(),
-          [](const Randomization* lhs, const Randomization* rhs) {
-            return lhs->get_temp_time() < rhs->get_temp_time();
-          });
+          auto new_rand3 = new Randomization(0.95, 1.05, Randomization::RANDTYPE_FLOAT);
+          new_rand3->set_temp_time(update_time);
+          randomizations.push_back(new_rand3);
+          randomizations_cleanup.push_back(new_rand3);
+
+          // Re-sort randomizations, including the newly added ones.
+          std::stable_sort(randomizations.begin(), randomizations.end(),
+            [](const Randomization* lhs, const Randomization* rhs) {
+              return lhs->get_temp_time() < rhs->get_temp_time();
+            });
+        }
       }
     }
 

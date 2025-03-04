@@ -131,19 +131,20 @@ SeedFinderMenu::import_randomization(const int index)
   int items_pos = get_item_pos(MNID_ADDRANDOMIZATION);
   auto* rand = s_seed_finder->m_randomizations[index].get();
 
-  add_item(std::unique_ptr<MenuItem>(new ItemNumField(_("Range start"), &rand->m_range_start)), items_pos)
+  add_item(std::unique_ptr<MenuItem>(new ItemNumField(_("Range start"), &rand->m_range_start)), items_pos++)
     ->id = -10 - (index + 1) * 2; // Set an ID to find the randomization on the menu with.
-  add_item(std::unique_ptr<MenuItem>(new ItemNumField(_("Range end"), &rand->m_range_end)), items_pos + 1);
+  add_item(std::unique_ptr<MenuItem>(new ItemNumField(_("Range end"), &rand->m_range_end)), items_pos++);
   add_item(std::unique_ptr<MenuItem>(new ItemStringSelect(_("Type"), SeedFinder::Randomization::s_rand_types,
-                                     reinterpret_cast<int*>(&rand->m_type))), items_pos + 2);
+                                     reinterpret_cast<int*>(&rand->m_type))), items_pos++);
+  add_item(std::unique_ptr<MenuItem>(new ItemNumField(_("Repeat times"), &rand->m_repeat_times)), items_pos++);
 
   const int desired_value_id = -9 - (index + 1) * 2;
   add_item(std::unique_ptr<MenuItem>(new ItemAction(_("Set desired value..."),
-                                     desired_value_id)), items_pos + 3);
+                                     desired_value_id)), items_pos++);
   if (!rand->m_desired_values.empty()) // Check if a desired value isn't already set.
     set_desired_value(desired_value_id, &items_pos);
 
-  add_item(std::unique_ptr<MenuItem>(new ItemHorizontalLine()), items_pos + 4);
+  add_item(std::unique_ptr<MenuItem>(new ItemHorizontalLine()), items_pos);
 }
 
 void
