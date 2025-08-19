@@ -45,7 +45,7 @@ jobs:
 
       - name: Clone SDL Android repo
         run: |
-          git clone --depth=100 https://github.com/pelya/commandergenius.git build.android
+          git clone --depth=1000 https://github.com/pelya/commandergenius.git build.android
           git -C build.android checkout ${SDL_ANDROID_REV}
 
       - name: Clone SDL Android repo submodules
