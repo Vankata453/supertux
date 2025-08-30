@@ -193,6 +193,7 @@ void draw_demo(GameSession* session, double frame_ratio)
   
   global_frame_counter++;
   tux->key_event((SDLKey) keymap.right,DOWN);
+  tux->key_event((SDLKey) keymap.fire,run_by_default ? DOWN : UP);
   
   if(random_timer.check())
     {
@@ -354,6 +355,10 @@ void title(void)
           else if(menu == options_menu)
             {
               process_options_menu();
+            }
+          else if(menu == options_keys_menu)
+            {
+              process_options_keys_menu();
             }
           else if(menu == load_game_menu)
             {

@@ -850,6 +850,10 @@ WorldMap::update(float delta)
         {
           process_options_menu();
         }
+      else if(menu == options_keys_menu)
+        {
+          process_options_keys_menu();
+        }
     }
 }
 

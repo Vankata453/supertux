@@ -426,6 +426,7 @@ void st_menu(void)
   options_keys_menu->additem(MN_CONTROLFIELD,"Jump", 0,0, 0,&keymap.jump);
   options_keys_menu->additem(MN_CONTROLFIELD,"Duck", 0,0, 0,&keymap.duck);
   options_keys_menu->additem(MN_CONTROLFIELD,"Power/Run", 0,0, 0,&keymap.fire);
+  options_keys_menu->additem(MN_TOGGLE, "Run by default", run_by_default, 0, MNID_RUN_BY_DEFAULT);
   options_keys_menu->additem(MN_HL,"",0,0);
   options_keys_menu->additem(MN_BACK,"Back",0,0);
 
@@ -566,6 +567,18 @@ void process_options_menu(void)
     case MNID_SHOWFPS:
       if(show_fps != options_menu->isToggled(MNID_SHOWFPS))
         show_fps = !show_fps;
+      break;
+    }
+}
+
+/* Handle changes made to global settings in the options keys menu. */
+void process_options_keys_menu(void)
+{
+  switch (options_keys_menu->check())
+    {
+    case MNID_RUN_BY_DEFAULT:
+      if(run_by_default != options_keys_menu->isToggled(MNID_RUN_BY_DEFAULT))
+        run_by_default = !run_by_default;
       break;
     }
 }

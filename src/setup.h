@@ -43,6 +43,7 @@ void st_shutdown(void);
 void st_menu(void);
 void st_abort(const std::string& reason, const std::string& details);
 void process_options_menu(void);
+void process_options_keys_menu(void);
 
 /** Return true if the gameloop() was entered, false otherwise */
 bool process_load_game_menu();

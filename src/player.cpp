@@ -40,6 +40,7 @@ PlayerSprite largetux;
 PlayerSprite firetux;
 
 PlayerKeymap keymap;
+bool run_by_default = false;
 
 PlayerKeymap::PlayerKeymap()
 {
@@ -306,7 +307,7 @@ Player::handle_horizontal_input()
       dirsign = 1;
   }
 
-  if (input.fire == UP) {
+  if (input.fire == (run_by_default ? DOWN : UP)) {
       ax = dirsign * WALK_ACCELERATION_X;
       // limit speed
       if(vx >= MAX_WALK_XM && dirsign > 0) {

@@ -46,6 +46,10 @@ enum OptionsMenuIDs {
   MNID_SHOWFPS
   };
 
+enum OptionsKeysMenuIDs {
+  MNID_RUN_BY_DEFAULT = 1
+  };
+
 enum GameMenuIDs {
   MNID_CONTINUE,
   MNID_ABORTLEVEL

@@ -60,6 +60,7 @@ public:
 };
 
 extern PlayerKeymap keymap;
+extern bool run_by_default;
 
 struct player_input_type
 {

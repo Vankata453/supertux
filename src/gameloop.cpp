@@ -574,6 +574,10 @@ GameSession::process_menu()
         {
           process_options_menu();
         }
+      else if(menu == options_keys_menu)
+        {
+          process_options_keys_menu();
+        }
       else if(menu == load_game_menu )
         {
           process_load_game_menu();
