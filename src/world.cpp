@@ -261,7 +261,7 @@ void
 World::action(double frame_ratio)
 {
   tux.action(frame_ratio);
-  tux.check_bounds(level->back_scrolling, (bool)level->hor_autoscroll_speed);
+  tux.check_bounds(back_scrolling || level->back_scrolling, (bool)level->hor_autoscroll_speed);
   scrolling(frame_ratio);
 
   /* Handle bouncy distros: */
@@ -327,9 +327,10 @@ void World::scrolling(double frame_ratio)
 
   int tux_pos_x = (int)(tux.base.x + (tux.base.width/2));
 
-  if (level->back_scrolling || debug_mode)
+  const bool back_scroll = back_scrolling || level->back_scrolling;
+  if (back_scroll || debug_mode)
   {
-    if(tux.old_dir != tux.dir && level->back_scrolling)
+    if(tux.old_dir != tux.dir && back_scroll)
       scrolling_timer.start(CHANGE_DIR_SCROLL_SPEED);
 
     if(scrolling_timer.check())
@@ -343,7 +344,7 @@ void World::scrolling(double frame_ratio)
       {
         if (tux.dir == RIGHT)
           final_scroll_x = tux_pos_x - (screen->w - X_SPACE);
-        else if (tux.dir == LEFT && level->back_scrolling)
+        else if (tux.dir == LEFT && back_scroll)
           final_scroll_x = tux_pos_x - X_SPACE;
       }
 
@@ -357,13 +358,13 @@ void World::scrolling(double frame_ratio)
     {
       if (tux.physic.get_velocity_x() > 0 && scroll_x < tux_pos_x - (screen->w - X_SPACE))
         scroll_x = tux_pos_x - (screen->w - X_SPACE);
-      else if (tux.physic.get_velocity_x() < 0 && scroll_x > tux_pos_x - X_SPACE && level->back_scrolling)
+      else if (tux.physic.get_velocity_x() < 0 && scroll_x > tux_pos_x - X_SPACE && back_scroll)
         scroll_x = tux_pos_x - X_SPACE;
       else
       {
         if (tux.dir == RIGHT && scroll_x < tux_pos_x - (screen->w - X_SPACE))
             scroll_x = tux_pos_x - (screen->w - X_SPACE);
-        else if (tux.dir == LEFT && scroll_x > tux_pos_x - X_SPACE && level->back_scrolling)
+        else if (tux.dir == LEFT && scroll_x > tux_pos_x - X_SPACE && back_scroll)
             scroll_x = tux_pos_x - X_SPACE;
       }
     }
@@ -379,7 +380,7 @@ void World::scrolling(double frame_ratio)
     {
       if (tux.dir == RIGHT && scroll_x < tux_pos_x - (screen->w - X_SPACE))
           scroll_x = tux_pos_x - (screen->w - X_SPACE);
-      else if (tux.dir == LEFT && scroll_x > tux_pos_x - X_SPACE && level->back_scrolling)
+      else if (tux.dir == LEFT && scroll_x > tux_pos_x - X_SPACE && back_scroll)
           scroll_x = tux_pos_x - X_SPACE;
     }
 

@@ -411,6 +411,7 @@ void st_menu(void)
       options_menu->additem(MN_DEACTIVE,"Music     ", false,0, MNID_MUSIC);
     }
   options_menu->additem(MN_TOGGLE,"Show FPS  ",show_fps,0, MNID_SHOWFPS);
+  options_menu->additem(MN_TOGGLE,"Back scrolling", back_scrolling, 0, MNID_BACKSCROLLING);
   options_menu->additem(MN_GOTO,"Keyboard Setup",0,options_keys_menu);
 
   //if(use_joystick)
@@ -567,6 +568,10 @@ void process_options_menu(void)
     case MNID_SHOWFPS:
       if(show_fps != options_menu->isToggled(MNID_SHOWFPS))
         show_fps = !show_fps;
+      break;
+    case MNID_BACKSCROLLING:
+      if(back_scrolling != options_menu->isToggled(MNID_BACKSCROLLING))
+        back_scrolling = !back_scrolling;
       break;
     }
 }

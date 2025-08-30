@@ -79,6 +79,7 @@ void loadconfig(void)
   reader.read_bool("music",      &use_music);
   reader.read_bool("show_fps",   &show_fps);
   reader.read_bool("player-run-by-default", &run_by_default);
+  reader.read_bool("back-scrolling", &back_scrolling);
 
   std::string video;
   reader.read_string ("video", &video);
@@ -125,6 +126,7 @@ void saveconfig (void)
       fprintf(config, "\t(music      %s)\n", use_music      ? "#t" : "#f");
       fprintf(config, "\t(show_fps   %s)\n", show_fps       ? "#t" : "#f");
       fprintf(config, "\t(player-run-by-default %s)\n", run_by_default ? "#t" : "#f");
+      fprintf(config, "\t(back-scrolling %s)\n", back_scrolling ? "#t" : "#f");
 
       fprintf(config, "\n\t;; either \"opengl\" or \"sdl\"\n");
       fprintf(config, "\t(video      \"%s\")\n", use_gl ? "opengl" : "sdl");

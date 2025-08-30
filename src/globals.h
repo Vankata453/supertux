@@ -65,6 +65,7 @@ extern bool use_joystick;
 extern bool use_fullscreen;
 extern bool debug_mode;
 extern bool show_fps;
+extern bool back_scrolling;
 
 /** The number of the joystick that will be use in the game */
 extern int joystick_num;
