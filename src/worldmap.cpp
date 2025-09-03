@@ -553,6 +553,7 @@ void WorldMap::get_level_title(Levels::pointer level)
   if (root_obj->type == LISP_TYPE_EOF || root_obj->type == LISP_TYPE_PARSE_ERROR)
   {
     printf("World: Parse Error in file %s", level->name.c_str());
+    return;
   }
 
   if (strcmp(lisp_symbol(lisp_car(root_obj)), "supertux-level") == 0)

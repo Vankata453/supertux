@@ -102,7 +102,7 @@ void LevelSubset::load(char *subset)
 
   PHYSFS_File* fi = PHYSFS_openRead(filename);
   if (fi == NULL)
-    throw std::runtime_error("Failed to open file for reading: " + std::string(filename));
+    return;
   PHYSFS_FileCharReader file_reader(fi);
 
   lisp_stream_t stream;
@@ -112,6 +112,7 @@ void LevelSubset::load(char *subset)
   if (root_obj->type == LISP_TYPE_EOF || root_obj->type == LISP_TYPE_PARSE_ERROR)
     {
       printf("World: Parse Error in file %s", filename);
+      return;
     }
 
   lisp_object_t* cur = lisp_car(root_obj);
