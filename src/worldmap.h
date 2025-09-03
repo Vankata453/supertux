@@ -138,6 +138,9 @@ public:
 /** */
 class WorldMap
 {
+public:
+  static std::string world_title_from_file(std::string filename);
+
 private:
   Tux* tux;
 

@@ -97,9 +97,9 @@ void generate_contrib_menu()
 
   for(int i = 0; i < worldmap_list.num_items; i++)
     {
-      WorldMapNS::WorldMap worldmap;
-      worldmap.loadmap(worldmap_list.item[i]);
-      contrib_menu->additem(MN_ACTION, worldmap.get_world_title(),0,0, i + level_subsets.num_items);
+      contrib_menu->additem(MN_ACTION,
+        WorldMapNS::WorldMap::world_title_from_file(worldmap_list.item[i]),
+        0,0, i + level_subsets.num_items);
     }
 
   contrib_menu->additem(MN_HL,"",0,0);

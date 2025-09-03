@@ -370,6 +370,33 @@ Tile::~Tile()
 
 //---------------------------------------------------------------------------
 
+std::string
+WorldMap::world_title_from_file(std::string filename)
+{
+  filename = "levels/worldmaps/" + filename;
+
+  lisp_object_t* root_obj = lisp_read_from_file(filename.c_str());
+  if (!root_obj)
+    st_abort("Couldn't load file", filename.c_str());
+
+  lisp_object_t* cur = lisp_cdr(root_obj);
+
+  std::string name;
+  while (!lisp_nil_p(cur))
+  {
+    lisp_object_t* element = lisp_car(cur);
+
+    if (strcmp(lisp_symbol(lisp_car(element)), "properties") == 0)
+    {
+      LispReader reader(lisp_cdr(element));
+      reader.read_string("name", &name);
+      break;
+    }
+  }
+  return name;
+}
+
+
 WorldMap::WorldMap()
 {
   tile_manager = new TileManager();
