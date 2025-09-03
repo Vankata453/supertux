@@ -20,7 +20,6 @@
 //  02111-1307, USA.
 
 #include <iostream>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -98,9 +97,9 @@ void generate_contrib_menu()
 
   for(int i = 0; i < worldmap_list.num_items; i++)
     {
-    WorldMapNS::WorldMap worldmap;
-    worldmap.loadmap(worldmap_list.item[i]);
-    contrib_menu->additem(MN_ACTION, worldmap.get_world_title(),0,0, i + level_subsets.num_items);
+      WorldMapNS::WorldMap worldmap;
+      worldmap.loadmap(worldmap_list.item[i]);
+      contrib_menu->additem(MN_ACTION, worldmap.get_world_title(),0,0, i + level_subsets.num_items);
     }
 
   contrib_menu->additem(MN_HL,"",0,0);
@@ -148,8 +147,8 @@ void check_contrib_menu()
 //      worldmap.set_levels_as_solved();
       std::string savegame = worldmap_list.item[index - contrib_subsets.size()];
       // remove .stwm...
-      savegame = savegame.substr(0, savegame.size()-5);
-      savegame = std::string(st_save_dir) + "/" + savegame + ".stsg";
+      savegame = "save/" + savegame.substr(0, savegame.size()-5);
+      savegame = savegame + ".stsg";
       std::cout << "SaveGameName: " << savegame << "\n";
       worldmap.loadgame(savegame.c_str());
 
@@ -240,15 +239,15 @@ void title(void)
 
   st_pause_ticks_init();
 
-  GameSession session(datadir + "/levels/misc/menu.stl", 0, ST_GL_DEMO_GAME);
+  GameSession session("/levels/misc/menu.stl", 0, ST_GL_DEMO_GAME);
 
   clearscreen(0, 0, 0);
   updatescreen();
 
   /* Load images: */
-  bkg_title = new Surface(datadir + "/images/title/background.jpg", IGNORE_ALPHA);
-  logo = new Surface(datadir + "/images/title/logo.png", USE_ALPHA);
-  img_choose_subset = new Surface(datadir + "/images/status/choose-level-subset.png", USE_ALPHA);
+  bkg_title = new Surface("/images/title/background.jpg", IGNORE_ALPHA);
+  logo = new Surface("/images/title/logo.png", USE_ALPHA);
+  img_choose_subset = new Surface("/images/status/choose-level-subset.png", USE_ALPHA);
 
   /* Generating contrib maps by only using a string_list */
   // Since there isn't any world dir or anything, add a hardcoded entry for Bonus Island
@@ -338,12 +337,12 @@ void title(void)
                   break;
                 case MNID_CREDITS:
                   music_manager = new MusicManager();
-                  menu_song  = music_manager->load_music(datadir + "/music/credits.ogg");
+                  menu_song  = music_manager->load_music("/music/credits.ogg");
                   music_manager->halt_music();
                   music_manager->play_music(menu_song,0);
                   display_text_file("CREDITS", bkg_title, SCROLL_SPEED_CREDITS);
                   music_manager->halt_music();
-                  menu_song = music_manager->load_music(datadir + "/music/theme.mod");
+                  menu_song = music_manager->load_music("/music/theme.mod");
                   music_manager->play_music(menu_song);
                   Menu::set_current(main_menu);
                   break;
@@ -372,7 +371,7 @@ void title(void)
 
                 if(confirm_dialog(str))
                   {
-                  sprintf(str,"%s/slot%d.stsg", st_save_dir, slot);
+                  sprintf(str,"save/slot%d.stsg", slot);
                   printf("Removing: %s\n",str);
                   remove(str);
                   }

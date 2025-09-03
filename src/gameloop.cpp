@@ -21,18 +21,15 @@
 
 #include <iostream>
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include <errno.h>
-#include <unistd.h>
 #include <math.h>
 #include <time.h>
 #include <SDL.h>
 
 #ifndef WIN32
-#include <sys/types.h>
 #include <ctype.h>
 #endif
 
@@ -805,7 +802,7 @@ std::string slotinfo(int slot)
   char tmp[1024];
   char slotfile[1024];
   std::string title;
-  sprintf(slotfile,"%s/slot%d.stsg",st_save_dir,slot);
+  sprintf(slotfile,"save/slot%d.stsg", slot);
 
   lisp_object_t* savegame = lisp_read_from_file(slotfile);
   if (savegame)
@@ -815,7 +812,7 @@ std::string slotinfo(int slot)
       lisp_free(savegame);
     }
 
-  if (access(slotfile, F_OK) == 0)
+  if (PHYSFS_exists(slotfile))
     {
       if (!title.empty())
         snprintf(tmp,1024,"Slot %d - %s",slot, title.c_str());

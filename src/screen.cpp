@@ -18,7 +18,6 @@
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <iostream>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -104,7 +103,7 @@ void fade(Surface *surface, int seconds, bool fade_out);
 
 void fade(const std::string& surface, int seconds, bool fade_out)
 {
-Surface* sur = new Surface(datadir + surface, IGNORE_ALPHA);
+Surface* sur = new Surface(surface, IGNORE_ALPHA);
 fade(sur, seconds, fade_out);
 delete sur;
 }

@@ -34,9 +34,9 @@
 #include "texture.h"
 #include "tile.h"
 
-int main(int argc, char * argv[])
+int main(int argc, char** argv)
 {
-  st_directory_setup();
+  st_directory_setup(argc, argv);
   parseargs(argc, argv);
   
   st_audio_setup();

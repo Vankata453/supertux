@@ -42,7 +42,7 @@ Sprite::Sprite(lisp_object_t* cur)
   for(std::vector<std::string>::size_type i = 0; i < images.size(); ++i)
     {
       surfaces.push_back(
-          new Surface(datadir + "/images/" + images[i], USE_ALPHA));
+          new Surface("/images/" + images[i], USE_ALPHA));
     }        
 
   frame_delay = 1000.0f/fps;

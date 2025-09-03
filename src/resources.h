@@ -23,6 +23,7 @@
 #include "musicref.h"
 
 class SpriteManager;
+class Surface;
 class MusicManager;
 
 extern Surface* img_waves[3]; 

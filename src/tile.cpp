@@ -45,7 +45,7 @@ Tile::~Tile()
 
 TileManager::TileManager()
 {
-  std::string filename = datadir + "/images/tilesets/supertux.stgt";
+  std::string filename = "/images/tilesets/supertux.stgt";
   load_tileset(filename);
 }
 
@@ -121,7 +121,7 @@ void TileManager::load_tileset(std::string filename)
                   Surface* cur_image;
                   tile->images.push_back(cur_image);
                   tile->images[tile->images.size()-1] = new Surface(
-                               datadir +  "/images/tilesets/" + (*it),
+                               "/images/tilesets/" + (*it),
                                USE_ALPHA);
                 }
               for(std::vector<std::string>::iterator it = tile->editor_filenames.begin();
@@ -131,7 +131,7 @@ void TileManager::load_tileset(std::string filename)
                   Surface* cur_image;
                   tile->editor_images.push_back(cur_image);
                   tile->editor_images[tile->editor_images.size()-1] = new Surface(
-                               datadir + "/images/tilesets/" + (*it),
+                               "/images/tilesets/" + (*it),
                                USE_ALPHA);
                 }
 		
@@ -146,7 +146,7 @@ void TileManager::load_tileset(std::string filename)
               LispReader reader(lisp_cdr(element));
               std::string filename;
               reader.read_string("file",  &filename);
-              filename = datadir + "/images/tilesets/" + filename;
+              filename = "/images/tilesets/" + filename;
               load_tileset(filename);
             }
           else if (strcmp(lisp_symbol(lisp_car(element)), "tilegroup") == 0)

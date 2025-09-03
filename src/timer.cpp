@@ -123,45 +123,4 @@ Timer::get_gone()
   return (get_ticks() - time);
 }
 
-void
-Timer::fwrite(FILE* fi)
-{
-  unsigned int diff_ticks;
-  int tick_mode;
-  if(time != 0)
-    diff_ticks = get_ticks() - time;
-  else
-    diff_ticks = 0;
-
-  ::fwrite(&period,sizeof(unsigned int),1,fi);
-  ::fwrite(&diff_ticks,sizeof(unsigned int),1,fi);
-  if(get_ticks == st_get_ticks)
-      tick_mode = true;
-  else
-      tick_mode = false;
-  ::fwrite(&tick_mode,sizeof(unsigned int),1,fi);
-}
-
-void
-Timer::fread(FILE* fi)
-{
-  unsigned int diff_ticks;
-  int tick_mode;
-
-  ::fread(&period,sizeof(unsigned int),1,fi);
-  ::fread(&diff_ticks,sizeof(unsigned int),1,fi);
-  ::fread(&tick_mode,sizeof(unsigned int),1,fi);
-
-  if (tick_mode)
-    get_ticks = st_get_ticks;
-  else
-    get_ticks = SDL_GetTicks;
-
-  if (diff_ticks != 0)
-    time = get_ticks() - diff_ticks;
-  else
-    time = 0;
-
-}
-
 /* EOF */

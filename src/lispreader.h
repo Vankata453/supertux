@@ -24,10 +24,11 @@
 #ifndef __LISPREADER_H__
 #define __LISPREADER_H__
 
-#include <stdio.h>
-#include <zlib.h>
 #include <string>
 #include <vector>
+#include <memory>
+
+#include "physfs_util.h"
 
 #define LISP_STREAM_FILE       1
 #define LISP_STREAM_STRING     2
@@ -61,7 +62,7 @@ typedef struct
 
     union
       {
-        FILE *file;
+        PHYSFS_FileCharReader* file;
         struct
           {
             char *buf;
@@ -107,8 +108,7 @@ struct _lisp_object_t
       } v;
   };
 
-lisp_stream_t* lisp_stream_init_gzfile (lisp_stream_t *stream, gzFile file);
-lisp_stream_t* lisp_stream_init_file (lisp_stream_t *stream, FILE *file);
+lisp_stream_t* lisp_stream_init_file (lisp_stream_t *stream, PHYSFS_FileCharReader *file);
 lisp_stream_t* lisp_stream_init_string (lisp_stream_t *stream, char *buf);
 lisp_stream_t* lisp_stream_init_any (lisp_stream_t *stream, void *data,
                                      int (*next_char) (void *data),
@@ -145,8 +145,6 @@ lisp_object_t* lisp_make_boolean (int value);
 int lisp_list_length (lisp_object_t *obj);
 lisp_object_t* lisp_list_nth_cdr (lisp_object_t *obj, int index);
 lisp_object_t* lisp_list_nth (lisp_object_t *obj, int index);
-
-void lisp_dump (lisp_object_t *obj, FILE *out);
 
 #define lisp_nil()           ((lisp_object_t*)0)
 

@@ -22,6 +22,7 @@
 #include "globals.h"
 #include "sound.h"
 #include "setup.h"
+#include "physfs_util.h"
 
 /*global variable*/
 bool use_sound = true;    /* handle sound on/off menu and command-line option */
@@ -95,14 +96,13 @@ void close_audio( void )
 Mix_Chunk* load_sound(const std::string& file)
 {
   if(!audio_device)
-    return 0;
+    return nullptr;
   
-  Mix_Chunk* snd = Mix_LoadWAV(file.c_str());
-
+  Mix_Chunk* snd = Mix_LoadWAV_RW(get_physfs_SDLRWops(file.c_str()), 1);
   if (snd == 0)
     st_abort("Can't load", file);
 
-  return(snd);
+  return snd;
 }
 
 /* --- PLAY A SOUND ON LEFT OR RIGHT OR CENTER SPEAKER --- */

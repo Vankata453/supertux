@@ -19,7 +19,6 @@
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <map>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -375,7 +374,7 @@ int le_load_level_subset(char *filename)
   le_level = 1;
   le_goto_level(1);
 
-  //GameSession* session = new GameSession(datadir + "/levels/" + le_level_subset->name + "/level1.stl", 0, ST_GL_DEMO_GAME);
+  //GameSession* session = new GameSession("/levels/" + le_level_subset->name + "/level1.stl", 0, ST_GL_DEMO_GAME);
 
   Menu::set_current(NULL);
 
@@ -540,7 +539,7 @@ int le_init()
   le_mouse_clicked[LEFT] = false;
   le_mouse_clicked[RIGHT] = false;
 
-  le_selection = new Surface(datadir + "/images/icons/select.png", USE_ALPHA);
+  le_selection = new Surface("/images/icons/select.png", USE_ALPHA);
 
   select_tilegroup_menu_effect.init(false);
   select_objects_menu_effect.init(false);
@@ -564,7 +563,7 @@ int le_init()
   le_object_properties_bt = new Button("/images/icons/properties.png","Edit object properties", SDLK_p, screen->w - 32, screen->h-98);
   le_object_properties_bt->set_active(false);
 
-  mouse_select_object = new MouseCursor(datadir + "/images/status/select-cursor.png",1);
+  mouse_select_object = new MouseCursor("/images/status/select-cursor.png",1);
   mouse_select_object->set_mid(16,16);
 
   le_tilemap_panel = new ButtonPanel(screen->w-64,screen->h-32,32,32);

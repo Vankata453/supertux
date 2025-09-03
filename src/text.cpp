@@ -24,6 +24,7 @@
 #include "defines.h"
 #include "screen.h"
 #include "text.h"
+#include "physfs_util.h"
 
 Text::Text(const std::string& file, int kind_, int w_, int h_)
 {
@@ -232,7 +233,7 @@ Text::erasecenteredtext(const  char * text, int y, Surface * ptexture, int updat
 
 void display_text_file(const std::string& file, const std::string& surface, float scroll_speed)
 {
-  Surface* sur = new Surface(datadir + surface, IGNORE_ALPHA);
+  Surface* sur = new Surface(surface, IGNORE_ALPHA);
   display_text_file(file, sur, scroll_speed);
   delete sur;
 }
@@ -244,30 +245,39 @@ void display_text_file(const std::string& file, Surface* surface, float scroll_s
   float speed;
   int y;
   int length;
-  FILE* fi;
+  PHYSFS_File* fi;
   char temp[1024];
   string_list_type names;
-  char filename[1024];
   string_list_init(&names);
-  sprintf(filename,"%s/%s", datadir.c_str(), file.c_str());
-  if((fi = fopen(filename,"r")) != NULL)
+  if(fi = PHYSFS_openRead(file.c_str()))
     {
-      while(fgets(temp, sizeof(temp), fi) != NULL)
+      PHYSFS_FileCharReader reader(fi);
+      char c;
+      int i = 0;
+      while(reader.next_char(c))
+      {
+        if (c == '\n' || i == sizeof(temp) - 1)
         {
-          temp[strlen(temp)-1]='\0';
-          string_list_add_item(&names,temp);
+          temp[i] = '\0';
+          string_list_add_item(&names, temp);
+          i = 0;
+          continue;
         }
-      fclose(fi);
+        temp[i++] = c;
+      }
+      temp[i] = '\0';
+      string_list_add_item(&names, temp);
+
+      PHYSFS_close(fi);
     }
   else
     {
       string_list_add_item(&names,"File was not found!");
-      string_list_add_item(&names,filename);
+      string_list_add_item(&names,file.c_str());
       string_list_add_item(&names,"Shame on the guy, who");
       string_list_add_item(&names,"forgot to include it");
       string_list_add_item(&names,"in your SuperTux distribution.");
     }
-
 
   scroll = 0;
   speed = scroll_speed / 50;

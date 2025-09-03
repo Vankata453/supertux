@@ -70,9 +70,9 @@ void ParticleSystem::draw(float scrollx, float scrolly, int layer)
 
 SnowParticleSystem::SnowParticleSystem()
 {
-    snowimages[0] = new Surface(datadir+"/images/shared/snow0.png", USE_ALPHA);
-    snowimages[1] = new Surface(datadir+"/images/shared/snow1.png", USE_ALPHA);
-    snowimages[2] = new Surface(datadir+"/images/shared/snow2.png", USE_ALPHA);
+    snowimages[0] = new Surface("/images/shared/snow0.png", USE_ALPHA);
+    snowimages[1] = new Surface("/images/shared/snow1.png", USE_ALPHA);
+    snowimages[2] = new Surface("/images/shared/snow2.png", USE_ALPHA);
 
     virtual_width = screen->w * 2;
 
@@ -115,7 +115,7 @@ void SnowParticleSystem::simulate(float elapsed_time)
 
 CloudParticleSystem::CloudParticleSystem()
 {
-    cloudimage = new Surface(datadir + "/images/shared/cloud.png", USE_ALPHA);
+    cloudimage = new Surface("/images/shared/cloud.png", USE_ALPHA);
 
     virtual_width = 2000.0;
 

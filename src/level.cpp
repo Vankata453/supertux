@@ -20,7 +20,6 @@
 
 #include <map>
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <iostream>
 #include "globals.h"
@@ -92,7 +91,6 @@ void LevelSubset::parse (lisp_object_t* cursor)
 
 void LevelSubset::load(char *subset)
 {
-  FILE* fi;
   char filename[1024];
   char str[1024];
   int i;
@@ -100,103 +98,80 @@ void LevelSubset::load(char *subset)
 
   name = subset;
 
-  snprintf(filename, 1024, "%s/levels/%s/info", st_dir, subset);
-  if(!faccessible(filename))
-    snprintf(filename, 1024, "%s/levels/%s/info", datadir.c_str(), subset);
-  if(faccessible(filename))
+  snprintf(filename, 1024, "levels/%s/info", subset);
+
+  PHYSFS_File* fi = PHYSFS_openRead(filename);
+  if (fi == NULL)
+    throw std::runtime_error("Failed to open file for reading: " + std::string(filename));
+  PHYSFS_FileCharReader file_reader(fi);
+
+  lisp_stream_t stream;
+  lisp_stream_init_file (&stream, &file_reader);
+  root_obj = lisp_read (&stream);
+
+  if (root_obj->type == LISP_TYPE_EOF || root_obj->type == LISP_TYPE_PARSE_ERROR)
     {
-      fi = fopen(filename, "r");
-      if (fi == NULL)
-        {
-          perror(filename);
-        }
-      lisp_stream_t stream;
-      lisp_stream_init_file (&stream, fi);
-      root_obj = lisp_read (&stream);
+      printf("World: Parse Error in file %s", filename);
+    }
 
-      if (root_obj->type == LISP_TYPE_EOF || root_obj->type == LISP_TYPE_PARSE_ERROR)
-        {
-          printf("World: Parse Error in file %s", filename);
-        }
+  lisp_object_t* cur = lisp_car(root_obj);
 
-      lisp_object_t* cur = lisp_car(root_obj);
+  if (!lisp_symbol_p (cur))
+    {
+      printf("World: Read error in %s",filename);
+    }
 
-      if (!lisp_symbol_p (cur))
-        {
-          printf("World: Read error in %s",filename);
-        }
+  if (strcmp(lisp_symbol(cur), "supertux-level-subset") == 0)
+    {
+      parse(lisp_cdr(root_obj));
 
-      if (strcmp(lisp_symbol(cur), "supertux-level-subset") == 0)
-        {
-          parse(lisp_cdr(root_obj));
+    }
 
-        }
+  lisp_free(root_obj);
+  PHYSFS_close(fi);
 
-      lisp_free(root_obj);
-      fclose(fi);
-
-      snprintf(str, 1024, "%s.png", filename);
-      if(faccessible(str))
-        {
-          delete image;
-          image = new Surface(str,IGNORE_ALPHA);
-        }
-      else
-        {
-          snprintf(filename, 1024, "%s/images/status/level-subset-info.png", datadir.c_str());
-          delete image;
-          image = new Surface(filename,IGNORE_ALPHA);
-        }
+  snprintf(str, 1024, "%s.png", filename);
+  if(faccessible(str))
+    {
+      delete image;
+      image = new Surface(str,IGNORE_ALPHA);
+    }
+  else
+    {
+      delete image;
+      image = new Surface("images/status/level-subset-info.png",IGNORE_ALPHA);
     }
 
   for(i=1; i != -1; ++i)
     {
       /* Get the number of levels in this subset */
-      snprintf(filename, 1024, "%s/levels/%s/level%d.stl", st_dir, subset,i);
+      snprintf(filename, 1024, "levels/%s/level%d.stl", subset, i);
       if(!faccessible(filename))
-        {
-          snprintf(filename, 1024, "%s/levels/%s/level%d.stl", datadir.c_str(), subset,i);
-          if(!faccessible(filename))
-            break;
-        }
+        break;
     }
   levels = --i;
 }
 
 void LevelSubset::save()
 {
-  FILE* fi;
-  string filename;
+  const std::string filename = "levels/" + name + "/info";
+  PHYSFS_File* fi = PHYSFS_openWrite(filename.c_str());
+  if (fi == NULL)
+    throw std::runtime_error("Failed to open file for writing: " + std::string(filename));
 
-  /* Save data file: */
-  filename = "/levels/" + name + "/";
+  /* Write header: */
+  PHYSFS_writeFormatted(fi,";SuperTux-Level-Subset\n");
+  PHYSFS_writeFormatted(fi,"(supertux-level-subset\n");
 
-  fcreatedir(filename.c_str());
-  filename = string(st_dir) + "/levels/" + name + "/info";
-  if(!fwriteable(filename.c_str()))
-    filename = datadir + "/levels/" + name + "/info";
-  if(fwriteable(filename.c_str()))
-    {
-      fi = fopen(filename.c_str(), "w");
-      if (fi == NULL)
-        {
-          perror(filename.c_str());
-        }
+  /* Save title info: */
+  PHYSFS_writeFormatted(fi,"  (title \"%s\")\n", title.c_str());
 
-      /* Write header: */
-      fprintf(fi,";SuperTux-Level-Subset\n");
-      fprintf(fi,"(supertux-level-subset\n");
+  /* Save the description: */
+  PHYSFS_writeFormatted(fi,"  (description \"%s\")\n", description.c_str());
 
-      /* Save title info: */
-      fprintf(fi,"  (title \"%s\")\n", title.c_str());
+  PHYSFS_writeFormatted( fi,")");
 
-      /* Save the description: */
-      fprintf(fi,"  (description \"%s\")\n", description.c_str());
-
-      fprintf( fi,")");
-      fclose(fi);
-
-    }
+  PHYSFS_close(fi);
 }
 
 Level::Level()
@@ -272,9 +247,7 @@ Level::load(const std::string& subset, int level)
   char filename[1024];
 
   // Load data file:
-  snprintf(filename, 1024, "%s/levels/%s/level%d.stl", st_dir, subset.c_str(), level);
-  if(!faccessible(filename))
-    snprintf(filename, 1024, "%s/levels/%s/level%d.stl", datadir.c_str(), subset.c_str(), level);
+  snprintf(filename, 1024, "levels/%s/level%d.stl", subset.c_str(), level);
 
   return load(filename);
 }
@@ -545,96 +518,87 @@ Level::save(const std::string& subset, int level)
   char str[80];
 
   /* Save data file: */
-  sprintf(str, "/levels/%s/", subset.c_str());
-  fcreatedir(str);
-  snprintf(filename, 1024, "%s/levels/%s/level%d.stl", st_dir, subset.c_str(),
-      level);
-  if(!fwriteable(filename))
-    snprintf(filename, 1024, "%s/levels/%s/level%d.stl", datadir.c_str(),
-        subset.c_str(), level);
+  sprintf(str, "levels/%s/", subset.c_str());
+  PHYSFS_mkdir(str);
+  snprintf(filename, 1024, "levels/%s/level%d.stl", subset.c_str(), level);
 
-  FILE * fi = fopen(filename, "w");
+  PHYSFS_File* fi = PHYSFS_openWrite(filename);
   if (fi == NULL)
-    {
-      perror(filename);
-      st_shutdown();
-      exit(-1);
-    }
-
+    throw std::runtime_error("Failed to open file for writing: " + std::string(filename));
 
   /* Write header: */
-  fprintf(fi,";SuperTux-Level\n");
-  fprintf(fi,"(supertux-level\n");
+  PHYSFS_writeFormatted(fi,";SuperTux-Level\n");
+  PHYSFS_writeFormatted(fi,"(supertux-level\n");
 
-  fprintf(fi,"  (version %d)\n", 1);
-  fprintf(fi,"  (name \"%s\")\n", name.c_str());
-  fprintf(fi,"  (author \"%s\")\n", author.c_str());
-  fprintf(fi,"  (music \"%s\")\n", song_title.c_str());
-  fprintf(fi,"  (background \"%s\")\n", bkgd_image.c_str());
-  fprintf(fi,"  (particle_system \"%s\")\n", particle_system.c_str());
-  fprintf(fi,"  (bkgd_speed %d)\n", bkgd_speed);
-  fprintf(fi,"  (bkgd_red_top %d)\n", bkgd_top.red);
-  fprintf(fi,"  (bkgd_green_top %d)\n", bkgd_top.green);
-  fprintf(fi,"  (bkgd_blue_top %d)\n", bkgd_top.blue);
-  fprintf(fi,"  (bkgd_red_bottom %d)\n", bkgd_bottom.red);
-  fprintf(fi,"  (bkgd_green_bottom %d)\n", bkgd_bottom.green);
-  fprintf(fi,"  (bkgd_blue_bottom %d)\n", bkgd_bottom.blue);
-  fprintf(fi,"  (time %d)\n", time_left);
-  fprintf(fi,"  (width %d)\n", width);
+  PHYSFS_writeFormatted(fi,"  (version %d)\n", 1);
+  PHYSFS_writeFormatted(fi,"  (name \"%s\")\n", name.c_str());
+  PHYSFS_writeFormatted(fi,"  (author \"%s\")\n", author.c_str());
+  PHYSFS_writeFormatted(fi,"  (music \"%s\")\n", song_title.c_str());
+  PHYSFS_writeFormatted(fi,"  (background \"%s\")\n", bkgd_image.c_str());
+  PHYSFS_writeFormatted(fi,"  (particle_system \"%s\")\n", particle_system.c_str());
+  PHYSFS_writeFormatted(fi,"  (bkgd_speed %d)\n", bkgd_speed);
+  PHYSFS_writeFormatted(fi,"  (bkgd_red_top %d)\n", bkgd_top.red);
+  PHYSFS_writeFormatted(fi,"  (bkgd_green_top %d)\n", bkgd_top.green);
+  PHYSFS_writeFormatted(fi,"  (bkgd_blue_top %d)\n", bkgd_top.blue);
+  PHYSFS_writeFormatted(fi,"  (bkgd_red_bottom %d)\n", bkgd_bottom.red);
+  PHYSFS_writeFormatted(fi,"  (bkgd_green_bottom %d)\n", bkgd_bottom.green);
+  PHYSFS_writeFormatted(fi,"  (bkgd_blue_bottom %d)\n", bkgd_bottom.blue);
+  PHYSFS_writeFormatted(fi,"  (time %d)\n", time_left);
+  PHYSFS_writeFormatted(fi,"  (width %d)\n", width);
   if(back_scrolling)
-    fprintf(fi,"  (back_scrolling #t)\n"); 
+    PHYSFS_writeFormatted(fi,"  (back_scrolling #t)\n"); 
   else
-    fprintf(fi,"  (back_scrolling #f)\n");
-  fprintf(fi,"  (hor_autoscroll_speed %2.1f)\n", hor_autoscroll_speed);
-  fprintf(fi,"  (gravity %2.1f)\n", gravity);
-  fprintf(fi,"  (background-tm ");
+    PHYSFS_writeFormatted(fi,"  (back_scrolling #f)\n");
+  PHYSFS_writeFormatted(fi,"  (hor_autoscroll_speed %2.1f)\n", hor_autoscroll_speed);
+  PHYSFS_writeFormatted(fi,"  (gravity %2.1f)\n", gravity);
+  PHYSFS_writeFormatted(fi,"  (background-tm ");
 
   for(int y = 0; y < 15; ++y)
     {
       for(int i = 0; i < width; ++i)
-        fprintf(fi," %d ", bg_tiles[y][i]);
+        PHYSFS_writeFormatted(fi," %d ", bg_tiles[y][i]);
     }
 
-  fprintf( fi,")\n");
-  fprintf(fi,"  (interactive-tm ");
+  PHYSFS_writeFormatted( fi,")\n");
+  PHYSFS_writeFormatted(fi,"  (interactive-tm ");
 
   for(int y = 0; y < 15; ++y)
     {
       for(int i = 0; i < width; ++i)
-        fprintf(fi," %d ", ia_tiles[y][i]);
+        PHYSFS_writeFormatted(fi," %d ", ia_tiles[y][i]);
     }
 
-  fprintf( fi,")\n");
-  fprintf(fi,"  (foreground-tm ");
+  PHYSFS_writeFormatted( fi,")\n");
+  PHYSFS_writeFormatted(fi,"  (foreground-tm ");
 
   for(int y = 0; y < 15; ++y)
     {
       for(int i = 0; i < width; ++i)
-        fprintf(fi," %d ", fg_tiles[y][i]);
+        PHYSFS_writeFormatted(fi," %d ", fg_tiles[y][i]);
     }
 
-  fprintf( fi,")\n");
+  PHYSFS_writeFormatted( fi,")\n");
 
-  fprintf( fi,"(reset-points\n");
+  PHYSFS_writeFormatted( fi,"(reset-points\n");
   for(std::vector<ResetPoint>::iterator i = reset_points.begin();
       i != reset_points.end(); ++i)
-    fprintf( fi,"(point (x %d) (y %d))\n",i->x, i->y);
-  fprintf( fi,")\n");
+    PHYSFS_writeFormatted( fi,"(point (x %d) (y %d))\n",i->x, i->y);
+  PHYSFS_writeFormatted( fi,")\n");
 
-  fprintf( fi,"(objects\n");
+  PHYSFS_writeFormatted( fi,"(objects\n");
 
   for(std::vector<BadGuyData>::iterator it = badguy_data.begin();
       it != badguy_data.end();
       ++it)
-    fprintf( fi,"(%s (x %d) (y %d) (stay-on-platform %s))\n",
+    PHYSFS_writeFormatted( fi,"(%s (x %d) (y %d) (stay-on-platform %s))\n",
              badguykind_to_string((*it).kind).c_str(),(*it).x,(*it).y,
              it->stay_on_platform ? "#t" : "#f");
 
-  fprintf( fi,")\n");
+  PHYSFS_writeFormatted( fi,")\n");
 
-  fprintf( fi,")\n");
+  PHYSFS_writeFormatted( fi,")\n");
 
-  fclose(fi);
+  PHYSFS_close(fi);
 }
 
 
@@ -665,9 +629,9 @@ Level::load_gfx()
   if(!bkgd_image.empty())
     {
       char fname[1024];
-      snprintf(fname, 1024, "%s/background/%s", st_dir, bkgd_image.c_str());
+      snprintf(fname, 1024, "background/%s", bkgd_image.c_str());
       if(!faccessible(fname))
-        snprintf(fname, 1024, "%s/images/background/%s", datadir.c_str(), bkgd_image.c_str());
+        snprintf(fname, 1024, "images/background/%s", bkgd_image.c_str());
       delete img_bkgd;
       img_bkgd = new Surface(fname, IGNORE_ALPHA);
     }
@@ -683,9 +647,9 @@ void Level::load_image(Surface** ptexture, string theme,const  char * file, int 
 {
   char fname[1024];
 
-  snprintf(fname, 1024, "%s/themes/%s/%s", st_dir, theme.c_str(), file);
+  snprintf(fname, 1024, "themes/%s/%s", theme.c_str(), file);
   if(!faccessible(fname))
-    snprintf(fname, 1024, "%s/images/themes/%s/%s", datadir.c_str(), theme.c_str(), file);
+    snprintf(fname, 1024, "images/themes/%s/%s", theme.c_str(), file);
 
   *ptexture = new Surface(fname, use_alpha);
 }
@@ -736,13 +700,12 @@ Level::load_song()
   char* song_path;
   char* song_subtitle;
 
-  level_song = music_manager->load_music(datadir + "/music/" + song_title);
+  level_song = music_manager->load_music("/music/" + song_title);
 
-  song_path = (char *) malloc(sizeof(char) * datadir.length() +
-                              strlen(song_title.c_str()) + 8 + 5);
+  song_path = (char *) malloc(strlen(song_title.c_str()) + 8 + 5);
   song_subtitle = strdup(song_title.c_str());
   strcpy(strstr(song_subtitle, "."), "\0");
-  sprintf(song_path, "%s/music/%s-fast%s", datadir.c_str(), 
+  sprintf(song_path, "/music/%s-fast%s",
           song_subtitle, strstr(song_title.c_str(), "."));
   if(!music_manager->exists_music(song_path)) {
     level_song_fast = level_song;

@@ -25,13 +25,11 @@
 #include "type.h"
 
 int faccessible(const char *filename);
-int fcreatedir(const char* relative_dir);
-int fwriteable(const char *filename);
-FILE * opendata(const char * filename, const char * mode);
-string_list_type dsubdirs(const char *rel_path, const char* expected_file);
-string_list_type dfiles(const char *rel_path, const char* glob, const char* exception_str);
+int fcreatedir(const char* dir);
+string_list_type dsubdirs(const char *path, const char* expected_file);
+string_list_type dfiles(const char *path, const char* glob, const char* exception_str);
 void free_strings(char **strings, int num);
-void st_directory_setup(void);
+void st_directory_setup(int argc, char** const argv);
 void st_general_setup(void);
 void st_general_free();
 void st_video_setup_sdl(void);

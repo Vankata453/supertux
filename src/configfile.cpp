@@ -24,6 +24,7 @@
 #include "globals.h"
 #include "lispreader.h"
 #include "player.h"
+#include "physfs_util.h"
 
 #ifdef WIN32
 const char * config_filename = "/st_config.dat";
@@ -47,23 +48,21 @@ static void defaults ()
 
 void loadconfig(void)
 {
-  FILE * file = NULL;
-
   defaults();
 
   /* override defaults from config file */
 
-  file = opendata(config_filename, "r");
+  PHYSFS_File* file = PHYSFS_openRead(config_filename);
+  PHYSFS_FileCharReader file_reader(file);
 
   if (file == NULL)
     return;
 
   /* read config file */
-
   lisp_stream_t   stream;
   lisp_object_t * root_obj = NULL;
 
-  lisp_stream_init_file (&stream, file);
+  lisp_stream_init_file (&stream, &file_reader);
   root_obj = lisp_read (&stream);
 
   if (root_obj->type == LISP_TYPE_EOF || root_obj->type == LISP_TYPE_PARSE_ERROR)
@@ -108,50 +107,47 @@ void loadconfig(void)
   reader.read_int ("keyboard-fire", &keymap.fire);
 
   lisp_free(root_obj);
-  fclose(file);
+  PHYSFS_close(file);
 }
 
 void saveconfig (void)
 {
   /* write settings to config file */
-
-  FILE * config = opendata(config_filename, "w");
-
+  PHYSFS_File* config = PHYSFS_openWrite(config_filename);
   if(config)
     {
-      fprintf(config, "(supertux-config\n");
-      fprintf(config, "\t;; the following options can be set to #t or #f:\n");
-      fprintf(config, "\t(fullscreen %s)\n", use_fullscreen ? "#t" : "#f");
-      fprintf(config, "\t(sound      %s)\n", use_sound      ? "#t" : "#f");
-      fprintf(config, "\t(music      %s)\n", use_music      ? "#t" : "#f");
-      fprintf(config, "\t(show_fps   %s)\n", show_fps       ? "#t" : "#f");
-      fprintf(config, "\t(player-run-by-default %s)\n", run_by_default ? "#t" : "#f");
-      fprintf(config, "\t(back-scrolling %s)\n", back_scrolling ? "#t" : "#f");
+      PHYSFS_writeFormatted(config, "(supertux-config\n");
+      PHYSFS_writeFormatted(config, "\t;; the following options can be set to #t or #f:\n");
+      PHYSFS_writeFormatted(config, "\t(fullscreen %s)\n", use_fullscreen ? "#t" : "#f");
+      PHYSFS_writeFormatted(config, "\t(sound      %s)\n", use_sound      ? "#t" : "#f");
+      PHYSFS_writeFormatted(config, "\t(music      %s)\n", use_music      ? "#t" : "#f");
+      PHYSFS_writeFormatted(config, "\t(show_fps   %s)\n", show_fps       ? "#t" : "#f");
+      PHYSFS_writeFormatted(config, "\t(player-run-by-default %s)\n", run_by_default ? "#t" : "#f");
+      PHYSFS_writeFormatted(config, "\t(back-scrolling %s)\n", back_scrolling ? "#t" : "#f");
 
-      fprintf(config, "\n\t;; either \"opengl\" or \"sdl\"\n");
-      fprintf(config, "\t(video      \"%s\")\n", use_gl ? "opengl" : "sdl");
+      PHYSFS_writeFormatted(config, "\n\t;; either \"opengl\" or \"sdl\"\n");
+      PHYSFS_writeFormatted(config, "\t(video      \"%s\")\n", use_gl ? "opengl" : "sdl");
 
-      fprintf(config, "\n\t;; joystick number (-1 means no joystick):\n");
-      fprintf(config, "\t(joystick   %d)\n", use_joystick ? joystick_num : -1);
+      PHYSFS_writeFormatted(config, "\n\t;; joystick number (-1 means no joystick):\n");
+      PHYSFS_writeFormatted(config, "\t(joystick   %d)\n", use_joystick ? joystick_num : -1);
 
-      fprintf(config, "\t(joystick-x   %d)\n", joystick_keymap.x_axis);
-      fprintf(config, "\t(joystick-y   %d)\n", joystick_keymap.y_axis);
-      fprintf(config, "\t(joystick-a   %d)\n", joystick_keymap.a_button);
-      fprintf(config, "\t(joystick-b   %d)\n", joystick_keymap.b_button);
-      fprintf(config, "\t(joystick-start  %d)\n", joystick_keymap.start_button);
-      fprintf(config, "\t(joystick-deadzone  %d)\n", joystick_keymap.dead_zone);
+      PHYSFS_writeFormatted(config, "\t(joystick-x   %d)\n", joystick_keymap.x_axis);
+      PHYSFS_writeFormatted(config, "\t(joystick-y   %d)\n", joystick_keymap.y_axis);
+      PHYSFS_writeFormatted(config, "\t(joystick-a   %d)\n", joystick_keymap.a_button);
+      PHYSFS_writeFormatted(config, "\t(joystick-b   %d)\n", joystick_keymap.b_button);
+      PHYSFS_writeFormatted(config, "\t(joystick-start  %d)\n", joystick_keymap.start_button);
+      PHYSFS_writeFormatted(config, "\t(joystick-deadzone  %d)\n", joystick_keymap.dead_zone);
 
-      fprintf(config, "\t(keyboard-jump  %d)\n", keymap.jump);
-      fprintf(config, "\t(keyboard-duck  %d)\n", keymap.duck);
-      fprintf(config, "\t(keyboard-left  %d)\n", keymap.left);
-      fprintf(config, "\t(keyboard-right %d)\n", keymap.right);
-      fprintf(config, "\t(keyboard-fire  %d)\n", keymap.fire);
+      PHYSFS_writeFormatted(config, "\t(keyboard-jump  %d)\n", keymap.jump);
+      PHYSFS_writeFormatted(config, "\t(keyboard-duck  %d)\n", keymap.duck);
+      PHYSFS_writeFormatted(config, "\t(keyboard-left  %d)\n", keymap.left);
+      PHYSFS_writeFormatted(config, "\t(keyboard-right %d)\n", keymap.right);
+      PHYSFS_writeFormatted(config, "\t(keyboard-fire  %d)\n", keymap.fire);
 
-      fprintf(config, ")\n");
+      PHYSFS_writeFormatted(config, ")\n");
 
-      fclose(config);
+      PHYSFS_close(config);
     }
-
 }
 
 /* EOF */

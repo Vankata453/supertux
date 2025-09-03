@@ -22,6 +22,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdexcept>
 
 #include "globals.h"
 #include "high_scores.h"
@@ -30,6 +31,7 @@
 #include "texture.h"
 #include "setup.h"
 #include "lispreader.h"
+#include "physfs_util.h"
 
 #ifdef WIN32
 const char * highscore_filename = "/st_highscore.dat";
@@ -47,22 +49,20 @@ void load_hs(void)
   hs_score = 100;
   hs_name  = "Grandma";
 
-  FILE * fi;
   lisp_object_t* root_obj = 0;
-  fi = fopen(highscore_filename, "r");
+  PHYSFS_File* fi = PHYSFS_openRead(highscore_filename);
   if (fi == NULL)
-    {
-      perror(highscore_filename);
-      return;
-    }
+    throw std::runtime_error("Failed to open file for reading: " + std::string(highscore_filename));
+  PHYSFS_FileCharReader file_reader(fi);
 
   lisp_stream_t stream;
-  lisp_stream_init_file (&stream, fi);
+  lisp_stream_init_file (&stream, &file_reader);
   root_obj = lisp_read (&stream);
 
   if (root_obj->type == LISP_TYPE_EOF || root_obj->type == LISP_TYPE_PARSE_ERROR)
     {
       printf("HighScore: Parse Error in file %s", highscore_filename);
+      return;
     }
 
 
@@ -73,7 +73,7 @@ void load_hs(void)
       reader.read_string("name", &hs_name);
     }
  
-  fclose(fi);
+  PHYSFS_close(fi);
   lisp_free(root_obj);
 }
 
@@ -84,7 +84,7 @@ void save_hs(int score)
   Surface* bkgd;
   SDL_Event event;
 
-  bkgd = new Surface(datadir + "/images/highscore/highscore.png", IGNORE_ALPHA);
+  bkgd = new Surface("/images/highscore/highscore.png", IGNORE_ALPHA);
 
   hs_score = score;
 
@@ -127,47 +127,21 @@ void save_hs(int score)
 
 
   /* Save to file: */
+  PHYSFS_File* fi = PHYSFS_openWrite(highscore_filename);
+  if (fi == NULL)
+    throw std::runtime_error("Failed to open file for writing: " + std::string(highscore_filename));
 
-  FILE* fi;
-  std::string filename;
+  /* Write header: */
+  PHYSFS_writeFormatted(fi,";SuperTux HighScores\n");
+  PHYSFS_writeFormatted(fi,"(supertux-highscore\n");
 
-  /* Save data file: */
-  filename = highscore_filename;
+  /* Save title info: */
+  PHYSFS_writeFormatted(fi,"  (name \"%s\")\n", hs_name.c_str());
 
-  fcreatedir(filename.c_str());
-  if(fwriteable(filename.c_str()))
-    {
-      fi = fopen(filename.c_str(), "w");
-      if (fi == NULL)
-        {
-          perror(filename.c_str());
-        }
+  /* Save the description: */
+  PHYSFS_writeFormatted(fi,"  (score \"%i\")\n", hs_score);
 
-      /* Write header: */
-      fprintf(fi,";SuperTux HighScores\n");
-      fprintf(fi,"(supertux-highscore\n");
+  PHYSFS_writeFormatted( fi,")");
 
-      /* Save title info: */
-      fprintf(fi,"  (name \"%s\")\n", hs_name.c_str());
-
-      /* Save the description: */
-      fprintf(fi,"  (score \"%i\")\n", hs_score);
-
-      fprintf( fi,")");
-      fclose(fi);
-    }
-
-/*
-  fi = opendata(highscore_filename, "w");
-  if (fi != NULL)
-    {
-      fprintf(fi, "# Supertux highscore file\n\n");
-
-      fprintf(fi, "name=%s\n", hs_name);
-      fprintf(fi, "highscore=%d\n", hs_score);
-
-      fprintf(fi, "# (File automatically created.)\n");
-
-      fclose(fi);
-    }*/
+  PHYSFS_close(fi);
 }

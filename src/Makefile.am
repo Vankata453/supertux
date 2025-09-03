@@ -30,6 +30,8 @@ menu.cpp \
 menu.h \
 particlesystem.cpp \
 particlesystem.h \
+physfs_util.cpp \
+physfs_util.h \
 physic.cpp \
 physic.h \
 player.cpp \

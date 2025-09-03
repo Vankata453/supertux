@@ -18,10 +18,8 @@
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <assert.h>
-#include <unistd.h>
 #include "globals.h"
 #include "texture.h"
 #include "screen.h"
@@ -88,7 +86,7 @@ string_to_direction(const std::string& directory)
 
 TileManager::TileManager()
 {
-  std::string stwt_filename = datadir +  "/images/worldmap/antarctica.stwt";
+  std::string stwt_filename =  "/images/worldmap/antarctica.stwt";
   lisp_object_t* root_obj = lisp_read_from_file(stwt_filename);
  
   if (!root_obj)
@@ -141,7 +139,7 @@ TileManager::TileManager()
                 }
 
               tile->sprite = new Surface(
-                           datadir +  "/images/worldmap/" + filename, 
+                            "/images/worldmap/" + filename, 
                            USE_ALPHA);
 
               if (id >= int(tiles.size()))
@@ -183,9 +181,9 @@ TileManager::get(int i)
 Tux::Tux(WorldMap* worldmap_)
   : worldmap(worldmap_)
 {
-  largetux_sprite = new Surface(datadir +  "/images/worldmap/tux.png", USE_ALPHA);
-  firetux_sprite = new Surface(datadir +  "/images/worldmap/firetux.png", USE_ALPHA);
-  smalltux_sprite = new Surface(datadir +  "/images/worldmap/smalltux.png", USE_ALPHA);
+  largetux_sprite = new Surface( "/images/worldmap/tux.png", USE_ALPHA);
+  firetux_sprite = new Surface( "/images/worldmap/firetux.png", USE_ALPHA);
+  smalltux_sprite = new Surface( "/images/worldmap/smalltux.png", USE_ALPHA);
 
   offset = 0;
   moving = false;
@@ -384,12 +382,12 @@ WorldMap::WorldMap()
 
   passive_message_timer.init(true);
 
-  level_sprite = new Surface(datadir +  "/images/worldmap/levelmarker.png", USE_ALPHA);
-  leveldot_green = new Surface(datadir +  "/images/worldmap/leveldot_green.png", USE_ALPHA);
-  leveldot_red = new Surface(datadir +  "/images/worldmap/leveldot_red.png", USE_ALPHA);
-  leveldot_teleporter = new Surface(datadir +  "/images/worldmap/teleporter.png", USE_ALPHA);
+  level_sprite = new Surface( "/images/worldmap/levelmarker.png", USE_ALPHA);
+  leveldot_green = new Surface( "/images/worldmap/leveldot_green.png", USE_ALPHA);
+  leveldot_red = new Surface( "/images/worldmap/leveldot_red.png", USE_ALPHA);
+  leveldot_teleporter = new Surface( "/images/worldmap/teleporter.png", USE_ALPHA);
   
-  map_file = datadir + "/levels/worldmaps/world1.stwm";
+  map_file = "/levels/worldmaps/world1.stwm";
   
   input_direction = D_NONE;
   enter_level = false;
@@ -412,7 +410,7 @@ WorldMap::~WorldMap()
 void
 WorldMap::set_map_file(std::string mapfile)
 {
-  map_file = datadir + "/levels/worldmaps/" + mapfile;
+  map_file = "/levels/worldmaps/" + mapfile;
 }
 
 void
@@ -515,17 +513,14 @@ void WorldMap::get_level_title(Levels::pointer level)
   /** get level's title */
   level->title = "<no title>";
 
-  FILE * fi;
   lisp_object_t* root_obj = 0;
-  fi = fopen((datadir +  "/levels/" + level->name).c_str(), "r");
+  PHYSFS_File* fi = PHYSFS_openRead(("levels/" + level->name).c_str());
   if (fi == NULL)
-  {
-    perror((datadir +  "/levels/" + level->name).c_str());
-    return;
-  }
+    throw std::runtime_error("Failed to open file for reading: levels/" + level->name);
+  PHYSFS_FileCharReader file_reader(fi);
 
   lisp_stream_t stream;
-  lisp_stream_init_file (&stream, fi);
+  lisp_stream_init_file (&stream, &file_reader);
   root_obj = lisp_read (&stream);
 
   if (root_obj->type == LISP_TYPE_EOF || root_obj->type == LISP_TYPE_PARSE_ERROR)
@@ -540,8 +535,7 @@ void WorldMap::get_level_title(Levels::pointer level)
   }
 
   lisp_free(root_obj);
-
-  fclose(fi);
+  PHYSFS_close(fi);
 }
 
 void
@@ -723,7 +717,7 @@ WorldMap::update(float delta)
               level->y == tux->get_tile_pos().y)
             {
               std::cout << "Enter the current level: " << level->name << std::endl;;
-              GameSession session(datadir +  "/levels/" + level->name,
+              GameSession session( "/levels/" + level->name,
                                   1, ST_GL_LOAD_LEVEL_FILE);
 
               switch (session.run())
@@ -768,8 +762,8 @@ WorldMap::update(float delta)
                     if (!level->extro_filename.empty())
                       { 
                         MusicRef theme =
-                          music_manager->load_music(datadir + "/music/theme.mod");
-                        MusicRef credits = music_manager->load_music(datadir + "/music/credits.ogg");
+                          music_manager->load_music("/music/theme.mod");
+                        MusicRef credits = music_manager->load_music("/music/credits.ogg");
                         music_manager->play_music(theme);
                         // Display final credits and go back to the main menu
                         display_text_file(level->extro_filename,
@@ -978,7 +972,7 @@ WorldMap::display()
 
   quit = false;
 
-  song = music_manager->load_music(datadir +  "/music/" + music);
+  song = music_manager->load_music( "/music/" + music);
   music_manager->play_music(song);
 
   unsigned int last_update_time;
@@ -1030,7 +1024,13 @@ void
 WorldMap::savegame(const std::string& filename)
 {
   std::cout << "savegame: " << filename << std::endl;
-  std::ofstream out(filename.c_str());
+  PHYSFS_mkdir("save");
+  PHYSFS_File* file = PHYSFS_openWrite(filename.c_str());
+  if (!file)
+  {
+    printf("Couldn't open savegame for writing: %s\n", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+    return;
+  }
 
   int nb_solved_levels = 0;
   for(Levels::iterator i = levels.begin(); i != levels.end(); ++i)
@@ -1039,28 +1039,29 @@ WorldMap::savegame(const std::string& filename)
         ++nb_solved_levels;
     }
 
-  out << "(supertux-savegame\n"
-      << "  (version 1)\n"
-      << "  (title  \"Icyisland - " << nb_solved_levels << "/" << levels.size() << "\")\n"
-      << "  (lives   " << player_status.lives << ")\n"
-      << "  (score   " << player_status.score << ")\n"
-      << "  (distros " << player_status.distros << ")\n"
-      << "  (tux (x " << tux->get_tile_pos().x << ") (y " << tux->get_tile_pos().y << ")\n"
-      << "       (back \"" << direction_to_string(tux->back_direction) << "\")\n"
-      << "       (bonus \"" << bonus_to_string(player_status.bonus) <<  "\"))\n"
-      << "  (levels\n";
+  PHYSFS_writeFormatted(file, "(supertux-savegame\n");
+  PHYSFS_writeFormatted(file, "  (version 1)\n");
+  PHYSFS_writeFormatted(file, "(title  \"Icyisland - %d/%d\")\n", nb_solved_levels, levels.size());
+  PHYSFS_writeFormatted(file, "  (lives   %d)\n", player_status.lives);
+  PHYSFS_writeFormatted(file, "  (score   %d)\n", player_status.score);
+  PHYSFS_writeFormatted(file, "  (distros %d)\n", player_status.distros);
+  PHYSFS_writeFormatted(file, "  (tux (x %d) (y %d)\n", tux->get_tile_pos().x, tux->get_tile_pos().y);
+  PHYSFS_writeFormatted(file, "       (back \"%s\")\n", direction_to_string(tux->back_direction).c_str());
+  PHYSFS_writeFormatted(file, "       (bonus \"%s\"))\n", bonus_to_string(player_status.bonus).c_str());
+  PHYSFS_writeFormatted(file, "  (levels\n");
   
   for(Levels::iterator i = levels.begin(); i != levels.end(); ++i)
     {
       if (i->solved && !i->name.empty())
         {
-          out << "     (level (name \"" << i->name << "\")\n"
-              << "            (solved #t))\n";
+          PHYSFS_writeFormatted(file, "     (level (name \"%s\")\n", i->name.c_str());
+          PHYSFS_writeFormatted(file, "            (solved #t))\n");
         }
     }  
 
-  out << "   )\n"
-      << " )\n\n;; EOF ;;" << std::endl;
+  PHYSFS_writeFormatted(file, "   )\n )\n\n;; EOF ;;");
+
+  PHYSFS_close(file);
 }
 
 void
@@ -1069,7 +1070,7 @@ WorldMap::loadgame(const std::string& filename)
   std::cout << "loadgame: " << filename << std::endl;
   savegame_file = filename;
 
-  if (access(filename.c_str(), F_OK) != 0)
+  if (!PHYSFS_exists(filename.c_str()))
     return;
   
   lisp_object_t* savegame = lisp_read_from_file(filename);

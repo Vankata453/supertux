@@ -22,6 +22,7 @@
 #include "musicref.h"
 #include "sound.h"
 #include "setup.h"
+#include "physfs_util.h"
 
 MusicManager::MusicManager()
   : current_music(0), music_enabled(true)
@@ -58,10 +59,19 @@ MusicManager::exists_music(const std::string& file)
   if(i != musics.end()) {
     return true;                                      
   }
-  
-  Mix_Music* song = Mix_LoadMUS(file.c_str());
-  if(song == 0)
+
+  Mix_Music* song;
+  try
+  {
+    song = Mix_LoadMUS_RW(get_physfs_SDLRWops(file.c_str()));
+    if (!song)
+      return false;
+  }
+  catch (const std::exception& err)
+  {
+    printf("%s\n", err.what());
     return false;
+  }
 
   // insert into music list
   std::pair<std::map<std::string, MusicResource>::iterator, bool> result = 

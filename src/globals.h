@@ -28,7 +28,8 @@
 #include "menu.h"
 #include "mousecursor.h"
 
-extern std::string datadir;
+extern std::string real_datadir;
+extern std::string real_userdir;
 
 struct JoystickKeymap
 {
@@ -71,10 +72,6 @@ extern bool back_scrolling;
 extern int joystick_num;
 extern char* level_startup_file;
 extern bool launch_leveleditor_mode;
-
-/* SuperTux directory ($HOME/.supertux) and save directory($HOME/.supertux/save) */
-extern char* st_dir;
-extern char* st_save_dir;
 
 extern float game_speed;
 extern SDL_Joystick * js;

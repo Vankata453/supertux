@@ -18,8 +18,8 @@
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <assert.h>
-#include <stdio.h>
 #include <iostream>
+#include <functional>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,11 +30,10 @@
 #ifndef NOOPENGL
 #include <SDL_opengl.h>
 #endif
+#include <physfs.h>
 
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <dirent.h>
 #ifndef WIN32
+#include <linux/limits.h>
 #include <libgen.h>
 #endif
 #include <ctype.h>
@@ -75,222 +74,82 @@ void usage(char * prog, int ret);
 /* Does the given file exist and is it accessible? */
 int faccessible(const char *filename)
 {
-  struct stat filestat;
-  if (stat(filename, &filestat) == -1)
-    {
-      return false;
-    }
-  else
-    {
-      if(S_ISREG(filestat.st_mode))
-        return true;
-      else
-        return false;
-    }
+  return PHYSFS_exists(filename);
 }
 
-/* Can we write to this location? */
-int fwriteable(const char *filename)
+int fcreatedir(const char* dir)
 {
-  FILE* fi;
-  fi = fopen(filename, "wa");
-  if (fi == NULL)
-    {
-      return false;
-    }
-  fclose(fi);
-  return true;
+  return PHYSFS_mkdir(dir);
 }
 
-/* Makes sure a directory is created in either the SuperTux home directory or the SuperTux base directory.*/
-int fcreatedir(const char* relative_dir)
+static PHYSFS_EnumerateCallbackResult physfs_enumerate_dirs(void* data, const char* origdir, const char* fname)
 {
-  char path[1024];
-  snprintf(path, 1024, "%s/%s/", st_dir, relative_dir);
-  if(mkdir(path,0755) != 0)
-    {
-      snprintf(path, 1024, "%s/%s/", datadir.c_str(), relative_dir);
-      if(mkdir(path,0755) != 0)
-        {
-          return false;
-        }
-      else
-        {
-          return true;
-        }
-    }
-  else
-    {
-      return true;
-    }
+  const std::string full_path = std::string(origdir) + "/" + std::string(fname);
+
+  PHYSFS_Stat stat;
+  PHYSFS_stat(full_path.c_str(), &stat);
+  if (stat.filetype == PHYSFS_FILETYPE_DIRECTORY)
+  {
+    const auto* callback = static_cast<std::function<void(const char*)>*>(data);
+    callback->operator()(fname);
+  }
+  return PHYSFS_ENUM_OK;
 }
 
-FILE * opendata(const char * rel_filename, const char * mode)
+static PHYSFS_EnumerateCallbackResult physfs_enumerate_files(void* data, const char* origdir, const char* fname)
 {
-  char * filename = NULL;
-  FILE * fi;
+  const std::string full_path = std::string(origdir) + "/" + std::string(fname);
 
-  filename = (char *) malloc(sizeof(char) * (strlen(st_dir) +
-                                             strlen(rel_filename) + 1));
-
-  strcpy(filename, st_dir);
-  /* Open the high score file: */
-
-  strcat(filename, rel_filename);
-
-  /* Try opening the file: */
-  fi = fopen(filename, mode);
-
-  if (fi == NULL)
-    {
-      fprintf(stderr, "Warning: Unable to open the file \"%s\" ", filename);
-
-      if (strcmp(mode, "r") == 0)
-        fprintf(stderr, "for read!!!\n");
-      else if (strcmp(mode, "w") == 0)
-        fprintf(stderr, "for write!!!\n");
-    }
-  free( filename );
-
-  return(fi);
+  PHYSFS_Stat stat;
+  PHYSFS_stat(full_path.c_str(), &stat);
+  if (stat.filetype == PHYSFS_FILETYPE_REGULAR)
+  {
+    const auto* callback = static_cast<std::function<void(const char*)>*>(data);
+    callback->operator()(fname);
+  }
+  return PHYSFS_ENUM_OK;
 }
 
 /* Get all names of sub-directories in a certain directory. */
 /* Returns the number of sub-directories found. */
 /* Note: The user has to free the allocated space. */
-string_list_type dsubdirs(const char *rel_path,const  char* expected_file)
+string_list_type dsubdirs(const char *path, const char* expected_file)
 {
-  DIR *dirStructP;
-  struct dirent *direntp;
   string_list_type sdirs;
-  char filename[1024];
-  char path[1024];
-
   string_list_init(&sdirs);
-  sprintf(path,"%s/%s",st_dir,rel_path);
-  if((dirStructP = opendir(path)) != NULL)
+
+  static std::function<void(const char*)> callback =
+    [&sdirs, path, expected_file](const char* fname)
     {
-      while((direntp = readdir(dirStructP)) != NULL)
-        {
-          char absolute_filename[1024];
-          struct stat buf;
-
-          sprintf(absolute_filename, "%s/%s", path, direntp->d_name);
-
-          if (stat(absolute_filename, &buf) == 0 && S_ISDIR(buf.st_mode))
-            {
-              if(expected_file != NULL)
-                {
-                  sprintf(filename,"%s/%s/%s",path,direntp->d_name,expected_file);
-                  if(!faccessible(filename))
-                    continue;
-                }
-
-              string_list_add_item(&sdirs,direntp->d_name);
-            }
-        }
-      closedir(dirStructP);
-    }
-
-  sprintf(path,"%s/%s",datadir.c_str(),rel_path);
-  if((dirStructP = opendir(path)) != NULL)
-    {
-      while((direntp = readdir(dirStructP)) != NULL)
-        {
-          char absolute_filename[1024];
-          struct stat buf;
-
-          sprintf(absolute_filename, "%s/%s", path, direntp->d_name);
-
-          if (stat(absolute_filename, &buf) == 0 && S_ISDIR(buf.st_mode))
-            {
-              if(expected_file != NULL)
-                {
-                  sprintf(filename,"%s/%s/%s",path,direntp->d_name,expected_file);
-                  if(!faccessible(filename))
-                    {
-                      continue;
-                    }
-                  else
-                    {
-                      sprintf(filename,"%s/%s/%s/%s",st_dir,rel_path,direntp->d_name,expected_file);
-                      if(faccessible(filename))
-                        continue;
-                    }
-                }
-
-              string_list_add_item(&sdirs,direntp->d_name);
-            }
-        }
-      closedir(dirStructP);
-    }
+      if (expected_file &&
+          PHYSFS_exists((std::string(path) + "/" +
+            std::string(fname) + "/" + std::string(expected_file)).c_str()))
+      {
+        string_list_add_item(&sdirs, fname);
+      }
+    };
+  PHYSFS_enumerate(path, &physfs_enumerate_dirs, &callback);
 
   return sdirs;
 }
 
-string_list_type dfiles(const char *rel_path, const  char* glob, const  char* exception_str)
+string_list_type dfiles(const char *path, const char* glob, const char* exception_str)
 {
-  DIR *dirStructP;
-  struct dirent *direntp;
-  string_list_type sdirs;
-  char path[1024];
+  string_list_type sfiles;
+  string_list_init(&sfiles);
 
-  string_list_init(&sdirs);
-  sprintf(path,"%s/%s",st_dir,rel_path);
-  if((dirStructP = opendir(path)) != NULL)
+  static std::function<void(const char*)> callback =
+    [&sfiles, glob, exception_str](const char* fname)
     {
-      while((direntp = readdir(dirStructP)) != NULL)
-        {
-          char absolute_filename[1024];
-          struct stat buf;
+      if ((!exception_str || !strstr(fname, exception_str)) &&
+          (!glob || strstr(fname, glob)))
+      {
+        string_list_add_item(&sfiles, fname);
+      }
+    };
+  PHYSFS_enumerate(path, &physfs_enumerate_files, &callback);
 
-          sprintf(absolute_filename, "%s/%s", path, direntp->d_name);
-
-          if (stat(absolute_filename, &buf) == 0 && S_ISREG(buf.st_mode))
-            {
-              if(exception_str != NULL)
-                {
-                  if(strstr(direntp->d_name,exception_str) != NULL)
-                    continue;
-                }
-              if(glob != NULL)
-                if(strstr(direntp->d_name,glob) == NULL)
-                  continue;
-
-              string_list_add_item(&sdirs,direntp->d_name);
-            }
-        }
-      closedir(dirStructP);
-    }
-
-  sprintf(path,"%s/%s",datadir.c_str(),rel_path);
-  if((dirStructP = opendir(path)) != NULL)
-    {
-      while((direntp = readdir(dirStructP)) != NULL)
-        {
-          char absolute_filename[1024];
-          struct stat buf;
-
-          sprintf(absolute_filename, "%s/%s", path, direntp->d_name);
-
-          if (stat(absolute_filename, &buf) == 0 && S_ISREG(buf.st_mode))
-            {
-              if(exception_str != NULL)
-                {
-                  if(strstr(direntp->d_name,exception_str) != NULL)
-                    continue;
-                }
-              if(glob != NULL)
-                if(strstr(direntp->d_name,glob) == NULL)
-                  continue;
-
-              string_list_add_item(&sdirs,direntp->d_name);
-            }
-        }
-      closedir(dirStructP);
-    }
-
-  return sdirs;
+  return sfiles;
 }
 
 void free_strings(char **strings, int num)
@@ -302,71 +161,62 @@ void free_strings(char **strings, int num)
 
 /* --- SETUP --- */
 /* Set SuperTux configuration and save directories */
-void st_directory_setup(void)
+void st_directory_setup(int argc, char** const argv)
 {
-  char *home;
-  char str[1024];
-  /* Get home directory (from $HOME variable)... if we can't determine it,
-     use the current directory ("."): */
-  if (getenv("HOME") != NULL)
-    home = getenv("HOME");
-  else
-    home = ".";
-
-  st_dir = (char *) malloc(sizeof(char) * (strlen(home) +
-                                           strlen("/.supertux") + 1));
-  strcpy(st_dir, home);
-  strcat(st_dir, "/.supertux");
-
-  /* Remove .supertux config-file from old SuperTux versions */
-  if(faccessible(st_dir))
+  // Get custom datadir from command line arguments.
+  // Must be parsed here early on, because config cannot be
+  // loaded in parseargs() before PhysFS initialization.
+  for (int i = 1; i + 1 < argc; i++)
+  {
+    if (strcmp(argv[i], "--datadir") == 0 ||
+        strcmp(argv[i], "-d") == 0)
     {
-      remove
-        (st_dir);
+      real_datadir = argv[i + 1];
+      break;
     }
+  }
 
-  st_save_dir = (char *) malloc(sizeof(char) * (strlen(st_dir) + strlen("/save") + 1));
+  if (!PHYSFS_init(argv[0]))
+    throw std::runtime_error("Couldn't initialize PhysFS: " + std::string(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode())));
 
-  strcpy(st_save_dir,st_dir);
-  strcat(st_save_dir,"/save");
-
-  /* Create them. In the case they exist they won't destroy anything. */
-  mkdir(st_dir, 0755);
-  mkdir(st_save_dir, 0755);
-
-  sprintf(str, "%s/levels", st_dir);
-  mkdir(str, 0755);
-
-  // User has not that a datadir, so we try some magic
-  if (datadir.empty())
-    {
+  if (real_datadir.empty())
+  {
 #ifndef WIN32
-      // Detect datadir
-      char exe_file[PATH_MAX];
-      if (readlink("/proc/self/exe", exe_file, PATH_MAX) < 0)
-        {
-          puts("Couldn't read /proc/self/exe, using default path: " DATA_PREFIX);
-          datadir = DATA_PREFIX;
-        }
-      else
-        {
-          std::string exedir = std::string(dirname(exe_file)) + "/";
-          
-          datadir = exedir + "../data"; // SuperTux run from source dir
-          if (access(datadir.c_str(), F_OK) != 0)
-            {
-              datadir = exedir + "../share/supertux"; // SuperTux run from PATH
-              if (access(datadir.c_str(), F_OK) != 0) 
-                { // If all fails, fall back to compiled path
-                  datadir = DATA_PREFIX; 
-                }
-            }
-        }
+    // Detect datadir
+    char exe_file[PATH_MAX];
+    if (readlink("/proc/self/exe", exe_file, PATH_MAX) < 0)
+      {
+        puts("Couldn't read /proc/self/exe, using default path: " DATA_PREFIX);
+        real_datadir = DATA_PREFIX;
+      }
+    else
+      {
+        std::string exedir = std::string(dirname(exe_file)) + "/";
+        
+        real_datadir = exedir + "../data"; // SuperTux run from source dir
+        if (access(real_datadir.c_str(), F_OK) != 0)
+          {
+            real_datadir = exedir + "../share/supertux"; // SuperTux run from PATH
+            if (access(real_datadir.c_str(), F_OK) != 0) 
+              { // If all fails, fall back to compiled path
+                real_datadir = DATA_PREFIX; 
+              }
+          }
+      }
 #else
-  datadir = DATA_PREFIX;
+    real_datadir = DATA_PREFIX;
 #endif
-    }
-  printf("Datadir: %s\n", datadir.c_str());
+  }
+  printf("Datadir: %s\n", real_datadir.c_str());
+  if (!PHYSFS_mount(real_datadir.c_str(), nullptr, 1))
+    throw std::runtime_error("Couldn't add '" + real_datadir + "' to PhysFS searchpath: " + std::string(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode())));
+
+  real_userdir = PHYSFS_getPrefDir("SuperTux", "supertux_m1");
+  printf("Userdir: %s\n", real_userdir.c_str());
+  if (!PHYSFS_setWriteDir(real_userdir.c_str()))
+    throw std::runtime_error("Failed to set userdir directory: " + std::string(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode())));
+  if (!PHYSFS_mount(real_userdir.c_str(), nullptr, 0))
+    throw std::runtime_error("Couldn't add '" + real_userdir + "' to PhysFS searchpath: " + std::string(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode())));
 }
 
 /* Create and setup menus. */
@@ -501,9 +351,9 @@ bool process_load_game_menu()
   if(slot != -1 && load_game_menu->get_item_by_id(slot).kind == MN_ACTION)
     {
       char slotfile[1024];
-      snprintf(slotfile, 1024, "%s/slot%d.stsg", st_save_dir, slot);
+      snprintf(slotfile, 1024, "save/slot%d.stsg", slot);
 
-      if (access(slotfile, F_OK) != 0)
+      if (!PHYSFS_exists(slotfile))
         {
           draw_intro();
         }
@@ -604,26 +454,26 @@ void st_general_setup(void)
 
   /* Load global images: */
 
-  black_text  = new Text(datadir + "/images/status/letters-black.png", TEXT_TEXT, 16,18);
-  gold_text   = new Text(datadir + "/images/status/letters-gold.png", TEXT_TEXT, 16,18);
-  silver_text = new Text(datadir + "/images/status/letters-silver.png", TEXT_TEXT, 16,18);
-  blue_text   = new Text(datadir + "/images/status/letters-blue.png", TEXT_TEXT, 16,18);
-  red_text    = new Text(datadir + "/images/status/letters-red.png", TEXT_TEXT, 16,18);
-  green_text  = new Text(datadir + "/images/status/letters-green.png", TEXT_TEXT, 16,18);
-  white_text  = new Text(datadir + "/images/status/letters-white.png", TEXT_TEXT, 16,18);
-  white_small_text = new Text(datadir + "/images/status/letters-white-small.png", TEXT_TEXT, 8,9);
-  white_big_text   = new Text(datadir + "/images/status/letters-white-big.png", TEXT_TEXT, 20,22);
-  yellow_nums = new Text(datadir + "/images/status/numbers.png", TEXT_NUM, 32,32);
+  black_text  = new Text("/images/status/letters-black.png", TEXT_TEXT, 16,18);
+  gold_text   = new Text("/images/status/letters-gold.png", TEXT_TEXT, 16,18);
+  silver_text = new Text("/images/status/letters-silver.png", TEXT_TEXT, 16,18);
+  blue_text   = new Text("/images/status/letters-blue.png", TEXT_TEXT, 16,18);
+  red_text    = new Text("/images/status/letters-red.png", TEXT_TEXT, 16,18);
+  green_text  = new Text("/images/status/letters-green.png", TEXT_TEXT, 16,18);
+  white_text  = new Text("/images/status/letters-white.png", TEXT_TEXT, 16,18);
+  white_small_text = new Text("/images/status/letters-white-small.png", TEXT_TEXT, 8,9);
+  white_big_text   = new Text("/images/status/letters-white-big.png", TEXT_TEXT, 20,22);
+  yellow_nums = new Text("/images/status/numbers.png", TEXT_NUM, 32,32);
 
   /* Load GUI/menu images: */
-  checkbox = new Surface(datadir + "/images/status/checkbox.png", USE_ALPHA);
-  checkbox_checked = new Surface(datadir + "/images/status/checkbox-checked.png", USE_ALPHA);
-  back = new Surface(datadir + "/images/status/back.png", USE_ALPHA);
-  arrow_left = new Surface(datadir + "/images/icons/left.png", USE_ALPHA);
-  arrow_right = new Surface(datadir + "/images/icons/right.png", USE_ALPHA);
+  checkbox = new Surface("/images/status/checkbox.png", USE_ALPHA);
+  checkbox_checked = new Surface("/images/status/checkbox-checked.png", USE_ALPHA);
+  back = new Surface("/images/status/back.png", USE_ALPHA);
+  arrow_left = new Surface("/images/icons/left.png", USE_ALPHA);
+  arrow_right = new Surface("/images/icons/right.png", USE_ALPHA);
 
   /* Load the mouse-cursor */
-  mouse_cursor = new MouseCursor( datadir + "/images/status/mousecursor.png",1);
+  mouse_cursor = new MouseCursor( "/images/status/mousecursor.png",1);
   MouseCursor::set_current(mouse_cursor);
   
 }
@@ -896,6 +746,7 @@ void st_shutdown(void)
   close_audio();
   SDL_Quit();
   saveconfig();
+  PHYSFS_deinit();
 }
 
 /* --- ABORT! --- */
@@ -913,18 +764,13 @@ void seticon(void)
 {
 //  int masklen;
 //  Uint8 * mask;
-  SDL_Surface * icon;
-
-
-  /* Load icon into a surface: */
-
-  icon = IMG_Load((datadir + "/images/icon.xpm").c_str());
+  SDL_Surface * icon = raw_sdl_surface_from_file("images/icon.xpm");
   if (icon == NULL)
     {
       fprintf(stderr,
-              "\nError: I could not load the icon image: %s%s\n"
+              "\nError: I could not load the icon image: %s\n"
               "The Simple DirectMedia error that occured was:\n"
-              "%s\n\n", datadir.c_str(), "/images/icon.xpm", SDL_GetError());
+              "%s\n\n", "images/icon.xpm", SDL_GetError());
       exit(1);
     }
 
@@ -999,11 +845,12 @@ void parseargs(int argc, char * argv[])
         {
           launch_leveleditor_mode = true;
         }
-      else if (strcmp(argv[i], "--datadir") == 0 
-               || strcmp(argv[i], "-d") == 0 )
+      else if (strcmp(argv[i], "--datadir") == 0 ||
+               strcmp(argv[i], "-d") == 0)
         {
+          // Datadir is parsed in st_directory_setup().
           assert(i+1 < argc);
-          datadir = argv[++i];
+          ++i;
         }
       else if (strcmp(argv[i], "--show-fps") == 0)
         {

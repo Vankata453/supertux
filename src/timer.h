@@ -57,9 +57,7 @@ class Timer
     ======================================================================*/
   int get_left();
 
-  int  get_gone();
-  void fwrite(FILE* fi);
-  void fread(FILE* fi);
+  int get_gone();
 };
 
 #endif /*SUPERTUX_TIMER_H*/

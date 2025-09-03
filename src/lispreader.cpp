@@ -75,8 +75,13 @@ _next_char (lisp_stream_t *stream)
 {
   switch (stream->type)
     {
-    case LISP_STREAM_FILE :
-      return getc(stream->v.file);
+    case LISP_STREAM_FILE:
+    {
+      char c;
+      if (!stream->v.file->next_char(c))
+        return EOF;
+      return c;
+    }
 
     case LISP_STREAM_STRING :
       {
@@ -103,8 +108,12 @@ _unget_char (char c, lisp_stream_t *stream)
   switch (stream->type)
     {
     case LISP_STREAM_FILE :
-      ungetc(c, stream->v.file);
+    {
+      char prev_c;
+      if (stream->v.file->prev_char(prev_c))
+        assert(c == prev_c);
       break;
+    }
 
     case LISP_STREAM_STRING :
       --stream->v.string.pos;
@@ -282,7 +291,7 @@ lisp_object_alloc (int type)
 }
 
 lisp_stream_t*
-lisp_stream_init_file (lisp_stream_t *stream, FILE *file)
+lisp_stream_init_file (lisp_stream_t *stream, PHYSFS_FileCharReader *file)
 {
   stream->type = LISP_STREAM_FILE;
   stream->v.file = file;
@@ -967,87 +976,6 @@ lisp_list_nth (lisp_object_t *obj, int index)
   return obj->v.cons.car;
 }
 
-void
-lisp_dump (lisp_object_t *obj, FILE *out)
-{
-  if (obj == 0)
-    {
-      fprintf(out, "()");
-      return;
-    }
-
-  switch (lisp_type(obj))
-    {
-    case LISP_TYPE_EOF :
-      fputs("#<eof>", out);
-      break;
-
-    case LISP_TYPE_PARSE_ERROR :
-      fputs("#<error>", out);
-      break;
-
-    case LISP_TYPE_INTEGER :
-      fprintf(out, "%d", lisp_integer(obj));
-      break;
-
-    case LISP_TYPE_REAL :
-      fprintf(out, "%f", lisp_real(obj));
-      break;
-
-    case LISP_TYPE_SYMBOL :
-      fputs(lisp_symbol(obj), out);
-      break;
-
-    case LISP_TYPE_STRING :
-      {
-        char *p;
-
-        fputc('"', out);
-        for (p = lisp_string(obj); *p != 0; ++p)
-          {
-            if (*p == '"' || *p == '\\')
-              fputc('\\', out);
-            fputc(*p, out);
-          }
-        fputc('"', out);
-      }
-      break;
-
-    case LISP_TYPE_CONS :
-    case LISP_TYPE_PATTERN_CONS :
-      fputs(lisp_type(obj) == LISP_TYPE_CONS ? "(" : "#?(", out);
-      while (obj != 0)
-        {
-          lisp_dump(lisp_car(obj), out);
-          obj = lisp_cdr(obj);
-          if (obj != 0)
-            {
-              if (lisp_type(obj) != LISP_TYPE_CONS
-                  && lisp_type(obj) != LISP_TYPE_PATTERN_CONS)
-                {
-                  fputs(" . ", out);
-                  lisp_dump(obj, out);
-                  break;
-                }
-              else
-                fputc(' ', out);
-            }
-        }
-      fputc(')', out);
-      break;
-
-    case LISP_TYPE_BOOLEAN :
-      if (lisp_boolean(obj))
-        fputs("#t", out);
-      else
-        fputs("#f", out);
-      break;
-
-    default :
-      assert(0);
-    }
-}
-
 using namespace std;
 
 LispReader::LispReader (lisp_object_t* l)
@@ -1070,9 +998,7 @@ LispReader::search_for(const char* name)
 
       if (!lisp_cons_p(cur) || !lisp_symbol_p (lisp_car(cur)))
         {
-          lisp_dump(cur, stdout);
-          //throw ConstruoError (std::string("LispReader: Read error in search_for ") + name);
-	  printf("LispReader: Read error in search\n");
+          printf("LispReader: Read error in search\n");
         }
       else
         {
@@ -1291,62 +1217,6 @@ LispWriter::create_lisp ()
   return lisp_obj;
 }
 
-#if 0
-void mygzungetc(char c, void* file)
-{
-  gzungetc(c, file);
-}
-
-lisp_stream_t* lisp_stream_init_gzfile (lisp_stream_t *stream, gzFile file)
-{
-  return lisp_stream_init_any (stream, file, gzgetc, mygzungetc);
-}
-#endif
-
-lisp_object_t* lisp_read_from_gzfile(const char* filename)
-{
-  bool done = false;
-  lisp_object_t* root_obj = 0;
-  int chunk_size = 128 * 1024;
-  int buf_pos = 0;
-  int try_number = 1;
-  char* buf = static_cast<char*>(malloc(chunk_size));
-  assert(buf);
-
-  gzFile in = gzopen(filename, "r");
-
-  while (!done)
-    {
-      int ret = gzread(in, buf + buf_pos, chunk_size);
-      if (ret == -1)
-        {
-          free (buf);
-          assert(!"Error while reading from file");
-        }
-      else if (ret == chunk_size) // buffer got full, eof not yet there so resize
-        {
-          buf_pos = chunk_size * try_number;
-          try_number += 1;
-          buf = static_cast<char*>(realloc(buf, chunk_size * try_number));
-          assert(buf);
-        }
-      else 
-        {
-          // everything fine, encountered EOF 
-          done = true;
-        }
-    }
-      
-  lisp_stream_t stream;
-  lisp_stream_init_string (&stream, buf);
-  root_obj = lisp_read (&stream);
-      
-  free(buf);
-  gzclose(in);
-
-  return root_obj;
-}
-
 bool has_suffix(const char* data, const char* suffix)
 {
   int suffix_len = strlen(suffix);
@@ -1368,24 +1238,17 @@ lisp_object_t* lisp_read_from_file(const std::string& filename)
 {
   lisp_stream_t stream;
 
-  if (has_suffix(filename.c_str(), ".gz"))
+  lisp_object_t* obj = 0;
+  PHYSFS_File* in = PHYSFS_openRead(filename.c_str());
+  if (in)
     {
-      return lisp_read_from_gzfile(filename.c_str());
+      PHYSFS_FileCharReader reader(in);
+      lisp_stream_init_file(&stream, &reader);
+      obj = lisp_read(&stream);
+      PHYSFS_close(in);
     }
-  else
-    {
-      lisp_object_t* obj = 0;
-      FILE* in = fopen(filename.c_str(), "r");
 
-      if (in)
-        {
-          lisp_stream_init_file(&stream, in);
-          obj = lisp_read(&stream);
-          fclose(in);
-        }
-
-      return obj;
-    }
+  return obj;
 }
 
 // EOF //

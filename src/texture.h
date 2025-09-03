@@ -30,6 +30,7 @@
 #include <list>
 #include "screen.h"
 
+SDL_Surface* raw_sdl_surface_from_file(const char* filename);
 SDL_Surface* sdl_surface_from_sdl_surface(SDL_Surface* sdl_surf, int use_alpha);
 
 class SurfaceImpl;

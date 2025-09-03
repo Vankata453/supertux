@@ -97,6 +97,16 @@ fi
 
 AC_CHECK_LIB(z, gzopen,, AC_MSG_ERROR([*** zlib is missing]))
 
+# Check for PhysFS header
+AC_CHECK_HEADERS([physfs.h], ,
+  [AC_MSG_ERROR([physfs.h not found. Install PhysFS development headers.])]
+)
+# Check for PhysFS library
+AC_CHECK_LIB([physfs], [PHYSFS_init], ,
+  [AC_MSG_ERROR([PhysFS library not found. Install PhysFS.])]
+)
+CXXFLAGS="$CXXFLAGS -lphysfs"
+
 CXXFLAGS="$CXXFLAGS -DDATA_PREFIX='\"$datadir/supertux\"'" 
 
 dnl Checks for library functions.

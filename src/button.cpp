@@ -53,13 +53,13 @@ void Button::add_icon(std::string icon_file, int mw, int mh)
 
   if(!icon_file.empty())
   {
-    snprintf(filename, 1024, "%s/%s", datadir.c_str(), icon_file.c_str());
+    snprintf(filename, 1024, "%s", icon_file.c_str());
     if(!faccessible(filename))
-      snprintf(filename, 1024, "%s/images/icons/default-icon.png", datadir.c_str());
+      snprintf(filename, 1024, "images/icons/default-icon.png");
   }
   else
   {
-    snprintf(filename, 1024, "%s/images/icons/default-icon.png", datadir.c_str());
+    snprintf(filename, 1024, "images/icons/default-icon.png");
   }
 
   if(mw != -1 || mh != -1)

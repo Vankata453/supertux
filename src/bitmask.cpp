@@ -24,7 +24,6 @@
  */
 
 #include <stdlib.h>
-#include <stdio.h>
 #include "bitmask.h"
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))

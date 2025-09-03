@@ -20,8 +20,8 @@
 
 #include "globals.h"
 
-/** The datadir prefix prepended when loading game data file */
-std::string datadir;
+std::string real_datadir;
+std::string real_userdir;
 
 JoystickKeymap::JoystickKeymap()
 {
@@ -62,9 +62,6 @@ float game_speed = 1.0f;
 int joystick_num = 0;
 char* level_startup_file = 0;
 bool launch_leveleditor_mode = false;
-
-/* SuperTux directory ($HOME/.supertux) and save directory($HOME/.supertux/save) */
-char *st_dir, *st_save_dir;
 
 SDL_Joystick * js;
 

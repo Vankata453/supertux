@@ -23,9 +23,20 @@
 #include <algorithm>
 #include "SDL.h"
 #include "SDL_image.h"
+#include "physfs_util.h"
 #include "texture.h"
 #include "globals.h"
 #include "setup.h"
+
+SDL_Surface* raw_sdl_surface_from_file(const char* filename)
+{
+  SDL_Surface* surface = IMG_Load_RW(get_physfs_SDLRWops(filename), 1);
+  if (!surface)
+    throw std::runtime_error("Couldn't load image '" + std::string(filename) + "': " + SDL_GetError());
+
+  return surface;
+}
+
 
 Surface::Surfaces Surface::surfaces;
 
@@ -313,7 +324,7 @@ sdl_surface_part_from_file(const std::string& file, int x, int y, int w, int h, 
   SDL_Surface * temp;
   SDL_Surface * conv;
 
-  temp = IMG_Load(file.c_str());
+  temp = raw_sdl_surface_from_file(file.c_str());
 
   if (temp == NULL)
     st_abort("Can't load", file);
@@ -364,7 +375,7 @@ sdl_surface_from_file(const std::string& file, int use_alpha)
   SDL_Surface* sdl_surface;
   SDL_Surface* temp;
 
-  temp = IMG_Load(file.c_str());
+  temp = raw_sdl_surface_from_file(file.c_str());
 
   if (temp == NULL)
     st_abort("Can't load", file);
