@@ -131,7 +131,7 @@ void LevelSubset::load(char *subset)
   PHYSFS_close(fi);
 
   snprintf(str, 1024, "%s.png", filename);
-  if(faccessible(str))
+  if(PHYSFS_exists(str))
     {
       delete image;
       image = new Surface(str,IGNORE_ALPHA);
@@ -146,7 +146,7 @@ void LevelSubset::load(char *subset)
     {
       /* Get the number of levels in this subset */
       snprintf(filename, 1024, "levels/%s/level%d.stl", subset, i);
-      if(!faccessible(filename))
+      if(!PHYSFS_exists(filename))
         break;
     }
   levels = --i;
@@ -630,7 +630,7 @@ Level::load_gfx()
     {
       char fname[1024];
       snprintf(fname, 1024, "background/%s", bkgd_image.c_str());
-      if(!faccessible(fname))
+      if(!PHYSFS_exists(fname))
         snprintf(fname, 1024, "images/background/%s", bkgd_image.c_str());
       delete img_bkgd;
       img_bkgd = new Surface(fname, IGNORE_ALPHA);
@@ -648,7 +648,7 @@ void Level::load_image(Surface** ptexture, string theme,const  char * file, int 
   char fname[1024];
 
   snprintf(fname, 1024, "themes/%s/%s", theme.c_str(), file);
-  if(!faccessible(fname))
+  if(!PHYSFS_exists(fname))
     snprintf(fname, 1024, "images/themes/%s/%s", theme.c_str(), file);
 
   *ptexture = new Surface(fname, use_alpha);

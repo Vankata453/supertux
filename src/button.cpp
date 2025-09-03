@@ -20,7 +20,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include "setup.h"
+#include <physfs.h>
 #include "screen.h"
 #include "globals.h"
 #include "button.h"
@@ -54,7 +54,7 @@ void Button::add_icon(std::string icon_file, int mw, int mh)
   if(!icon_file.empty())
   {
     snprintf(filename, 1024, "%s", icon_file.c_str());
-    if(!faccessible(filename))
+    if(!PHYSFS_exists(filename))
       snprintf(filename, 1024, "images/icons/default-icon.png");
   }
   else

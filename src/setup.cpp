@@ -71,17 +71,6 @@
 void seticon(void);
 void usage(char * prog, int ret);
 
-/* Does the given file exist and is it accessible? */
-int faccessible(const char *filename)
-{
-  return PHYSFS_exists(filename);
-}
-
-int fcreatedir(const char* dir)
-{
-  return PHYSFS_mkdir(dir);
-}
-
 static PHYSFS_EnumerateCallbackResult physfs_enumerate_dirs(void* data, const char* origdir, const char* fname)
 {
   const std::string full_path = std::string(origdir) + "/" + std::string(fname);

@@ -24,8 +24,6 @@
 #include "sound.h"
 #include "type.h"
 
-int faccessible(const char *filename);
-int fcreatedir(const char* dir);
 string_list_type dsubdirs(const char *path, const char* expected_file);
 string_list_type dfiles(const char *path, const char* glob, const char* exception_str);
 void free_strings(char **strings, int num);
