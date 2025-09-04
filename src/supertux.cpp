@@ -39,6 +39,7 @@ int main(int argc, char** argv)
   st_directory_setup(argc, argv);
   parseargs(argc, argv);
   
+  st_addons_setup();
   st_audio_setup();
   st_video_setup();
   st_joystick_setup();

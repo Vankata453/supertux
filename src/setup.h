@@ -28,6 +28,7 @@ string_list_type dsubdirs(const char *path, const char* expected_file);
 string_list_type dfiles(const char *path, const char* glob, const char* exception_str);
 void free_strings(char **strings, int num);
 void st_directory_setup(int argc, char** const argv);
+void st_addons_setup();
 void st_general_setup(void);
 void st_general_free();
 void st_video_setup_sdl(void);

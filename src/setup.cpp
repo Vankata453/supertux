@@ -208,6 +208,42 @@ void st_directory_setup(int argc, char** const argv)
     throw std::runtime_error("Couldn't add '" + real_userdir + "' to PhysFS searchpath: " + std::string(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode())));
 }
 
+void st_addons_setup()
+{
+  if (!PHYSFS_exists("addons"))
+  {
+    PHYSFS_mkdir("addons");
+    return;
+  }
+
+  std::vector<std::string> archives;
+  std::function<void(const char*)> callback =
+    [&archives](const char* fname)
+    {
+      const char* dot = strrchr(fname, '.');
+      if (dot && !strcmp(dot, ".zip"))
+        archives.push_back(fname);
+    };
+  PHYSFS_enumerate("addons", &physfs_enumerate_files, &callback);
+
+  for (const std::string& archive : archives)
+  {
+    const std::string filepath = "addons/" + archive;
+    const char* realdir = PHYSFS_getRealDir(filepath.c_str());
+    if (!realdir)
+    {
+      printf("PHYSFS_getRealDir() failed for 'addons/%s': %s\n", archive.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+      return;
+    }
+    if (!PHYSFS_mount((std::string(realdir) + "/" + filepath).c_str(), nullptr, 0))
+    {
+      printf("Couldn't mount add-on archive '%s': %s\n", archive.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+      return;
+    }
+    printf("Mounted add-on archive '%s'\n", archive.c_str());
+  }
+}
+
 /* Create and setup menus. */
 void st_menu(void)
 {
