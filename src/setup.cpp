@@ -107,7 +107,7 @@ string_list_type dsubdirs(const char *path, const char* expected_file)
   string_list_type sdirs;
   string_list_init(&sdirs);
 
-  static std::function<void(const char*)> callback =
+  std::function<void(const char*)> callback =
     [&sdirs, path, expected_file](const char* fname)
     {
       if (expected_file &&
@@ -127,7 +127,7 @@ string_list_type dfiles(const char *path, const char* glob, const char* exceptio
   string_list_type sfiles;
   string_list_init(&sfiles);
 
-  static std::function<void(const char*)> callback =
+  std::function<void(const char*)> callback =
     [&sfiles, glob, exception_str](const char* fname)
     {
       if ((!exception_str || !strstr(fname, exception_str)) &&
