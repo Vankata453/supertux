@@ -437,6 +437,10 @@ void st_general_setup(void)
 
   seticon();
 
+  /* Hide default cursor */
+
+  SDL_ShowCursor(SDL_DISABLE);
+
   /* Unicode needed for input handling: */
 
   SDL_EnableUNICODE(1);

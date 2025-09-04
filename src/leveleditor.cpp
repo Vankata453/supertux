@@ -681,6 +681,8 @@ void save_subset_settings_menu()
 
 void le_unload_level()
 {
+  if (!le_world) return;
+
   if(le_level_changed)
   {
     le_drawlevel();
@@ -1076,7 +1078,10 @@ void le_checkevents()
     {
       Menu::current()->event(event);
       if(!le_world && !Menu::current())
-        Menu::set_current(leveleditor_menu);
+      {
+        done = 1;
+        return;
+      }
     }
     else
     {
@@ -1231,7 +1236,8 @@ void le_checkevents()
       }
       else if(event.type == SDL_QUIT) /* window closing */
       {
-      done = 1;
+        done = 1;
+        return;
       }
     }
 
@@ -1576,7 +1582,6 @@ void le_checkevents()
   if(le_mouse_pressed[RIGHT])
     show_minimap = true;
   }
-
 }
 
 void le_highlight_selection()

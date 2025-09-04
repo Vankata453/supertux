@@ -32,15 +32,11 @@ MouseCursor::MouseCursor(std::string cursor_file, int frames) : mid_x(0), mid_y(
 
   timer.init(false);
   timer.start(MC_FRAME_PERIOD);
-  
-  SDL_ShowCursor(SDL_DISABLE);
 }
 
 MouseCursor::~MouseCursor()
 {
   delete cursor;
-
-  SDL_ShowCursor(SDL_ENABLE);
 }
 
 int MouseCursor::state()
