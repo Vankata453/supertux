@@ -232,15 +232,131 @@ void st_addons_setup()
     const char* realdir = PHYSFS_getRealDir(filepath.c_str());
     if (!realdir)
     {
-      printf("PHYSFS_getRealDir() failed for 'addons/%s': %s\n", archive.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
-      return;
+      printf("ERROR: PHYSFS_getRealDir() failed for 'addons/%s': %s\n", archive.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+      continue;
     }
-    if (!PHYSFS_mount((std::string(realdir) + "/" + filepath).c_str(), nullptr, 0))
+    const std::string full_archive_path = std::string(realdir) + "/" + filepath;
+
+    // Generate valid add-on ID: Replace spaces with underscores, skip other invalid lisp symbol characters
+    const std::string addon_id;
     {
-      printf("Couldn't mount add-on archive '%s': %s\n", archive.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
-      return;
+      const std::string raw_addon_id = archive.substr(0, archive.size() - 4);
+      for (char c : raw_addon_id)
+      {
+        if (c == ' ')
+        {
+          const_cast<std::string&>(addon_id) += '_';
+        }
+        else if (isalnum(c) ||
+            c == '_' || c == '-' || c == '!' || c == '?' ||
+            c == ':' || c == '+' || c == '*' || c == '/' ||
+            c == '=' || c == '<' || c == '>' || c == '$' ||
+            c == '%' || c == '&' || c == '~' || c == '^' ||
+            c == '.')
+        {
+          const_cast<std::string&>(addon_id) += c;
+        }
+      }
     }
-    printf("Mounted add-on archive '%s'\n", archive.c_str());
+    if (addon_id.empty())
+    {
+      printf("ERROR: Couldn't process add-on archive '%s': Name leads to an empty ID!\n", archive.c_str());
+      continue;
+    }
+    if (addons.find(addon_id) != addons.end())
+    {
+      printf("ERROR: Couldn't process add-on archive '%s': Add-on with the same ID ('%s') exists!\n", archive.c_str(), addon_id.c_str());
+      continue;
+    }
+
+    // Mount add-on temporarily just to parse "info" file
+    if (!PHYSFS_mount(full_archive_path.c_str(), ("addons/" + addon_id).c_str(), 0))
+    {
+      printf("ERROR: Couldn't temporarily mount add-on archive '%s': %s\n", archive.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+      continue;
+    }
+    lisp_object_t* root_obj = lisp_read_from_file(("addons/" + addon_id + "/info").c_str());
+    PHYSFS_unmount(full_archive_path.c_str());
+
+    // Parse add-on "info"
+    if (!root_obj)
+    {
+      printf("ERROR: Couldn't find 'info' file in add-on archive '%s'!\n", archive.c_str());
+      continue;
+    }
+    if (root_obj->type == LISP_TYPE_EOF || root_obj->type == LISP_TYPE_PARSE_ERROR)
+    {
+      printf("ERROR: Couldn't parse 'info' file from add-on archive '%s'!\n", archive.c_str());
+      continue;
+    }
+    if (strcmp(lisp_symbol(lisp_car(root_obj)), "supertux-addoninfo") != 0)
+    {
+      printf("ERROR: 'info' file from add-on archive '%s' is not declared 'supertux-addoninfo'!\n", archive.c_str());
+      continue;
+    }
+    LispReader reader(lisp_cdr(root_obj));
+    Addon addon(archive);
+    if (!reader.read_string("title", &addon.title))
+      addon.title = addon_id;
+    if (!reader.read_string("author", &addon.author))
+      addon.author = "Unknown";
+    reader.read_bool("overrides-data", &addon.overrides_data);
+    reader.read_bool("resource-pack", &addon.resource_pack);
+    reader.read_string_vector("dependencies", &addon.dependencies);
+    lisp_free(root_obj);
+    printf("SUCCESS: Successfully parsed 'info' from add-on archive '%s' (id: '%s') (title: '%s')\n", archive.c_str(),
+      addon_id.c_str(), addon.title.c_str());
+
+    // Add add-on object to map
+    addons.insert({ addon_id, addon });
+    const bool enabled = addons_enabled.insert({ addon_id, false }).first->second;
+
+    // Mount add-on, if enabled
+    if (!enabled) continue;
+    if (!PHYSFS_mount(full_archive_path.c_str(), nullptr, !addon.overrides_data))
+    {
+      printf("ERROR: Couldn't mount add-on archive '%s': %s\n", archive.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+      continue;
+    }
+    printf("SUCCESS: Mounted add-on archive '%s' (prepended: %s)\n", archive.c_str(), addon.overrides_data ? "yes" : "no");
+  }
+
+  // Ensure each enabled add-on has its dependencies enabled, if they are installed
+  for (const auto& addon_entry : addons)
+  {
+    if (!addons_enabled[addon_entry.first])
+      continue;
+
+    for (const std::string& dep_id : addon_entry.second.dependencies)
+    {
+      const auto dep_it = addons.find(dep_id);
+      if (dep_it == addons.end())
+      {
+        printf("WARNING: Dependency '%s' of add-on '%s' is not available!\n", dep_id.c_str(), addon_entry.first.c_str());
+        continue;
+      }
+
+      if (addons_enabled[dep_id])
+        continue;
+      addons_enabled[dep_id] = true;
+
+      const Addon& dep_addon = dep_it->second;
+
+      const std::string filepath = "addons/" + dep_addon.filename;
+      const char* realdir = PHYSFS_getRealDir(filepath.c_str());
+      if (!realdir)
+      {
+        printf("ERROR: PHYSFS_getRealDir() failed for 'addons/%s': %s\n", dep_addon.filename.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+        continue;
+      }
+
+      if (!PHYSFS_mount((std::string(realdir) + "/" + filepath).c_str(), nullptr, !dep_addon.overrides_data))
+      {
+        printf("ERROR: Couldn't mount add-on archive '%s': %s\n", dep_addon.filename.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+        continue;
+      }
+      printf("SUCCESS: Mounted add-on archive '%s' (prepended: %s)\n", dep_addon.filename.c_str(), dep_addon.overrides_data ? "yes" : "no");
+    }
   }
 }
 

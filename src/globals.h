@@ -23,6 +23,7 @@
 #define SUPERTUX_GLOBALS_H
 
 #include <string>
+#include <map>
 #include <SDL.h>
 #include "text.h"
 #include "menu.h"
@@ -46,6 +47,24 @@ struct JoystickKeymap
 };
 
 extern JoystickKeymap joystick_keymap;
+
+struct Addon final
+{
+  Addon(const std::string& filename_) :
+    filename(filename_)
+  {}
+  const std::string filename;
+
+  std::string title;
+  std::string author;
+
+  bool overrides_data = false;
+  bool resource_pack = false;
+
+  std::vector<std::string> dependencies;
+};
+extern std::map<std::string, Addon> addons;
+extern std::map<std::string, bool> addons_enabled;
 
 extern SDL_Surface * screen;
 extern Text* black_text;

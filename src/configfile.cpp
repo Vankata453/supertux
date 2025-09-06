@@ -106,6 +106,25 @@ void loadconfig(void)
   reader.read_int ("keyboard-right", &keymap.right);
   reader.read_int ("keyboard-fire", &keymap.fire);
 
+  lisp_object_t* addon_cur;
+  if (reader.read_lisp("addons", &addon_cur))
+  {
+    while (!lisp_nil_p(addon_cur))
+    {
+      lisp_object_t* addon_lisp_el = lisp_car(addon_cur);
+
+      const char* addon_id = lisp_symbol(lisp_car(addon_lisp_el));
+      lisp_object_t* addon_val = lisp_car(lisp_cdr(addon_lisp_el));
+
+      if (!lisp_boolean_p(addon_val))
+        st_abort("LispReader expected type bool at token: ", addon_id);
+
+      addons_enabled.insert({ addon_id, lisp_boolean(addon_val) });
+
+      addon_cur = lisp_cdr(addon_cur);
+    }
+  }
+
   lisp_free(root_obj);
   PHYSFS_close(file);
 }
@@ -143,6 +162,11 @@ void saveconfig (void)
       PHYSFS_writeFormatted(config, "\t(keyboard-left  %d)\n", keymap.left);
       PHYSFS_writeFormatted(config, "\t(keyboard-right %d)\n", keymap.right);
       PHYSFS_writeFormatted(config, "\t(keyboard-fire  %d)\n", keymap.fire);
+
+      PHYSFS_writeFormatted(config, "\t(addons\n");
+      for (const auto& addon_info : addons_enabled)
+        PHYSFS_writeFormatted(config, "\t\t(%s #%c)\n", addon_info.first.c_str(), addon_info.second ? 't' : 'f');
+      PHYSFS_writeFormatted(config, "\t)\n");
 
       PHYSFS_writeFormatted(config, ")\n");
 

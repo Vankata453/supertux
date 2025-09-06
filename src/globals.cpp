@@ -37,6 +37,9 @@ JoystickKeymap::JoystickKeymap()
 
 JoystickKeymap joystick_keymap;
 
+std::map<std::string, Addon> addons;
+std::map<std::string, bool> addons_enabled;
+
 SDL_Surface * screen;
 Text* black_text;
 Text* gold_text;
