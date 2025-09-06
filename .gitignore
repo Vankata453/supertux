@@ -1,0 +1,12 @@
+aclocal.m4
+autom4te.cache
+compile
+config*
+depcomp
+install-sh
+missing
+Makefile*
+*/Makefile*
+*/*.o
+*/.deps
+src/supertux
