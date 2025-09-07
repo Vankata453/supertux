@@ -67,6 +67,23 @@ static std::string current_contrib_subset;
 
 static string_list_type worldmap_list;
 
+void index_worldmaps()
+{
+  string_list_free(&worldmap_list);
+
+  /* Generating contrib maps by only using a string_list */
+  // Since there isn't any world dir or anything, add a hardcoded entry for Bonus Island
+  string_list_init(&worldmap_list);
+
+  string_list_type files = dfiles("levels/worldmaps/", ".stwm", "couldn't list worldmaps");
+  for(int i = 0; i < files.num_items; ++i) {
+    if(strcmp(files.item[i], "world1.stwm") == 0)
+      continue;
+    string_list_add_item(&worldmap_list, files.item[i]);
+  }
+  string_list_free(&files);
+}
+
 void free_contrib_menu()
 {
   for(std::vector<LevelSubset*>::iterator i = contrib_subsets.begin();
@@ -82,6 +99,7 @@ void generate_contrib_menu()
   string_list_type level_subsets = dsubdirs("/levels", "info");
 
   free_contrib_menu();
+  index_worldmaps();
 
   contrib_menu->additem(MN_LABEL,"Bonus Levels",0,0);
   contrib_menu->additem(MN_HL,"",0,0);
@@ -248,18 +266,6 @@ void title(void)
   bkg_title = new Surface("/images/title/background.jpg", IGNORE_ALPHA);
   logo = new Surface("/images/title/logo.png", USE_ALPHA);
   img_choose_subset = new Surface("/images/status/choose-level-subset.png", USE_ALPHA);
-
-  /* Generating contrib maps by only using a string_list */
-  // Since there isn't any world dir or anything, add a hardcoded entry for Bonus Island
-  string_list_init(&worldmap_list);
-
-  string_list_type files = dfiles("levels/worldmaps/", ".stwm", "couldn't list worldmaps");
-  for(int i = 0; i < files.num_items; ++i) {
-    if(strcmp(files.item[i], "world1.stwm") == 0)
-      continue;
-    string_list_add_item(&worldmap_list, files.item[i]);
-  }
-  string_list_free(&files);
 
   /* --- Main title loop: --- */
   frame = 0;
