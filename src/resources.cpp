@@ -226,6 +226,9 @@ void unloadshared(void)
   for (i = 0; i < NUM_SOUNDS; i++)
     free_chunk(sounds[i]);
 
+  herring_song.free();
+  level_end_song.free();
+
   delete sprite_manager;
   sprite_manager = 0;
   delete music_manager;

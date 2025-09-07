@@ -33,6 +33,8 @@ public:
 
   MusicRef& operator= (const MusicRef& other);
 
+  void free();
+
 private:
   friend class MusicManager;
   MusicRef(MusicManager::MusicResource* music);

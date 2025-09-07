@@ -57,13 +57,15 @@ MusicManager::exists_music(const std::string& file)
   // song already loaded?
   std::map<std::string, MusicResource>::iterator i = musics.find(file);
   if(i != musics.end()) {
-    return true;                                      
+    return true;
   }
 
+  SDL_RWops* rw;
   Mix_Music* song;
   try
   {
-    song = Mix_LoadMUS_RW(get_physfs_SDLRWops(file.c_str()));
+    rw = get_physfs_SDLRWops(file.c_str());
+    song = Mix_LoadMUS_RW(rw);
     if (!song)
       return false;
   }
@@ -79,16 +81,25 @@ MusicManager::exists_music(const std::string& file)
         std::make_pair<std::string, MusicResource> (std::string(file), MusicResource()));
   MusicResource& resource = result.first->second;
   resource.manager = this;
+  resource.rw = rw;
   resource.music = song;
 
   return true;
 }
 
 void
-MusicManager::free_music(MusicResource* )
+MusicManager::free_music(MusicResource* music)
 {
-  // TODO free music, currently we can't do this since SDL_mixer seems to have
-  // some bugs if you load/free alot of mod files.  
+  auto it = musics.begin();
+  while (it != musics.end())
+  {
+    if (&it->second == music)
+    {
+      musics.erase(it);
+      break;
+    }
+    ++it;
+  }
 }
 
 void
@@ -101,7 +112,11 @@ MusicManager::play_music(const MusicRef& musicref, int loops)
     return;
 
   if(current_music)
+  {
     current_music->refcount--;
+    if(current_music->refcount == 0)
+      free_music(current_music);
+  }
   
   current_music = musicref.music;
   current_music->refcount++;
@@ -145,7 +160,10 @@ MusicManager::enable_music(bool enable)
 
 MusicManager::MusicResource::~MusicResource()
 {
-  // buggy SDL_mixer :-/
-  // Mix_FreeMusic(music);
-}
+  if (music)
+    Mix_FreeMusic(music);
 
+  // Mix_LoadMUS_RW in SDL_mixer 1.x does not automatically free RWops
+  if (rw)
+    SDL_RWclose(rw);
+}

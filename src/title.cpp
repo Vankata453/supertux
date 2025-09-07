@@ -324,8 +324,7 @@ void title(void)
         
           if(menu == main_menu)
             {
-              MusicManager* music_manager;
-	      MusicRef menu_song;
+              MusicRef menu_song;
               switch (main_menu->check())
                 {
                 case MNID_STARTGAME:
@@ -345,12 +344,9 @@ void title(void)
                   Menu::set_current(main_menu);
                   break;
                 case MNID_CREDITS:
-                  music_manager = new MusicManager();
-                  menu_song  = music_manager->load_music("/music/credits.ogg");
-                  music_manager->halt_music();
+                  menu_song = music_manager->load_music("/music/credits.ogg");
                   music_manager->play_music(menu_song,0);
                   display_text_file("CREDITS", bkg_title, SCROLL_SPEED_CREDITS);
-                  music_manager->halt_music();
                   menu_song = music_manager->load_music("/music/theme.mod");
                   music_manager->play_music(menu_song);
                   Menu::set_current(main_menu);

@@ -51,6 +51,7 @@ private:
     ~MusicResource();
 
     MusicManager* manager;
+    SDL_RWops* rw;
     Mix_Music* music;
     int refcount;
   };
