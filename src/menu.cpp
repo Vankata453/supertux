@@ -57,6 +57,9 @@ Menu* load_game_menu = 0;
 Menu* save_game_menu = 0;
 Menu* contrib_menu   = 0;
 Menu* contrib_subset_menu   = 0;
+Menu* addons_menu   = 0;
+
+Menu* restart_info_menu = 0;
 
 std::vector<Menu*> Menu::last_menus;
 Menu* Menu::current_ = 0;

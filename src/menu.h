@@ -32,6 +32,7 @@
 enum MainMenuIDs {
   MNID_STARTGAME,
   MNID_CONTRIB,
+  MNID_ADDONS,
   MNID_OPTIONMENU,
   MNID_LEVELEDITOR,
   MNID_CREDITS,
@@ -145,10 +146,10 @@ private:
   static std::vector<Menu*> last_menus;
   static Menu* current_;
 
+public:
   static void push_current(Menu* pmenu);
   static void pop_current();
 
-public:
   /** Set the current menu, if pmenu is NULL, hide the current menu */
   static void set_current(Menu* pmenu);
 
@@ -235,6 +236,7 @@ extern Surface* arrow_right;
 
 extern Menu* contrib_menu;
 extern Menu* contrib_subset_menu;
+extern Menu* addons_menu;
 extern Menu* main_menu;
 extern Menu* game_menu;
 extern Menu* worldmap_menu;
@@ -244,6 +246,8 @@ extern Menu* options_joystick_menu;
 extern Menu* highscore_menu;
 extern Menu* load_game_menu;
 extern Menu* save_game_menu;
+
+extern Menu* restart_info_menu;
 
 #endif /*SUPERTUX_MENU_H*/
 

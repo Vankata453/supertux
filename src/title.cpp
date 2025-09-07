@@ -331,6 +331,9 @@ void title(void)
                   puts("Entering contrib menu");
                   generate_contrib_menu();
                   break;
+                case MNID_ADDONS:
+                  generate_addons_menu(true);
+                  break;
                 case MNID_LEVELEDITOR:
                   leveleditor();
                   Menu::set_current(main_menu);
@@ -396,6 +399,10 @@ void title(void)
           else if (menu == contrib_subset_menu)
             {
               check_contrib_subset_menu();
+            }
+          else if (menu == addons_menu)
+            {
+              process_addons_menu();
             }
         }
 
