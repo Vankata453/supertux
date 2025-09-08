@@ -628,6 +628,7 @@ Menu::draw_item(int index, // Position of the current item in the menu
 
   case MN_TOGGLE:
     {
+      x_pos -= checkbox->impl->w / 2;
       text_font->draw_align(pitem.text, x_pos, y_pos, A_HMIDDLE, A_VMIDDLE, shadow_size);
 
       if(pitem.toggled)
