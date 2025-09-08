@@ -495,6 +495,9 @@ void st_menu(void)
   restart_info_menu->additem(MN_BACK, "Back", 0, 0);
 }
 
+static int addons_menu_page = 0;
+constexpr int addons_per_page = 10;
+
 void generate_addons_menu(bool addons_check)
 {
   addons_menu->clear();
@@ -503,7 +506,11 @@ void generate_addons_menu(bool addons_check)
   if (addons_check)
     st_addons_check();
 
-  addons_menu->additem(MN_LABEL,"Add-ons", 0, 0);
+  addons_menu->additem(MN_LABEL,"Add-ons (Page "
+      + std::to_string(addons_menu_page + 1) + "/"
+      + std::to_string(static_cast<int>(addons.size()) / addons_per_page
+          + (static_cast<int>(addons.size()) % addons_per_page > 0 ? 1 : 0))
+      + ")", 0, 0);
   addons_menu->additem(MN_HL, "", 0, 0);
 
   // Variables related to trimming add-on title/author on menu
@@ -512,10 +519,12 @@ void generate_addons_menu(bool addons_check)
   constexpr int extra_horizontal_space = 100;
   const int remaining_data_len = (screen->w - strlen("\"\" by \"\"") * white_text->w - extra_horizontal_space) / white_text->w;
 
-  int idx = -1;
-  for (const auto& addon_entry : addons)
+  int idx = addons_menu_page * addons_per_page;
+  auto addon_it = addons.begin();
+  std::advance(addon_it, idx);
+  for (; addon_it != addons.end(); ++addon_it)
   {
-    const Addon& addon = addon_entry.second;
+    const Addon& addon = addon_it->second;
 
     // Trim add-on title and/or author if the text wouldn't fit on screen
     std::string text = "\"" + addon.title + "\" by \"" + addon.author + "\"";
@@ -547,8 +556,22 @@ void generate_addons_menu(bool addons_check)
       text = "\"" + trimmed_title + "\" by \"" + trimmed_author + "\"";
     }
 
-    addons_menu->additem(MN_TOGGLE, text, addons_enabled[addon_entry.first], 0, ++idx);
+    addons_menu->additem(MN_TOGGLE, text, addons_enabled[addon_it->first], 0, idx++);
+    if (idx >= (addons_menu_page + 1) * addons_per_page)
+      break;
   }
+
+  addons_menu->additem(MN_HL, "", 0, 0);
+
+  if (addons_menu_page > 0)
+    addons_menu->additem(MN_PURE_ACTION, "Previous page", 0, 0, MNID_PREV_PAGE);
+  else
+    addons_menu->additem(MN_DEACTIVE, "Previous page", 0, 0, MNID_PREV_PAGE);
+
+  if (static_cast<int>(addons.size()) > (addons_menu_page + 1) * addons_per_page)
+    addons_menu->additem(MN_PURE_ACTION, "Next page", 0, 0, MNID_NEXT_PAGE);
+  else
+    addons_menu->additem(MN_DEACTIVE, "Next page", 0, 0, MNID_NEXT_PAGE);
 
   addons_menu->additem(MN_HL, "", 0, 0);
   addons_menu->additem(MN_BACK, "Back", 0, 0);
@@ -569,7 +592,23 @@ void update_load_save_game_menu(Menu* pmenu)
 void process_addons_menu()
 {
   const int idx = addons_menu->check();
-  if (idx < 0) return;
+  if (idx < 0)
+  {
+    switch (idx)
+    {
+      case MNID_PREV_PAGE:
+        assert(addons_menu_page > 0);
+        --addons_menu_page;
+        generate_addons_menu(false);
+        break;
+      case MNID_NEXT_PAGE:
+        assert(static_cast<int>(addons.size()) > (addons_menu_page + 1) * addons_per_page);
+        ++addons_menu_page;
+        generate_addons_menu(false);
+        break;
+    }
+    return;
+  }
 
   auto addon_it = addons.begin();
   std::advance(addon_it, idx);

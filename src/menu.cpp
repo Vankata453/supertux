@@ -642,6 +642,7 @@ Menu::draw_item(int index, // Position of the current item in the menu
       break;
     }
   case MN_ACTION:
+  case MN_PURE_ACTION:
     text_font->draw_align(pitem.text, x_pos, y_pos, A_HMIDDLE, A_VMIDDLE, shadow_size);
     break;
 

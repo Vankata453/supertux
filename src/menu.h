@@ -62,6 +62,11 @@ enum WorldMapMenuIDs {
   MNID_QUITWORLDMAP
   };
 
+enum AddonMenuIDs {
+  MNID_PREV_PAGE = -2,
+  MNID_NEXT_PAGE = -3
+  };
+
 enum LevelEditorMainMenuIDs {
   MNID_RETURNLEVELEDITOR,
   MNID_SUBSETSETTINGS,
@@ -103,6 +108,7 @@ bool confirm_dialog(std::string text);
 /* Kinds of menu items */
 enum MenuItemKind {
   MN_ACTION,
+  MN_PURE_ACTION,
   MN_GOTO,
   MN_TOGGLE,
   MN_BACK,
