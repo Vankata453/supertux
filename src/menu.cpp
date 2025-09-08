@@ -823,6 +823,10 @@ Menu::event(SDL_Event& event)
     menuaction = MENU_ACTION_HIT;
     break;
   case SDL_MOUSEBUTTONDOWN:
+    // Do not trigger on mouse wheel scroll
+    if (event.button.button > 3)
+      break;
+
     x = event.motion.x;
     y = event.motion.y;
     if(x > pos_x - get_width()/2 &&
