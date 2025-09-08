@@ -9,4 +9,8 @@ Makefile*
 */Makefile*
 */*.o
 */.deps
+*.exe
+*.dll
 src/supertux
+src/stderr.txt
+src/stdout.txt
