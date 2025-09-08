@@ -556,7 +556,9 @@ void generate_addons_menu(bool addons_check)
       text = "\"" + trimmed_title + "\" by \"" + trimmed_author + "\"";
     }
 
-    addons_menu->additem(MN_TOGGLE, text, addons_enabled[addon_it->first], 0, idx++);
+    addons_menu->additem(MN_TOGGLE, text, addons_enabled[addon_it->first], 0, idx++,
+        nullptr, addon.resource_pack ? resource_pack_addon_icon : levelset_addon_icon);
+
     if (idx >= (addons_menu_page + 1) * addons_per_page)
       break;
   }
@@ -837,6 +839,8 @@ void st_general_setup(void)
   back = new Surface("/images/status/back.png", USE_ALPHA);
   arrow_left = new Surface("/images/icons/left.png", USE_ALPHA);
   arrow_right = new Surface("/images/icons/right.png", USE_ALPHA);
+  levelset_addon_icon = new Surface("/images/icons/levelset.png", USE_ALPHA);
+  resource_pack_addon_icon = new Surface("/images/icons/resource_pack.png", USE_ALPHA);
 
   /* Load the mouse-cursor */
   mouse_cursor = new MouseCursor( "/images/status/mousecursor.png",1);
@@ -865,6 +869,8 @@ void st_general_free(void)
   delete back;
   delete arrow_left;
   delete arrow_right;
+  delete levelset_addon_icon;
+  delete resource_pack_addon_icon;
 
   /* Free mouse-cursor */
   delete mouse_cursor;

@@ -45,6 +45,8 @@ Surface* checkbox_checked;
 Surface* back;
 Surface* arrow_left;
 Surface* arrow_right;
+Surface* levelset_addon_icon;
+Surface* resource_pack_addon_icon;
 
 Menu* main_menu      = 0;
 Menu* game_menu      = 0;
@@ -157,7 +159,7 @@ Menu::set_current(Menu* menu)
 
 /* Return a pointer to a new menu item */
 MenuItem*
-MenuItem::create(MenuItemKind kind_, const char *text_, int init_toggle_, Menu* target_menu_, int id, int* int_p_)
+MenuItem::create(MenuItemKind kind_, const char *text_, int init_toggle_, Menu* target_menu_, int id, int* int_p_, Surface* icon)
 {
   MenuItem *pnew_item = new MenuItem;
 
@@ -184,6 +186,8 @@ MenuItem::create(MenuItemKind kind_, const char *text_, int init_toggle_, Menu* 
 
   pnew_item->id = id;
   pnew_item->int_p = int_p_;
+
+  pnew_item->icon = icon;
 
   pnew_item->input_flickering = false;
   pnew_item->input_flickering_timer.init(true);
@@ -328,9 +332,9 @@ void Menu::set_pos(int x, int y, float rw, float rh)
 }
 
 void
-Menu::additem(MenuItemKind kind_, const std::string& text_, int toggle_, Menu* menu_, int id, int* int_p)
+Menu::additem(MenuItemKind kind_, const std::string& text_, int toggle_, Menu* menu_, int id, int* int_p, Surface* icon)
 {
-  additem(MenuItem::create(kind_, text_.c_str(), toggle_, menu_, id, int_p));
+  additem(MenuItem::create(kind_, text_.c_str(), toggle_, menu_, id, int_p, icon));
 }
 
 /* Add an item to a menu */
@@ -500,7 +504,6 @@ Menu::draw_item(int index, // Position of the current item in the menu
 {
   MenuItem& pitem = item[index];
 
-  int font_width  = 16;
   int effect_offset = 0;
   {
     int effect_time = 0;
@@ -514,10 +517,12 @@ Menu::draw_item(int index, // Position of the current item in the menu
   int x_pos       = pos_x;
   int y_pos       = pos_y + 24*index - menu_height/2 + 12 + effect_offset;
   int shadow_size = 2;
+
+  Text* text_font = white_text;
+  const int font_width = text_font->w;
   int text_width  = strlen(pitem.text) * font_width;
   int input_width = (strlen(pitem.input)+ 1) * font_width;
   int list_width  = strlen(string_list_active(pitem.list)) * font_width;
-  Text* text_font = white_text;
 
   if (arrange_left)
     x_pos += 24 - menu_width/2 + (text_width + input_width + list_width)/2;
@@ -527,6 +532,9 @@ Menu::draw_item(int index, // Position of the current item in the menu
     shadow_size = 3;
     text_font = blue_text;
   }
+
+  if (pitem.icon)
+    pitem.icon->draw(x_pos - text_width / 2 - 20 - pitem.icon->impl->w / 2, y_pos - 8);
 
   switch (pitem.kind)
   {
@@ -663,7 +671,9 @@ int Menu::get_width() const
     if( w > menu_width )
     {
       menu_width = w;
-      if( item[i].kind == MN_TOGGLE)
+      if(item[i].kind == MN_TOGGLE)
+        menu_width += 2;
+      if(item[i].icon)
         menu_width += 2;
     }
   }

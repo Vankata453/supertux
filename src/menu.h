@@ -134,11 +134,12 @@ public:
   int id;   // item id
   string_list_type* list;
   Menu* target_menu;
+  Surface* icon;
 
   void change_text (const char *text);
   void change_input(const char *text);
 
-  static MenuItem* create(MenuItemKind kind, const char *text, int init_toggle, Menu* target_menu, int id, int* int_p);
+  static MenuItem* create(MenuItemKind kind, const char *text, int init_toggle, Menu* target_menu, int id, int* int_p, Surface* icon = nullptr);
 
   std::string get_input_with_symbol(bool active_item);   // returns the text with an input symbol
 private:
@@ -201,7 +202,7 @@ public:
   ~Menu();
 
   void additem(MenuItem* pmenu_item);
-  void additem(MenuItemKind kind, const std::string& text, int init_toggle, Menu* target_menu, int id = -1, int *int_p = NULL);
+  void additem(MenuItemKind kind, const std::string& text, int init_toggle, Menu* target_menu, int id = -1, int *int_p = NULL, Surface* icon = nullptr);
   
   void  action ();
   
@@ -239,6 +240,8 @@ extern Surface* checkbox_checked;
 extern Surface* back;
 extern Surface* arrow_left;
 extern Surface* arrow_right;
+extern Surface* levelset_addon_icon;
+extern Surface* resource_pack_addon_icon;
 
 extern Menu* contrib_menu;
 extern Menu* contrib_subset_menu;
