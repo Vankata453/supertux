@@ -506,12 +506,48 @@ void generate_addons_menu(bool addons_check)
   addons_menu->additem(MN_LABEL,"Add-ons", 0, 0);
   addons_menu->additem(MN_HL, "", 0, 0);
 
+  // Variables related to trimming add-on title/author on menu
+  constexpr int min_visible = 5;
+  constexpr int no_trim_threshold = 8;
+  constexpr int extra_horizontal_space = 100;
+  const int remaining_data_len = (screen->w - strlen("\"\" by \"\"") * white_text->w - extra_horizontal_space) / white_text->w;
+
   int idx = -1;
   for (const auto& addon_entry : addons)
   {
     const Addon& addon = addon_entry.second;
-    addons_menu->additem(MN_TOGGLE, "\"" + addon.title + "\" by \"" + addon.author + "\"",
-                         addons_enabled[addon_entry.first], 0, ++idx);
+
+    // Trim add-on title and/or author if the text wouldn't fit on screen
+    std::string text = "\"" + addon.title + "\" by \"" + addon.author + "\"";
+    if (static_cast<int>(text.size()) * white_text->w + extra_horizontal_space > screen->w &&
+        (static_cast<int>(addon.title.size()) > no_trim_threshold || static_cast<int>(addon.author.size()) > no_trim_threshold))
+    {
+      const std::string& title = addon.title;
+      const std::string& author = addon.author;
+      std::string trimmed_title = title;
+      std::string trimmed_author = author;
+
+      if (remaining_data_len >= static_cast<int>(title.size()) + min_visible)
+      {
+        // Title and the minimum required for author will fit - trim author only
+        if (static_cast<int>(author.size()) > no_trim_threshold)
+          trimmed_author = author.substr(0, std::max(min_visible, remaining_data_len - static_cast<int>(title.size()) - 3)) + "...";
+      }
+      else
+      {
+        // Full title won't fit, so trim author first
+        if (static_cast<int>(author.size()) > no_trim_threshold)
+          trimmed_author = author.substr(0, min_visible) + "...";
+
+        // Title gets all the remaining space
+        if (static_cast<int>(title.size()) > no_trim_threshold)
+          trimmed_title = title.substr(0, std::max(min_visible, remaining_data_len - static_cast<int>(trimmed_author.size()) - 3)) + "...";
+      }
+
+      text = "\"" + trimmed_title + "\" by \"" + trimmed_author + "\"";
+    }
+
+    addons_menu->additem(MN_TOGGLE, text, addons_enabled[addon_entry.first], 0, ++idx);
   }
 
   addons_menu->additem(MN_HL, "", 0, 0);
