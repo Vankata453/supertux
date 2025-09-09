@@ -50,6 +50,7 @@
 #include "tile.h"
 #include "resources.h"
 #include "worldmap.h"
+#include "intro.h"
 
 static Surface* bkg_title;
 static Surface* logo;
@@ -133,7 +134,7 @@ void check_contrib_menu()
     return;
 
   if (index < (int)contrib_subsets.size())
-    {
+  {
       // FIXME: This shouln't be busy looping
       LevelSubset& subset = * (contrib_subsets[index]);
 
@@ -154,26 +155,30 @@ void check_contrib_menu()
 
       contrib_subset_menu->additem(MN_HL,"",0,0);      
       contrib_subset_menu->additem(MN_BACK, "Back", 0, 0);
-      }
+    }
     else if(index < worldmap_list.num_items + (int)contrib_subsets.size())
-      {
+    {
+      std::string savegame = worldmap_list.item[index - contrib_subsets.size()];
+      const std::string world_id = savegame.substr(0, savegame.size() - 5); // Remove .stwm
+      savegame = "save/" + world_id + ".stsg";
+
+      const std::string intro_file = "intro-" + world_id + ".txt";
+      if (PHYSFS_exists(intro_file.c_str()) && !PHYSFS_exists(savegame.c_str()))
+        draw_intro(intro_file);
+
       // Loading fade
       fadeout();
 
       WorldMapNS::WorldMap worldmap;
       worldmap.loadmap(worldmap_list.item[index - contrib_subsets.size()]);
 //      worldmap.set_levels_as_solved();
-      std::string savegame = worldmap_list.item[index - contrib_subsets.size()];
-      // remove .stwm...
-      savegame = "save/" + savegame.substr(0, savegame.size()-5);
-      savegame = savegame + ".stsg";
       std::cout << "SaveGameName: " << savegame << "\n";
       worldmap.loadgame(savegame.c_str());
 
       worldmap.display();
 
       Menu::set_current(main_menu);
-      }
+    }
 }
 
 void check_contrib_subset_menu()

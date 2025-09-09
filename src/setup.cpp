@@ -718,9 +718,7 @@ bool process_load_game_menu()
       snprintf(slotfile, 1024, "save/slot%d.stsg", slot);
 
       if (!PHYSFS_exists(slotfile))
-        {
-          draw_intro();
-        }
+        draw_intro("intro.txt");
 
       fadeout();
       WorldMapNS::WorldMap worldmap;

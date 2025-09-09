@@ -32,10 +32,10 @@
 
 #include "screen.h"
 
-void draw_intro()
+void draw_intro(const std::string& intro_file)
 {
-if(debug_mode)
-  fade("/images/background/arctis2.jpg", 30, false);
-display_text_file("intro.txt", "/images/background/arctis2.jpg", SCROLL_SPEED_MESSAGE);
+  if(debug_mode)
+    fade("/images/background/arctis2.jpg", 30, false);
+  display_text_file(intro_file, "/images/background/arctis2.jpg", SCROLL_SPEED_MESSAGE);
 }
 
