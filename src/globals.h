@@ -51,9 +51,11 @@ extern JoystickKeymap joystick_keymap;
 struct Addon final
 {
   Addon(const std::string& filename_) :
-    filename(filename_)
+    filename(filename_),
+    mounted(false)
   {}
   const std::string filename;
+  bool mounted;
 
   std::string title;
   std::string author;

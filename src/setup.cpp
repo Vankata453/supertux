@@ -219,6 +219,85 @@ void st_addons_setup()
   st_addons_check(true);
 }
 
+void st_addons_enable(bool resource_packs, bool startup)
+{
+  // Resource packs should only be enabled on startup
+  if (resource_packs)
+    assert(startup);
+
+  for (auto& addon_entry : addons)
+  {
+    Addon& addon = addon_entry.second;
+    if (addon.resource_pack != resource_packs ||
+        // Do not actually enable add-ons which override data after game has started
+        (!startup && addon.overrides_data))
+      continue;
+
+    // Mount add-on, if enabled and not yet mounted
+    if (addon.mounted || !addons_enabled[addon_entry.first]) continue;
+    const std::string filepath = "addons/" + addon.filename;
+    const char* realdir = PHYSFS_getRealDir(filepath.c_str());
+    if (!realdir)
+    {
+      printf("[ADD-ONS] ERROR: PHYSFS_getRealDir() failed for 'addons/%s': %s\n", addon.filename.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+      continue;
+    }
+    if (!PHYSFS_mount((std::string(realdir) + "/" + filepath).c_str(), nullptr, !addon.overrides_data))
+    {
+      printf("[ADD-ONS] ERROR: Couldn't mount add-on archive '%s': %s\n", addon.filename.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+      continue;
+    }
+    addon.mounted = true;
+    printf("[ADD-ONS] SUCCESS: Mounted add-on archive '%s' (resource pack: %s) (prepended: %s)\n", addon.filename.c_str(),
+      addon.resource_pack ? "yes" : "no", addon.overrides_data ? "yes" : "no");
+  }
+
+  // Ensure each enabled add-on has its dependencies enabled, if they are installed
+  for (const auto& addon_entry : addons)
+  {
+    if ((resource_packs && !addon_entry.second.resource_pack) ||
+        !addons_enabled[addon_entry.first])
+      continue;
+
+    for (const std::string& dep_id : addon_entry.second.dependencies)
+    {
+      const auto dep_it = addons.find(dep_id);
+      if (dep_it == addons.end())
+      {
+        printf("[ADD-ONS] WARNING: Dependency '%s' of add-on '%s' is not available!\n", dep_id.c_str(), addon_entry.first.c_str());
+        continue;
+      }
+
+      Addon& dep_addon = dep_it->second;
+      bool& addon_enabled = addons_enabled[dep_id];
+      if (addon_enabled && dep_addon.mounted)
+        continue;
+      addon_enabled = true;
+
+      if (dep_addon.resource_pack != resource_packs ||
+          // Do not actually enable add-ons which override data after game has started
+          (!startup && dep_addon.overrides_data))
+        continue;
+
+      const std::string filepath = "addons/" + dep_addon.filename;
+      const char* realdir = PHYSFS_getRealDir(filepath.c_str());
+      if (!realdir)
+      {
+        printf("[ADD-ONS] ERROR: PHYSFS_getRealDir() failed for 'addons/%s': %s\n", dep_addon.filename.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+        continue;
+      }
+      if (!PHYSFS_mount((std::string(realdir) + "/" + filepath).c_str(), nullptr, !dep_addon.overrides_data))
+      {
+        printf("[ADD-ONS] ERROR: Couldn't mount add-on archive '%s': %s\n", dep_addon.filename.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+        continue;
+      }
+      dep_addon.mounted = true;
+      printf("[ADD-ONS] SUCCESS: Mounted add-on archive '%s' (resource pack: %s) (prepended: %s)\n", dep_addon.filename.c_str(),
+        dep_addon.resource_pack ? "yes" : "no", dep_addon.overrides_data ? "yes" : "no");
+    }
+  }
+}
+
 void st_addons_check(bool startup)
 {
   std::vector<std::string> archives;
@@ -308,8 +387,11 @@ void st_addons_check(bool startup)
       addon.title = addon_id;
     if (!reader.read_string("author", &addon.author))
       addon.author = "Unknown";
-    reader.read_bool("overrides-data", &addon.overrides_data);
     reader.read_bool("resource-pack", &addon.resource_pack);
+    if (addon.resource_pack)
+      addon.overrides_data = true; // Resource packs should always override data
+    else
+      reader.read_bool("overrides-data", &addon.overrides_data);
     reader.read_string_vector("dependencies", &addon.dependencies);
     lisp_free(root_obj);
     printf("[ADD-ONS] SUCCESS: Successfully parsed 'info' from add-on archive '%s' (id: '%s') (title: '%s')\n", archive.c_str(),
@@ -317,59 +399,14 @@ void st_addons_check(bool startup)
 
     // Add add-on object to map
     addons.insert({ addon_id, addon });
-    const bool enabled = addons_enabled.insert({ addon_id, false }).first->second;
-
-    // Mount add-on, if enabled
-    if (!enabled) continue;
-    if (!PHYSFS_mount(full_archive_path.c_str(), nullptr, !addon.overrides_data))
-    {
-      printf("[ADD-ONS] ERROR: Couldn't mount add-on archive '%s': %s\n", archive.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
-      continue;
-    }
-    printf("[ADD-ONS] SUCCESS: Mounted add-on archive '%s' (prepended: %s)\n", archive.c_str(), addon.overrides_data ? "yes" : "no");
+    addons_enabled.insert({ addon_id, false });
   }
 
-  // Ensure each enabled add-on has its dependencies enabled, if they are installed
-  for (const auto& addon_entry : addons)
-  {
-    if (!addons_enabled[addon_entry.first])
-      continue;
-
-    for (const std::string& dep_id : addon_entry.second.dependencies)
-    {
-      const auto dep_it = addons.find(dep_id);
-      if (dep_it == addons.end())
-      {
-        printf("[ADD-ONS] WARNING: Dependency '%s' of add-on '%s' is not available!\n", dep_id.c_str(), addon_entry.first.c_str());
-        continue;
-      }
-
-      bool& addon_enabled = addons_enabled[dep_id];
-      if (addon_enabled)
-        continue;
-      addon_enabled = true;
-
-      const Addon& dep_addon = dep_it->second;
-
-      // Do not actually enable add-ons which override data after game has started
-      if (!startup && dep_addon.overrides_data)
-        continue;
-
-      const std::string filepath = "addons/" + dep_addon.filename;
-      const char* realdir = PHYSFS_getRealDir(filepath.c_str());
-      if (!realdir)
-      {
-        printf("[ADD-ONS] ERROR: PHYSFS_getRealDir() failed for 'addons/%s': %s\n", dep_addon.filename.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
-        continue;
-      }
-      if (!PHYSFS_mount((std::string(realdir) + "/" + filepath).c_str(), nullptr, !dep_addon.overrides_data))
-      {
-        printf("[ADD-ONS] ERROR: Couldn't mount add-on archive '%s': %s\n", dep_addon.filename.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
-        continue;
-      }
-      printf("[ADD-ONS] SUCCESS: Mounted add-on archive '%s' (prepended: %s)\n", dep_addon.filename.c_str(), dep_addon.overrides_data ? "yes" : "no");
-    }
-  }
+  // On startup, enable resource pack add-ons first, so that levelset add-ons
+  // which override data can override them as well.
+  if (startup)
+    st_addons_enable(true, true);
+  st_addons_enable(false, startup);
 }
 
 /* Create and setup menus. */
@@ -621,7 +658,7 @@ void process_addons_menu()
 
   addon_enabled = !addon_enabled;
 
-  const Addon& addon = addon_it->second;
+  Addon& addon = addon_it->second;
 
   // Notify user a restart is required to enable/disable add-ons which override data
   if (addon.overrides_data)
@@ -648,6 +685,7 @@ void process_addons_menu()
       printf("[ADD-ONS] ERROR: Couldn't mount add-on archive '%s': %s\n", addon.filename.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
       return;
     }
+    addon.mounted = true;
     printf("[ADD-ONS] SUCCESS: Mounted add-on archive '%s' (prepended: %s)\n", addon.filename.c_str(), addon.overrides_data ? "yes" : "no");
 
     // Ensure the add-on's dependencies are also enabled.
@@ -667,7 +705,7 @@ void process_addons_menu()
         continue;
       addon_enabled = true;
 
-      const Addon& dep_addon = dep_it->second;
+      Addon& dep_addon = dep_it->second;
 
       // Do not actually enable add-ons which override data after game has started.
       // Notify the user later instead.
@@ -689,6 +727,7 @@ void process_addons_menu()
         printf("[ADD-ONS] ERROR: Couldn't mount add-on archive '%s': %s\n", dep_addon.filename.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
         continue;
       }
+      dep_addon.mounted = true;
       printf("[ADD-ONS] SUCCESS: Mounted add-on archive '%s' (prepended: %s)\n", dep_addon.filename.c_str(), dep_addon.overrides_data ? "yes" : "no");
     }
     if (dep_overrides_data)
@@ -704,6 +743,7 @@ void process_addons_menu()
       printf("[ADD-ONS] ERROR: Couldn't unmount add-on archive '%s': %s\n", addon.filename.c_str(), PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
       return;
     }
+    addon.mounted = false;
     printf("[ADD-ONS] SUCCESS: Unmounted add-on archive '%s'\n", addon.filename.c_str());
   }
 }
