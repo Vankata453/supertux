@@ -27,7 +27,7 @@
 #include <errno.h>
 #include <math.h>
 #include <time.h>
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 #ifndef WIN32
 #include <ctype.h>
@@ -108,7 +108,7 @@ GameSession::restart_level()
       for(std::vector<ResetPoint>::iterator i = get_level()->reset_points.begin();
           i != get_level()->reset_points.end(); ++i)
         {
-          if (i->x - screen->w/2 < old_x_pos && best_reset_point.x < i->x)
+          if (i->x - screen_w()/2 < old_x_pos && best_reset_point.x < i->x)
             best_reset_point = *i;
         }
       
@@ -123,7 +123,7 @@ GameSession::restart_level()
               std::cout << "Warning: reset point inside a wall.\n";
           }                                                                  
 
-          scroll_x = best_reset_point.x - screen->w/2;
+          scroll_x = best_reset_point.x - screen_w()/2;
         }
     }
     
@@ -217,7 +217,7 @@ GameSession::process_events()
       last_x_pos = tux.base.x;
 
       SDL_Event event;
-      while (SDL_PollEvent(&event))
+      while (poll_event(event))
         {
           /* Check for menu-events, if the menu is shown */
           if (Menu::current())
@@ -235,7 +235,7 @@ GameSession::process_events()
               
             case SDL_KEYDOWN:     /* A keypress! */
               {
-                SDLKey key = event.key.keysym.sym;
+                SDL_Keycode key = event.key.keysym.sym;
            
                 switch(key)
                   {
@@ -260,7 +260,7 @@ GameSession::process_events()
         st_pause_ticks_stop();
 
       SDL_Event event;
-      while (SDL_PollEvent(&event))
+      while (poll_event(event))
         {
           /* Check for menu-events, if the menu is shown */
           if (Menu::current())
@@ -273,11 +273,11 @@ GameSession::process_events()
                it could have nasty bugs, like going allways to the right
                or whatever that key does */
             Player& tux = *world->get_tux();
-            tux.key_event((SDLKey)keymap.jump, UP);
-            tux.key_event((SDLKey)keymap.duck, UP);
-            tux.key_event((SDLKey)keymap.left, UP);
-            tux.key_event((SDLKey)keymap.right, UP);
-            tux.key_event((SDLKey)keymap.fire, UP);
+            tux.key_event((SDL_Keycode)keymap.jump, UP);
+            tux.key_event((SDL_Keycode)keymap.duck, UP);
+            tux.key_event((SDL_Keycode)keymap.left, UP);
+            tux.key_event((SDL_Keycode)keymap.right, UP);
+            tux.key_event((SDL_Keycode)keymap.fire, UP);
             }
           else
             {
@@ -291,7 +291,7 @@ GameSession::process_events()
 
                 case SDL_KEYDOWN:     /* A keypress! */
                   {
-                    SDLKey key = event.key.keysym.sym;
+                    SDL_Keycode key = event.key.keysym.sym;
             
                     if(tux.key_event(key,DOWN))
                       break;
@@ -308,7 +308,7 @@ GameSession::process_events()
                   break;
                 case SDL_KEYUP:      /* A keyrelease! */
                   {
-                    SDLKey key = event.key.keysym.sym;
+                    SDL_Keycode key = event.key.keysym.sym;
 
                     if(tux.key_event(key, UP))
                       break;
@@ -528,12 +528,12 @@ GameSession::draw()
 
   if(game_pause)
     {
-      int x = screen->h / 20;
+      int x = screen_h() / 20;
       for(int i = 0; i < x; ++i)
         {
-          fillrect(i % 2 ? (pause_menu_frame * i)%screen->w : -((pause_menu_frame * i)%screen->w) ,(i*20+pause_menu_frame)%screen->h,screen->w,10,20,20,20, rand() % 20 + 1);
+          fillrect(i % 2 ? (pause_menu_frame * i)%screen_w() : -((pause_menu_frame * i)%screen_w()) ,(i*20+pause_menu_frame)%screen_h(),screen_w(),10,20,20,20, rand() % 20 + 1);
         }
-      fillrect(0,0,screen->w,screen->h,rand() % 50, rand() % 50, rand() % 50, 128);
+      fillrect(0,0,screen_w(),screen_h(),rand() % 50, rand() % 50, rand() % 50, 128);
       blue_text->drawf("PAUSE - Press 'P' To Play", 0, 230, A_HMIDDLE, A_TOP, 1);
     }
 
@@ -594,7 +594,7 @@ GameSession::run()
 
   // Eat unneeded events
   SDL_Event event;
-  while (SDL_PollEvent(&event)) {}
+  while (poll_event(event)) {}
 
   draw();
 
@@ -725,7 +725,7 @@ GameSession::drawstatus()
   }
 
   sprintf(str, "%d", player_status.distros);
-  white_text->draw("COINS", screen->h, 0, 1);
+  white_text->draw("COINS", screen_h(), 0, 1);
   gold_text->draw(str, 608, 0, 1);
 
   white_text->draw("LIVES", 480, 20);
@@ -744,8 +744,8 @@ GameSession::drawstatus()
   if(show_fps)
     {
       sprintf(str, "%2.1f", fps_fps);
-      white_text->draw("FPS", screen->h, 40, 1);
-      gold_text->draw(str, screen->h + 60, 40, 1);
+      white_text->draw("FPS", screen_h(), 40, 1);
+      gold_text->draw(str, screen_h() + 60, 40, 1);
     }
 }
 

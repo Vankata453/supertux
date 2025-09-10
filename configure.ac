@@ -17,7 +17,7 @@ AC_CONFIG_SRCDIR([src/supertux.cpp])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE(dist-bzip2)
 
-SDL_VERSION=1.2.4
+SDL2_VERSION=2.0.10
 
 AC_PROG_CC
 AC_PROG_CXX
@@ -68,19 +68,19 @@ else
 fi
 
 dnl ===========================================================================
-dnl Check for SDL
-AM_PATH_SDL($SDL_VERSION,
-            :,
-	    AC_MSG_ERROR([*** SDL version $SDL_VERSION not found!]))
+dnl Check for SDL2
+AM_PATH_SDL2($SDL2_VERSION,
+             :,
+             AC_MSG_ERROR([*** SDL2 version $SDL2_VERSION not found!]))
 CXXFLAGS="$CXXFLAGS $SDL_CFLAGS"
 CFLAGS="$CFLAGS $SDL_CFLAGS"
 LIBS="$LIBS $SDL_LIBS"
 
 dnl Checks for additional libraries.
-AC_CHECK_LIB(SDL_mixer, Mix_OpenAudio,,
+AC_CHECK_LIB(SDL2_mixer, Mix_OpenAudio,,
 	AC_MSG_ERROR([SDL_mixer library required]))
 
-AC_CHECK_LIB(SDL_image, IMG_Load,,
+AC_CHECK_LIB(SDL2_image, IMG_Load,,
 	AC_MSG_ERROR([SDL_image library required]))
 
 if test "x${enable_opengl}" != "xno"; then

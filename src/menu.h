@@ -20,7 +20,7 @@
 #ifndef SUPERTUX_MENU_H
 #define SUPERTUX_MENU_H
 
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #include <vector>
 #include "texture.h"
 #include "timer.h"
@@ -189,7 +189,7 @@ private:
 
   /* input implementation variables */
   int delete_character;
-  char mn_input_char;
+  char mn_input_chars[16];
   
 public:
   Timer effect;

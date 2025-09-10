@@ -24,6 +24,7 @@
 #include "defines.h"
 #include "screen.h"
 #include "text.h"
+#include "setup.h"
 #include "physfs_util.h"
 
 Text::Text(const std::string& file, int kind_, int w_, int h_)
@@ -56,7 +57,7 @@ Text::Text(const std::string& file, int kind_, int w_, int h_)
   chars = new Surface(file, USE_ALPHA);
 
   // Load shadow font.
-  conv = SDL_DisplayFormatAlpha(chars->impl->get_sdl_surface());
+  conv = SDL_ConvertSurfaceFormat(chars->impl->get_sdl_surface(), SDL_PIXELFORMAT_RGBA8888, 0);
   pixels = conv->w * conv->h;
   SDL_LockSurface(conv);
   for(i = 0; i < pixels; ++i)
@@ -65,7 +66,7 @@ Text::Text(const std::string& file, int kind_, int w_, int h_)
       *p = *p & conv->format->Amask;
     }
   SDL_UnlockSurface(conv);
-  SDL_SetAlpha(conv, SDL_SRCALPHA, 128);
+  SDL_SetSurfaceAlphaMod(conv, 128);
   shadow_chars = new Surface(conv, USE_ALPHA);
 
   SDL_FreeSurface(conv);
@@ -180,14 +181,14 @@ Text::drawf(const  char* text, int x, int y,
   if(text != NULL)
     {
       if(halign == A_RIGHT)  /* FIXME: this doesn't work correctly for strings with newlines.*/
-        x += screen->w - (strlen(text)*w);
+        x += screen_w() - (strlen(text)*w);
       else if(halign == A_HMIDDLE)
-        x += screen->w/2 - ((strlen(text)*w)/2);
+        x += screen_w()/2 - ((strlen(text)*w)/2);
 
       if(valign == A_BOTTOM)
-        y += screen->h - h;
+        y += screen_h() - h;
       else if(valign == A_VMIDDLE)
-        y += screen->h/2 - h/2;
+        y += screen_h()/2 - h/2;
 
       draw(text,x,y,shadowsize, update);
     }
@@ -205,8 +206,8 @@ Text::erasetext(const  char * text, int x, int y, Surface * ptexture, int update
   dest.w = strlen(text) * w + shadowsize;
   dest.h = h;
 
-  if (dest.w > screen->w)
-    dest.w = screen->w;
+  if (dest.w > screen_w())
+    dest.w = screen_w();
 
   ptexture->draw_part(dest.x,dest.y,dest.x,dest.y,dest.w,dest.h, 255, update);
 
@@ -220,7 +221,7 @@ Text::erasetext(const  char * text, int x, int y, Surface * ptexture, int update
 void
 Text::erasecenteredtext(const  char * text, int y, Surface * ptexture, int update, int shadowsize)
 {
-  erasetext(text, screen->w / 2 - (strlen(text) * 8), y, ptexture, update, shadowsize);
+  erasetext(text, screen_w() / 2 - (strlen(text) * 8), y, ptexture, update, shadowsize);
 }
 
 
@@ -285,14 +286,12 @@ void display_text_file(const std::string& file, Surface* surface, float scroll_s
 
   length = names.num_items;
 
-  SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-
   Uint32 lastticks = SDL_GetTicks();
   while(done == 0)
     {
       /* in case of input, exit */
       SDL_Event event;
-      while(SDL_PollEvent(&event))
+      while(poll_event(event))
         switch(event.type)
           {
           case SDL_KEYDOWN:
@@ -337,22 +336,22 @@ void display_text_file(const std::string& file, Surface* surface, float scroll_s
         switch(names.item[i][0])
           {
           case ' ':
-            white_small_text->drawf(names.item[i]+1, 0, screen->h+y-int(scroll),
+            white_small_text->drawf(names.item[i]+1, 0, screen_h()+y-int(scroll),
                 A_HMIDDLE, A_TOP, 1);
             y += white_small_text->h+ITEMS_SPACE;
             break;
           case '	':
-            white_text->drawf(names.item[i]+1, 0, screen->h+y-int(scroll),
+            white_text->drawf(names.item[i]+1, 0, screen_h()+y-int(scroll),
                 A_HMIDDLE, A_TOP, 1);
             y += white_text->h+ITEMS_SPACE;
             break;
           case '-':
-            white_big_text->drawf(names.item[i]+1, 0, screen->h+y-int(scroll),
+            white_big_text->drawf(names.item[i]+1, 0, screen_h()+y-int(scroll),
                 A_HMIDDLE, A_TOP, 3);
             y += white_big_text->h+ITEMS_SPACE;
             break;
           default:
-            blue_text->drawf(names.item[i], 0, screen->h+y-int(scroll),
+            blue_text->drawf(names.item[i], 0, screen_h()+y-int(scroll),
                 A_HMIDDLE, A_TOP, 1);
             y += blue_text->h+ITEMS_SPACE;
             break;
@@ -361,7 +360,7 @@ void display_text_file(const std::string& file, Surface* surface, float scroll_s
 
       flipscreen();
 
-      if(screen->h+y-scroll < 0 && 20+screen->h+y-scroll < 0)
+      if(screen_h()+y-scroll < 0 && 20+screen_h()+y-scroll < 0)
         done = 1;
 
       Uint32 ticks = SDL_GetTicks();
@@ -374,7 +373,6 @@ void display_text_file(const std::string& file, Surface* surface, float scroll_s
     }
   string_list_free(&names);
 
-  SDL_EnableKeyRepeat(0, 0);    // disables key repeating
   Menu::set_current(main_menu);
 }
 

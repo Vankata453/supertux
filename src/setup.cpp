@@ -25,10 +25,10 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <SDL.h>
-#include <SDL_image.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #ifndef NOOPENGL
-#include <SDL_opengl.h>
+#include <SDL2/SDL_opengl.h>
 #endif
 #include <physfs.h>
 
@@ -60,11 +60,6 @@
 #undef DATA_PREFIX
 #define DATA_PREFIX "./data/"
 #endif
-
-/* Screen proprities: */
-/* Don't use this to test for the actual screen sizes. Use screen->w/h instead! */
-#define SCREEN_W 640
-#define SCREEN_H 480
 
 /* Local function prototypes: */
 
@@ -426,7 +421,7 @@ void st_menu(void)
   worldmap_menu  = new Menu();
   restart_info_menu     = new Menu();
 
-  main_menu->set_pos(screen->w/2, 335);
+  main_menu->set_pos(screen_w()/2, 335);
   main_menu->additem(MN_GOTO, "Start Game",0,load_game_menu, MNID_STARTGAME);
   main_menu->additem(MN_GOTO, "Bonus Levels",0,contrib_menu, MNID_CONTRIB);
   main_menu->additem(MN_GOTO, "Add-ons",0,addons_menu, MNID_ADDONS);
@@ -554,7 +549,7 @@ void generate_addons_menu(bool addons_check)
   constexpr int min_visible = 5;
   constexpr int no_trim_threshold = 8;
   constexpr int extra_horizontal_space = 100;
-  const int remaining_data_len = (screen->w - strlen("\"\" by \"\"") * white_text->w - extra_horizontal_space) / white_text->w;
+  const int remaining_data_len = (screen_w() - strlen("\"\" by \"\"") * white_text->w - extra_horizontal_space) / white_text->w;
 
   int idx = addons_menu_page * addons_per_page;
   auto addon_it = addons.begin();
@@ -565,7 +560,7 @@ void generate_addons_menu(bool addons_check)
 
     // Trim add-on title and/or author if the text wouldn't fit on screen
     std::string text = "\"" + addon.title + "\" by \"" + addon.author + "\"";
-    if (static_cast<int>(text.size()) * white_text->w + extra_horizontal_space > screen->w &&
+    if (static_cast<int>(text.size()) * white_text->w + extra_horizontal_space > screen_w() &&
         (static_cast<int>(addon.title.size()) > no_trim_threshold || static_cast<int>(addon.author.size()) > no_trim_threshold))
     {
       const std::string& title = addon.title;
@@ -846,17 +841,20 @@ void st_general_setup(void)
 
   srand(SDL_GetTicks());
 
-  /* Set icon image: */
+  /* Initialize SDL2_mixer with required codecs */
 
-  seticon();
+  const int mixer_flags = MIX_INIT_OGG | MIX_INIT_MOD;
+  if (Mix_Init(mixer_flags) != mixer_flags)
+  {
+    fprintf(stderr, "Mix_Init: Failed to init required codecs! %s\n", Mix_GetError());
+    st_shutdown();
+    abort();
+    return;
+  }
 
   /* Hide default cursor */
 
   SDL_ShowCursor(SDL_DISABLE);
-
-  /* Unicode needed for input handling: */
-
-  SDL_EnableUNICODE(1);
 
   /* Load global images: */
 
@@ -929,10 +927,11 @@ void st_video_setup(void)
   /* Init SDL Video: */
   if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
-      fprintf(stderr,
-              "\nError: I could not initialize video!\n"
+	  char err[256];
+	  sprintf(err, "Error: I could not initialize video!\n"
               "The Simple DirectMedia error that occured was:\n"
               "%s\n\n", SDL_GetError());
+      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", err, window);
       exit(1);
     }
 
@@ -943,44 +942,70 @@ void st_video_setup(void)
     st_video_setup_sdl();
 
   Surface::reload_all();
-
-  /* Set window manager stuff: */
-  SDL_WM_SetCaption("SuperTux " VERSION, "SuperTux");
 }
 
 void st_video_setup_sdl(void)
 {
+  // Destroy OpenGL video
+#ifndef NOOPENGL
+  if (!screen)
+    SDL_GL_DeleteContext(glcontext);
+#endif
+  SDL_DestroyWindow(window);
+
   if (use_fullscreen)
+  {
+    window = SDL_CreateWindow("SuperTux " VERSION, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+        SCREEN_W, SCREEN_H, SDL_WINDOW_FULLSCREEN | SDL_WINDOW_RESIZABLE);
+    if (window == NULL)
     {
-      screen = SDL_SetVideoMode(SCREEN_W, SCREEN_H, 0, SDL_FULLSCREEN | SDL_RESIZABLE); /* | SDL_HWSURFACE); */
-      if (screen == NULL)
-        {
-          fprintf(stderr,
-                  "\nWarning: I could not set up fullscreen video for "
+      char err[256];
+      sprintf(err, "Error: I could not set up fullscreen video for "
                   "640x480 mode.\n"
                   "The Simple DirectMedia error that occured was:\n"
                   "%s\n\n", SDL_GetError());
-          use_fullscreen = false;
-        }
-    }
-  else
-    {
-      screen = SDL_SetVideoMode(SCREEN_W, SCREEN_H, 0, SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE);
+      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, "Error", err, window);
 
-      if (screen == NULL)
-        {
-          fprintf(stderr,
-                  "\nError: I could not set up video for 640x480 mode.\n"
+      use_fullscreen = false;
+      st_shutdown();
+      exit(1);
+    }
+  }
+  else
+  {
+    window = SDL_CreateWindow("SuperTux " VERSION, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+        SCREEN_W, SCREEN_H, SDL_WINDOW_RESIZABLE);
+    if (window == NULL)
+    {
+      char err[256];
+      sprintf(err, "Error: I could not set up video for 640x480 mode.\n"
                   "The Simple DirectMedia error that occured was:\n"
                   "%s\n\n", SDL_GetError());
-          exit(1);
-        }
+      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", err, window);
+
+      exit(1);
     }
+  }
+
+  renderer = SDL_CreateRenderer(window, -1, 0);
+  screen = SDL_CreateRGBSurface(0, SCREEN_W, SCREEN_H, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+  sdl_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_W, SCREEN_H);
+
+  seticon();
+
+  SDL_RenderSetLogicalSize(renderer, SCREEN_W, SCREEN_H);
+  SDL_RenderSetIntegerScale(renderer, SDL_TRUE);
 }
 
 void st_video_setup_gl(void)
 {
 #ifndef NOOPENGL
+
+  // Destroy SDL video
+  SDL_DestroyTexture(sdl_texture);
+  SDL_FreeSurface(screen);
+  SDL_DestroyRenderer(renderer);
+  SDL_DestroyWindow(window);
 
   SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
   SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
@@ -989,31 +1014,42 @@ void st_video_setup_gl(void)
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
   if (use_fullscreen)
+  {
+    window = SDL_CreateWindow("SuperTux " VERSION, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+        SCREEN_W, SCREEN_H, SDL_WINDOW_FULLSCREEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+    if (window == NULL)
     {
-      screen = SDL_SetVideoMode(SCREEN_W, SCREEN_H, 0, SDL_FULLSCREEN | SDL_OPENGL | SDL_RESIZABLE); /* | SDL_HWSURFACE); */
-      if (screen == NULL)
-        {
-          fprintf(stderr,
-                  "\nWarning: I could not set up fullscreen video for "
-                  "640x480 mode.\n"
+      char err[256];
+      sprintf(err, "Error: I could not set up fullscreen video for "
+                  "640x480 mode in OpenGL.\n"
                   "The Simple DirectMedia error that occured was:\n"
                   "%s\n\n", SDL_GetError());
-          use_fullscreen = false;
-        }
-    }
-  else
-    {
-      screen = SDL_SetVideoMode(SCREEN_W, SCREEN_H, 0, SDL_OPENGL | SDL_RESIZABLE);
+      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, "Error", err, window);
 
-      if (screen == NULL)
-        {
-          fprintf(stderr,
-                  "\nError: I could not set up video for 640x480 mode.\n"
+      use_fullscreen = false;
+      st_shutdown();
+      exit(1);
+    }
+  }
+  else
+  {
+    window = SDL_CreateWindow("SuperTux " VERSION, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+        SCREEN_W, SCREEN_H, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+    if (window == NULL)
+    {
+      char err[256];
+      sprintf(err, "Error: I could not set up video for 640x480 mode in OpenGL.\n"
                   "The Simple DirectMedia error that occured was:\n"
                   "%s\n\n", SDL_GetError());
-          exit(1);
-        }
+      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", err, window);
+
+      exit(1);
     }
+  }
+
+  glcontext = SDL_GL_CreateContext(window);
+
+  seticon();
 
   /*
    * Set up OpenGL for 2D rendering.
@@ -1021,17 +1057,45 @@ void st_video_setup_gl(void)
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
 
-  glViewport(0, 0, screen->w, screen->h);
+  glViewport(0, 0, SCREEN_W, SCREEN_H);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  glOrtho(0, screen->w, screen->h, 0, -1.0, 1.0);
+  glOrtho(0, SCREEN_W, SCREEN_H, 0, -1.0, 1.0);
 
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
   glTranslatef(0.0f, 0.0f, 0.0f);
 
 #endif
+}
 
+int poll_event(SDL_Event& ev)
+{
+  const int result = SDL_PollEvent(&ev);
+  if (result)
+  {
+    // OpenGL: Center and resize the logical screen on window resize
+#ifndef NOOPENGL
+    if (use_gl &&
+        ev.type == SDL_WINDOWEVENT &&
+        ev.window.event == SDL_WINDOWEVENT_RESIZED)
+    {
+      int win_w, win_h;
+      SDL_GetWindowSize(window, &win_w, &win_h);
+
+      const float scale_x = win_w / 640.f;
+      const float scale_y = win_h / 480.f;
+      const float scale = scale_x < scale_y ? scale_x : scale_y;
+
+      const int viewport_w = static_cast<int>(640 * scale);
+      const int viewport_h = static_cast<int>(480 * scale);
+
+      clearscreen(0, 0, 0);
+      glViewport((win_w - viewport_w) / 2, (win_h - viewport_h) / 2, viewport_w, viewport_h);
+    }
+#endif
+  }
+  return result;
 }
 
 void st_joystick_setup(void)
@@ -1155,6 +1219,21 @@ void st_audio_setup(void)
 
 void st_shutdown(void)
 {
+  // Destroy video
+#ifndef NOOPENGL
+  if (use_gl)
+    SDL_GL_DeleteContext(glcontext);
+  else
+  {
+#endif
+    SDL_DestroyTexture(sdl_texture);
+    SDL_FreeSurface(screen);
+    SDL_DestroyRenderer(renderer);
+#ifndef NOOPENGL
+  }
+#endif
+  SDL_DestroyWindow(window);
+
   close_audio();
   SDL_Quit();
   saveconfig();
@@ -1196,12 +1275,10 @@ void seticon(void)
 
   /* Set icon: */
 
-  SDL_WM_SetIcon(icon, NULL);//mask);
-
+  SDL_SetWindowIcon(window, icon);
 
   /* Free icon surface & mask: */
 
-//  free(mask);
   SDL_FreeSurface(icon);
 }
 

@@ -21,10 +21,10 @@
 #ifndef SUPERTUX_TEXTURE_H
 #define SUPERTUX_TEXTURE_H
 
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #include <string>
 #ifndef NOOPENGL
-#include <SDL_opengl.h>
+#include <SDL2/SDL_opengl.h>
 #endif
 
 #include <list>

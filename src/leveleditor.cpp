@@ -24,8 +24,8 @@
 #include <math.h>
 #include <errno.h>
 #include <unistd.h>
-#include <SDL.h>
-#include <SDL_image.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #include "leveleditor.h"
 
 #include "screen.h"
@@ -172,7 +172,7 @@ int leveleditor(char* filename)
 
   music_manager->halt_music();
 
-  while (SDL_PollEvent(&event))
+  while (poll_event(event))
   {}
 
   if(filename != NULL)
@@ -190,20 +190,20 @@ int leveleditor(char* filename)
     {
       if(select_tilegroup_menu_effect.check())
       {
-        select_tilegroup_menu->set_pos(screen->w - 64 + select_tilegroup_menu_effect.get_left(),
+        select_tilegroup_menu->set_pos(screen_w() - 64 + select_tilegroup_menu_effect.get_left(),
                                        66,-0.5,0.5);
       }
       else
-        select_tilegroup_menu->set_pos(screen->w - 64,66,-0.5,0.5);
+        select_tilegroup_menu->set_pos(screen_w() - 64,66,-0.5,0.5);
     }
     else if(Menu::current() == select_objects_menu)
     {
       if(select_objects_menu_effect.check())
       {
-        select_objects_menu->set_pos(screen->w - 64 + select_objects_menu_effect.get_left(),82,-0.5,0.5);
+        select_objects_menu->set_pos(screen_w() - 64 + select_objects_menu_effect.get_left(),82,-0.5,0.5);
       }
       else
-        select_objects_menu->set_pos(screen->w - 64,82,-0.5,0.5);
+        select_objects_menu->set_pos(screen_w() - 64,82,-0.5,0.5);
     }
 
     if(le_world != NULL)
@@ -211,8 +211,8 @@ int leveleditor(char* filename)
       /* making events results to be in order */
       if(pos_x < 0)
         pos_x = 0;
-      if(pos_x > (le_world->get_level()->width * 32 + 2*32) - screen->w)
-        pos_x = (le_world->get_level()->width * 32 +2*32) - screen->w;
+      if(pos_x > (le_world->get_level()->width * 32 + 2*32) - screen_w())
+        pos_x = (le_world->get_level()->width * 32 +2*32) - screen_w();
 
       /* draw the level */
       le_drawlevel();
@@ -461,7 +461,7 @@ void le_init_menus()
     {
       select_tilegroup_menu->additem(MN_ACTION, it->name, 0, 0, tileid);
       tileid++;
-      tilegroups_map[(*it).name] = new ButtonPanel(screen->w - 64,96, 64, 318);
+      tilegroups_map[(*it).name] = new ButtonPanel(screen_w() - 64,96, 64, 318);
       i = 0;
 
       for(std::vector<int>::const_iterator sit = (*it).tiles.begin();
@@ -482,7 +482,7 @@ void le_init_menus()
         {
           imagefile += "notile.png";
         }
-        Button* button = new Button(imagefile, it->name, SDLKey(SDLK_a + i),
+        Button* button = new Button(imagefile, it->name, SDL_Keycode(SDLK_a + i),
                                     0, 0, 32, 32);
         if(!only_editor_image)
           if(!TileManager::instance()->get(*sit)->editor_filenames.empty())
@@ -499,12 +499,12 @@ void le_init_menus()
   select_objects_menu->additem(MN_LABEL,"Objects",0,0);
   select_objects_menu->additem(MN_HL,"",0,0);
   select_objects_menu->additem(MN_ACTION,"BadGuys",0,0,1);
-  objects_map["BadGuys"] = new ButtonPanel(screen->w - 64,96, 64, 318);
+  objects_map["BadGuys"] = new ButtonPanel(screen_w() - 64,96, 64, 318);
 
   for(int i = 0; i < NUM_BadGuyKinds; ++i)
   {
     BadGuy bad_tmp(0,0,BadGuyKind(i),false);
-    objects_map["BadGuys"]->additem(new Button("", "BadGuy",(SDLKey)(i+'a'),0,0,32,32),1000000+i);
+    objects_map["BadGuys"]->additem(new Button("", "BadGuy",(SDL_Keycode)(i+'a'),0,0,32,32),1000000+i);
     objects_map["BadGuys"]->manipulate_button(i)->set_game_object(new BadGuy(objects_map["BadGuys"]->manipulate_button(i)->get_pos().x,objects_map["BadGuys"]->manipulate_button(i)->get_pos().y,BadGuyKind(i),false));
   }
 
@@ -546,27 +546,27 @@ int le_init()
   display_level_info.init(false);
 
   /* Load buttons */
-  le_save_level_bt = new Button("/images/icons/save.png","Save level", SDLK_F6,screen->w-64,32);
-  le_exit_bt = new Button("/images/icons/exit.png","Exit", SDLK_F10,screen->w-32,32);
-  le_next_level_bt = new Button("/images/icons/up.png","Next level", SDLK_PAGEUP,screen->w-64,0);
-  le_previous_level_bt = new Button("/images/icons/down.png","Previous level",SDLK_PAGEDOWN,screen->w-32,0);
-  le_rubber_bt = new Button("/images/icons/rubber.png","Rubber",SDLK_DELETE,screen->w-32,48);
-  le_select_mode_one_bt = new Button ("/images/icons/select-mode1.png","Select single tile",SDLK_F3,screen->w-64,48);
-  le_select_mode_two_bt = new Button("/images/icons/select-mode2.png","Select multiple tiles",SDLK_F3,screen->w-64,48);
-  le_test_level_bt = new Button("/images/icons/test-level.png","Test level",SDLK_F4,screen->w-64,screen->h - 64);
-  le_settings_bt = new Button("/images/icons/settings.png","Level settings",SDLK_F5,screen->w-32,screen->h - 64);
+  le_save_level_bt = new Button("/images/icons/save.png","Save level", SDLK_F6,screen_w()-64,32);
+  le_exit_bt = new Button("/images/icons/exit.png","Exit", SDLK_F10,screen_w()-32,32);
+  le_next_level_bt = new Button("/images/icons/up.png","Next level", SDLK_PAGEUP,screen_w()-64,0);
+  le_previous_level_bt = new Button("/images/icons/down.png","Previous level",SDLK_PAGEDOWN,screen_w()-32,0);
+  le_rubber_bt = new Button("/images/icons/rubber.png","Rubber",SDLK_DELETE,screen_w()-32,48);
+  le_select_mode_one_bt = new Button ("/images/icons/select-mode1.png","Select single tile",SDLK_F3,screen_w()-64,48);
+  le_select_mode_two_bt = new Button("/images/icons/select-mode2.png","Select multiple tiles",SDLK_F3,screen_w()-64,48);
+  le_test_level_bt = new Button("/images/icons/test-level.png","Test level",SDLK_F4,screen_w()-64,screen_h() - 64);
+  le_settings_bt = new Button("/images/icons/settings.png","Level settings",SDLK_F5,screen_w()-32,screen_h() - 64);
   le_move_left_bt = new Button("/images/icons/left.png","Move left",SDLK_LEFT,0,0);
-  le_move_right_bt = new Button("/images/icons/right.png","Move right",SDLK_RIGHT,screen->w-80,0);
-  le_tilegroup_bt = new Button("/images/icons/tilegroup.png","Select Tilegroup", SDLK_F7,screen->w-64,64);
-  le_objects_bt = new Button("/images/icons/objects.png","Select Objects", SDLK_F8,screen->w-64,80);
-  le_object_select_bt = new Button("/images/icons/select-one.png","Select an Object", SDLK_s, screen->w - 64, screen->h-98);
-  le_object_properties_bt = new Button("/images/icons/properties.png","Edit object properties", SDLK_p, screen->w - 32, screen->h-98);
+  le_move_right_bt = new Button("/images/icons/right.png","Move right",SDLK_RIGHT,screen_w()-80,0);
+  le_tilegroup_bt = new Button("/images/icons/tilegroup.png","Select Tilegroup", SDLK_F7,screen_w()-64,64);
+  le_objects_bt = new Button("/images/icons/objects.png","Select Objects", SDLK_F8,screen_w()-64,80);
+  le_object_select_bt = new Button("/images/icons/select-one.png","Select an Object", SDLK_s, screen_w() - 64, screen_h()-98);
+  le_object_properties_bt = new Button("/images/icons/properties.png","Edit object properties", SDLK_p, screen_w() - 32, screen_h()-98);
   le_object_properties_bt->set_active(false);
 
   mouse_select_object = new MouseCursor("/images/status/select-cursor.png",1);
   mouse_select_object->set_mid(16,16);
 
-  le_tilemap_panel = new ButtonPanel(screen->w-64,screen->h-32,32,32);
+  le_tilemap_panel = new ButtonPanel(screen_w()-64,screen_h()-32,32,32);
   le_tilemap_panel->set_button_size(32,10);
   le_tilemap_panel->additem(new Button("/images/icons/bkgrd.png","Background",SDLK_b,0,0),TM_BG);
   le_tilemap_panel->additem(new Button("/images/icons/intact.png","Interactive",SDLK_i,0,0),TM_IA);
@@ -577,9 +577,6 @@ int le_init()
   le_current.Init();
 
   le_init_menus();
-
-  SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-
 
   return 0;
 }
@@ -709,8 +706,6 @@ void le_goto_level(int levelnb)
 
 void le_quit(void)
 {
-  SDL_EnableKeyRepeat(0, 0);    // disables key repeating
-
   le_unload_level();
   delete le_selection;
   delete leveleditor_menu;
@@ -759,13 +754,13 @@ void le_drawminimap()
     return;
 
   int mini_tile_width;
-  if(screen->w - 64 > le_world->get_level()->width * 4)
+  if(screen_w() - 64 > le_world->get_level()->width * 4)
     mini_tile_width = 4;
-  else if(screen->w - 64 > le_world->get_level()->width * 2)
+  else if(screen_w() - 64 > le_world->get_level()->width * 2)
     mini_tile_width = 2;
   else
     mini_tile_width = 1;
-  int left_offset = (screen->w - 64 - le_world->get_level()->width*mini_tile_width) / 2;
+  int left_offset = (screen_w() - 64 - le_world->get_level()->width*mini_tile_width) / 2;
 
   for (int y = 0; y < 15; ++y)
     for (int x = 0; x < le_world->get_level()->width; ++x)
@@ -799,9 +794,9 @@ void le_drawinterface()
     if(le_show_grid)
     {
       for(x = 0; x < 19; x++)
-        fillrect(x*32 - ((int)pos_x % 32), 0, 1, screen->h, 225, 225, 225,255);
+        fillrect(x*32 - ((int)pos_x % 32), 0, 1, screen_h(), 225, 225, 225,255);
       for(y = 0; y < 15; y++)
-        fillrect(0, y*32, screen->w - 32, 1, 225, 225, 225,255);
+        fillrect(0, y*32, screen_w() - 32, 1, 225, 225, 225,255);
     }
   }
 
@@ -831,7 +826,7 @@ void le_drawinterface()
 
 
   /* draw button bar */
-  fillrect(screen->w - 64, 0, 64, screen->h, 50, 50, 50,255);
+  fillrect(screen_w() - 64, 0, 64, screen_h(), 50, 50, 50,255);
 
   if(le_current.IsTile())
   {
@@ -912,10 +907,10 @@ void le_drawlevel()
   /* Draw the real background */
   if(le_world->get_level()->bkgd_image[0] != '\0')
   {
-    s = (int)((float)pos_x * ((float)le_world->get_level()->bkgd_speed/100.0f)) % screen->w;
+    s = (int)((float)pos_x * ((float)le_world->get_level()->bkgd_speed/100.0f)) % screen_w();
     le_world->get_level()->img_bkgd->draw_part(s,0,0,0,
         le_world->get_level()->img_bkgd->w - s - 32, le_world->get_level()->img_bkgd->h);
-    le_world->get_level()->img_bkgd->draw_part(0,0,screen->w - s - 32 ,0,s,
+    le_world->get_level()->img_bkgd->draw_part(0,0,screen_w() - s - 32 ,0,s,
         le_world->get_level()->img_bkgd->h);
   }
   else
@@ -1015,7 +1010,7 @@ void le_change_object_properties(GameObject *pobj)
   {
     SDL_Event event;
 
-    while (SDL_PollEvent(&event))
+    while (poll_event(event))
     {
       object_properties_menu->event(event);
     }
@@ -1065,14 +1060,14 @@ void le_change_object_properties(GameObject *pobj)
 
 void le_checkevents()
 {
-  SDLKey key;
-  SDLMod keymod;
+  SDL_Keycode key;
+  SDL_Keymod keymod;
   Button* pbutton;
   int x,y;
 
   keymod = SDL_GetModState();
 
-  while(SDL_PollEvent(&event))
+  while(poll_event(event))
   {
     if (Menu::current())
     {
@@ -1091,8 +1086,8 @@ void le_checkevents()
       if(event.type == SDL_KEYDOWN
           || ((event.type == SDL_MOUSEBUTTONDOWN || SDL_MOUSEMOTION)
               && (event.motion.x > 0
-                  && event.motion.x < screen->w - 64 &&
-                  event.motion.y > 0 && event.motion.y < screen->h)))
+                  && event.motion.x < screen_w() - 64 &&
+                  event.motion.y > 0 && event.motion.y < screen_h())))
       {
         switch(event.type)
         {
@@ -1138,8 +1133,8 @@ void le_checkevents()
             else
               cursor_y += KEY_CURSOR_FASTSPEED;
 
-            if(cursor_y > screen->h-32)
-              cursor_y = screen->h-32;
+            if(cursor_y > screen_h()-32)
+              cursor_y = screen_h()-32;
             break;
           case SDLK_LCTRL:
             fire =UP;
@@ -1243,8 +1238,8 @@ void le_checkevents()
 
     if(le_world != NULL)
     {
-      if(event.type == SDL_KEYDOWN || event.type == SDL_KEYUP || ((event.type == SDL_MOUSEBUTTONDOWN || SDL_MOUSEMOTION) && (event.motion.x > screen->w-64 && event.motion.x < screen->w &&
-          event.motion.y > 0 && event.motion.y < screen->h)))
+      if(event.type == SDL_KEYDOWN || event.type == SDL_KEYUP || ((event.type == SDL_MOUSEBUTTONDOWN || SDL_MOUSEMOTION) && (event.motion.x > screen_w()-64 && event.motion.x < screen_w() &&
+          event.motion.y > 0 && event.motion.y < screen_h())))
       {
         le_mouse_pressed[LEFT] = false;
         le_mouse_pressed[RIGHT] = false;
@@ -1329,7 +1324,7 @@ void le_checkevents()
           case BUTTON_CLICKED:
             Menu::set_current(select_tilegroup_menu);
             select_tilegroup_menu_effect.start(200);
-            select_tilegroup_menu->set_pos(screen->w - 64,100,-0.5,0.5);
+            select_tilegroup_menu->set_pos(screen_w() - 64,100,-0.5,0.5);
             break;
           case BUTTON_WHEELUP:
             if(cur_tilegroup.empty())
@@ -1376,7 +1371,7 @@ void le_checkevents()
           case BUTTON_CLICKED:
             Menu::set_current(select_objects_menu);
             select_objects_menu_effect.start(200);
-            select_objects_menu->set_pos(screen->w - 64,100,-0.5,0.5);
+            select_objects_menu->set_pos(screen_w() - 64,100,-0.5,0.5);
             break;
           case BUTTON_WHEELUP:
             it = objects_map.find(cur_objects);

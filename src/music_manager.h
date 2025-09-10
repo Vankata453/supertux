@@ -20,7 +20,7 @@
 #ifndef HEADER_MUSIC_MANAGER_H
 #define HEADER_MUSIC_MANAGER_H
 
-#include <SDL_mixer.h>
+#include <SDL2/SDL_mixer.h>
 #include <string>
 #include <map>
 
@@ -51,7 +51,6 @@ private:
     ~MusicResource();
 
     MusicManager* manager;
-    SDL_RWops* rw;
     Mix_Music* music;
     int refcount;
   };

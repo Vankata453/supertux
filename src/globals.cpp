@@ -20,6 +20,8 @@
 
 #include "globals.h"
 
+#include "setup.h"
+
 std::string real_datadir;
 std::string real_userdir;
 
@@ -40,7 +42,14 @@ JoystickKeymap joystick_keymap;
 std::map<std::string, Addon> addons;
 std::map<std::string, bool> addons_enabled;
 
-SDL_Surface * screen;
+SDL_Surface* screen;
+SDL_Window* window;
+SDL_Renderer* renderer;
+SDL_Texture* sdl_texture;
+#ifndef NOOPENGL
+SDL_GLContext glcontext;
+#endif
+
 Text* black_text;
 Text* gold_text;
 Text* silver_text;
@@ -85,14 +94,14 @@ int wait_for_event(SDL_Event& event,unsigned int min_delay, unsigned int max_del
   mindelay.start(min_delay);
 
   if(empty_events)
-    while (SDL_PollEvent(&event))
+    while (poll_event(event))
     {}
 
   /* Handle events: */
 
   for(i = 0; maxdelay.check() || !i; ++i)
     {
-      while (SDL_PollEvent(&event))
+      while (poll_event(event))
         {
           if(!mindelay.check())
             {

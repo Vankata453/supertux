@@ -24,8 +24,8 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <SDL.h>
-#include <SDL_image.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 
 #ifndef WIN32
 #include <sys/types.h>
@@ -214,15 +214,15 @@ void draw_demo(GameSession* session, double frame_ratio)
   world->play_music(LEVEL_MUSIC);
   
   global_frame_counter++;
-  tux->key_event((SDLKey) keymap.right,DOWN);
-  tux->key_event((SDLKey) keymap.fire,run_by_default ? DOWN : UP);
+  tux->key_event((SDL_Keycode) keymap.right,DOWN);
+  tux->key_event((SDL_Keycode) keymap.fire,run_by_default ? DOWN : UP);
   
   if(random_timer.check())
     {
       if(walking)
-        tux->key_event((SDLKey) keymap.jump,UP);
+        tux->key_event((SDL_Keycode) keymap.jump,UP);
       else
-        tux->key_event((SDLKey) keymap.jump,DOWN);
+        tux->key_event((SDL_Keycode) keymap.jump,DOWN);
     }
   else
     {
@@ -296,7 +296,7 @@ void title(void)
       frame_ratio /= 2;
 
       SDL_Event event;
-      while (SDL_PollEvent(&event))
+      while (poll_event(event))
         {
           if (Menu::current())
             {

@@ -28,8 +28,8 @@
 
 ParticleSystem::ParticleSystem()
 {
-    virtual_width = screen->w;
-    virtual_height = screen->h;
+    virtual_width = screen_w();
+    virtual_height = screen_h();
 }
 
 ParticleSystem::~ParticleSystem()
@@ -57,13 +57,13 @@ void ParticleSystem::draw(float scrollx, float scrolly, int layer)
         float ymax = fmodf(y + particle->texture->h, virtual_height);
 
         // particle on screen
-        if(x >= screen->w && xmax >= screen->w)
+        if(x >= screen_w() && xmax >= screen_w())
             continue;
-        if(y >= screen->h && ymax >= screen->h)
+        if(y >= screen_h() && ymax >= screen_h())
             continue;
         
-        if(x > screen->w) x -= virtual_width;
-        if(y > screen->h) y -= virtual_height;
+        if(x > screen_w()) x -= virtual_width;
+        if(y > screen_h()) y -= virtual_height;
         particle->texture->draw(x, y);
     }
 }
@@ -74,14 +74,14 @@ SnowParticleSystem::SnowParticleSystem()
     snowimages[1] = new Surface("/images/shared/snow1.png", USE_ALPHA);
     snowimages[2] = new Surface("/images/shared/snow2.png", USE_ALPHA);
 
-    virtual_width = screen->w * 2;
+    virtual_width = screen_w() * 2;
 
     // create some random snowflakes
     size_t snowflakecount = size_t(virtual_width/10.0);
     for(size_t i=0; i<snowflakecount; ++i) {
         SnowParticle* particle = new SnowParticle;
         particle->x = rand() % int(virtual_width);
-        particle->y = rand() % screen->h;
+        particle->y = rand() % screen_h();
         particle->layer = i % 2;
         int snowsize = rand() % 3;
         particle->texture = snowimages[snowsize];
@@ -106,7 +106,7 @@ void SnowParticleSystem::simulate(float elapsed_time)
     for(i = particles.begin(); i != particles.end(); ++i) {
         SnowParticle* particle = (SnowParticle*) *i;
         particle->y += particle->speed * elapsed_time;
-        if(particle->y > screen->h) {
+        if(particle->y > screen_h()) {
             particle->y = fmodf(particle->y , virtual_height);
             particle->x = rand() % int(virtual_width);
         }

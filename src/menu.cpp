@@ -84,7 +84,7 @@ bool confirm_dialog(std::string text)
   {
     SDL_Event event;
 
-    while (SDL_PollEvent(&event))
+    while (poll_event(event))
     {
       dialog->event(event);
     }
@@ -316,10 +316,10 @@ Menu::Menu()
   hit_item = -1;
   menuaction = MENU_ACTION_NONE;
   delete_character = 0;
-  mn_input_char = '\0';
+  mn_input_chars[0] = '\0';
 
-  pos_x        = screen->w/2;
-  pos_y        = screen->h/2;
+  pos_x        = screen_w()/2;
+  pos_y        = screen_h()/2;
   arrange_left = 0;
   active_item  = 0;
   effect.init(false);
@@ -449,21 +449,38 @@ Menu::action()
       break;
 
     case MENU_ACTION_INPUT:
-      if(item[active_item].kind == MN_TEXTFIELD
-          || (item[active_item].kind == MN_NUMFIELD && mn_input_char >= '0' && mn_input_char <= '9'))
+      if(item[active_item].kind == MN_TEXTFIELD ||
+         item[active_item].kind == MN_NUMFIELD) //&& mn_input_char >= '0' && mn_input_char <= '9'))
       {
-        if(item[active_item].input != NULL)
+        char input_chars[16];
+        if (item[active_item].kind == MN_NUMFIELD)
         {
-          int i = strlen(item[active_item].input);
-          item[active_item].input = (char*) realloc(item[active_item].input,sizeof(char)*(i + 2));
-          item[active_item].input[i] = mn_input_char;
-          item[active_item].input[i+1] = '\0';
+          int input_idx = 0;
+          for (char& c : mn_input_chars)
+          {
+            if (c >= '0' && c <= '9')
+              input_chars[input_idx++] = c;
+          }
+          input_chars[input_idx] = '\0';
         }
         else
         {
-          item[active_item].input = (char*) malloc(2*sizeof(char));
-          item[active_item].input[0] = mn_input_char;
-          item[active_item].input[1] = '\0';
+          strcpy(input_chars, mn_input_chars);
+        }
+
+        const int input_len = strlen(input_chars);
+        if(item[active_item].input != NULL)
+        {
+          const int i = strlen(item[active_item].input);
+          item[active_item].input = (char*) realloc(item[active_item].input,sizeof(char) * (i + input_len + 1));
+          strcpy(item[active_item].input + i, input_chars);
+          item[active_item].input[i + input_len] = '\0';
+        }
+        else
+        {
+          item[active_item].input = (char*) malloc(sizeof(char) * (input_len + 1));
+          strcpy(item[active_item].input, input_chars);
+          item[active_item].input[input_len] = '\0';
         }
       }
 
@@ -734,27 +751,14 @@ Menu::isToggled(int id)
 void
 Menu::event(SDL_Event& event)
 {
-  SDLKey key;
+  SDL_Keycode key;
   switch(event.type)
   {
   case SDL_KEYDOWN:
     key = event.key.keysym.sym;
-    SDLMod keymod;
-    char ch[2];
+    SDL_Keymod keymod;
     keymod = SDL_GetModState();
     int x,y;
-
-    /* If the current unicode character is an ASCII character,
-       assign it to ch. */
-    if ( (event.key.keysym.unicode & 0xFF80) == 0 )
-    {
-      ch[0] = event.key.keysym.unicode & 0x7F;
-      ch[1] = '\0';
-    }
-    else
-    {
-      /* An International Character. */
-    }
 
     if(item[active_item].kind == MN_CONTROLFIELD)
     {
@@ -767,7 +771,6 @@ Menu::event(SDL_Event& event)
       menuaction = MENU_ACTION_DOWN;
       return;
     }
-
 
     switch(key)
     {
@@ -787,7 +790,8 @@ Menu::event(SDL_Event& event)
       if(item[active_item].kind == MN_TEXTFIELD)
       {
         menuaction = MENU_ACTION_INPUT;
-        mn_input_char = ' ';
+        mn_input_chars[0] = ' ';
+        mn_input_chars[1] = '\0';
         break;
       }
     case SDLK_RETURN: /* Menu Hit */
@@ -801,18 +805,11 @@ Menu::event(SDL_Event& event)
     case SDLK_ESCAPE:
       Menu::pop_current();
       break;
-    default:
-      if( (key >= SDLK_0 && key <= SDLK_9) || (key >= SDLK_a && key <= SDLK_z) || (key >= SDLK_SPACE && key <= SDLK_SLASH))
-      {
-        menuaction = MENU_ACTION_INPUT;
-        mn_input_char = *ch;
-      }
-      else
-      {
-        mn_input_char = '\0';
-      }
-      break;
     }
+    break;
+  case SDL_TEXTINPUT:
+    menuaction = MENU_ACTION_INPUT;
+    strcpy(mn_input_chars, event.text.text);
     break;
   case  SDL_JOYHATMOTION:
       if(event.jhat.value == SDL_HAT_UP)

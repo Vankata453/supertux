@@ -261,9 +261,9 @@ BadGuy::action_mriceblock(double frame_ratio)
       if(mode == KICK && changed != dir)
         {
           /* handle stereo sound (number 10 should be tweaked...)*/
-          if (base.x < scroll_x + screen->w/2 - 10)
+          if (base.x < scroll_x + screen_w()/2 - 10)
             play_sound(sounds[SND_RICOCHET], SOUND_LEFT_SPEAKER);
-          else if (base.x > scroll_x + screen->w/2 + 10)
+          else if (base.x > scroll_x + screen_w()/2 + 10)
             play_sound(sounds[SND_RICOCHET], SOUND_RIGHT_SPEAKER);
           else
             play_sound(sounds[SND_RICOCHET], SOUND_CENTER_SPEAKER);
@@ -454,9 +454,9 @@ BadGuy::action_bomb(double frame_ratio)
       timer.start(EXPLODETIME);
 
       /* play explosion sound */  // FIXME: is the stereo all right? maybe we should use player cordinates...
-      if (base.x < scroll_x + screen->w/2 - 10)
+      if (base.x < scroll_x + screen_w()/2 - 10)
         play_sound(sounds[SND_EXPLODE], SOUND_LEFT_SPEAKER);
-      else if (base.x > scroll_x + screen->w/2 + 10)
+      else if (base.x > scroll_x + screen_w()/2 + 10)
         play_sound(sounds[SND_EXPLODE], SOUND_RIGHT_SPEAKER);
       else
         play_sound(sounds[SND_EXPLODE], SOUND_CENTER_SPEAKER);
@@ -677,13 +677,13 @@ BadGuy::action(double frame_ratio)
     }
 
   // BadGuy fall below the ground
-  if (base.y > screen->h) {
+  if (base.y > screen_h()) {
     remove_me();
     return;
   }
 
   // Once it's on screen, it's activated!
-  if (base.x <= scroll_x + screen->w + OFFSCREEN_DISTANCE)
+  if (base.x <= scroll_x + screen_w() + OFFSCREEN_DISTANCE)
     seen = true;
 
   if(!seen)
@@ -743,7 +743,7 @@ void
 BadGuy::draw()
 {
   // Don't try to draw stuff that is outside of the screen
-  if(base.x <= scroll_x - base.width || base.x >= scroll_x + screen->w)
+  if(base.x <= scroll_x - base.width || base.x >= scroll_x + screen_w())
     return;
   
   if(sprite_left == 0 || sprite_right == 0)

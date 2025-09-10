@@ -19,7 +19,7 @@
 
 #include <assert.h>
 #include <iostream>
-#include "SDL.h"
+#include <SDL2/SDL.h>
 #include "defines.h"
 #include "special.h"
 #include "gameloop.h"
@@ -106,8 +106,8 @@ Bullet::action(double frame_ratio)
   base.ym = base.ym + 0.5 * frame_ratio;
 
   if (base.x < scroll_x ||
-      base.x > scroll_x + screen->w ||
-      base.y > screen->h ||
+      base.x > scroll_x + screen_w() ||
+      base.y > screen_h() ||
       issolid(base.x + 4, base.y + 2) ||
       issolid(base.x, base.y + 2) ||
       life_count <= 0)
@@ -121,7 +121,7 @@ void
 Bullet::draw()
 {
   if (base.x >= scroll_x - base.width &&
-      base.x <= scroll_x + screen->w)
+      base.x <= scroll_x + screen_w())
     {
       img_bullet->draw(base.x - scroll_x, base.y);
     }
@@ -197,7 +197,7 @@ Upgrade::action(double frame_ratio)
       remove_me();
       return;
   }
-  if(base.y > screen->h) {
+  if(base.y > screen_h()) {
     remove_me();
     return;
   }

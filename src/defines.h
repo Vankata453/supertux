@@ -28,6 +28,12 @@
 	#define VERSION "0.1.1"
 #endif
 
+/* Screen proprities: */
+/* Don't use this to test for the actual screen sizes. Use screen_w()/screen_h() instead!
+   (although both currently do the same, the game runs at a constant logical size) */
+#define SCREEN_W 640
+#define SCREEN_H 480
+
 /* Frames per second: */
 
 #define FPS (1000 / 25)

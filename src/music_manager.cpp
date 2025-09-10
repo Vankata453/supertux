@@ -60,12 +60,10 @@ MusicManager::exists_music(const std::string& file)
     return true;
   }
 
-  SDL_RWops* rw;
   Mix_Music* song;
   try
   {
-    rw = get_physfs_SDLRWops(file.c_str());
-    song = Mix_LoadMUS_RW(rw);
+    song = Mix_LoadMUS_RW(get_physfs_SDLRWops(file.c_str()), 1);
     if (!song)
       return false;
   }
@@ -81,7 +79,6 @@ MusicManager::exists_music(const std::string& file)
         std::make_pair<std::string, MusicResource> (std::string(file), MusicResource()));
   MusicResource& resource = result.first->second;
   resource.manager = this;
-  resource.rw = rw;
   resource.music = song;
 
   return true;
@@ -162,8 +159,4 @@ MusicManager::MusicResource::~MusicResource()
 {
   if (music)
     Mix_FreeMusic(music);
-
-  // Mix_LoadMUS_RW in SDL_mixer 1.x does not automatically free RWops
-  if (rw)
-    SDL_RWclose(rw);
 }

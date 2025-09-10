@@ -18,12 +18,13 @@
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <iostream>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <SDL.h>
-#include <SDL_image.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 
 #ifndef WIN32
 #include <sys/types.h>
@@ -190,7 +191,7 @@ void drawpixel(int x, int y, Uint32 pixel)
         }
     }
 
-  if(!(x < 0 || y < 0 || x > screen->w || y > screen->h))
+  if(!(x < 0 || y < 0 || x > screen_w() || y > screen_h()))
     putpixel(screen, x, y, pixel);
 
   if ( SDL_MUSTLOCK(screen) )
@@ -198,7 +199,8 @@ void drawpixel(int x, int y, Uint32 pixel)
       SDL_UnlockSurface(screen);
     }
   /* Update just the part of the display that we've changed */
-  SDL_UpdateRect(screen, x, y, 1, 1);
+  SDL_Rect rect[1] = {x,y,1,1};
+  SDL_UpdateWindowSurfaceRects(window, rect, 1);
 }
 
 void drawline(int x1, int y1, int x2, int y2, int r, int g, int b, int a)
@@ -269,16 +271,16 @@ void drawline(int x1, int y1, int x2, int y2, int r, int g, int b, int a)
 
 void fillrect(float x, float y, float w, float h, int r, int g, int b, int a)
 {
-if(w < 0)
-	{
-	x += w;
-	w = -w;
-	}
-if(h < 0)
-	{
-	y += h;
-	h = -h;
-	}
+  if(w < 0)
+  {
+    x += w;
+    w = -w;
+  }
+  if(h < 0)
+  {
+    y += h;
+    h = -h;
+  }
 
 #ifndef NOOPENGL
   if(use_gl)
@@ -322,7 +324,7 @@ if(h < 0)
 
           SDL_FillRect(temp, &src, SDL_MapRGB(screen->format, r, g, b));
 
-          SDL_SetAlpha(temp, SDL_SRCALPHA, a);
+          SDL_SetSurfaceAlphaMod(temp, a);
 
           SDL_BlitSurface(temp,0,screen,&rect);
 
@@ -342,30 +344,43 @@ if(h < 0)
 
 void updatescreen(void)
 {
-  if(use_gl)  /*clearscreen(0,0,0);*/
-    SDL_GL_SwapBuffers();
+  if (use_gl)
+    SDL_GL_SwapWindow(window);
   else
-    SDL_UpdateRect(screen, 0, 0, screen->w, screen->h);
+  {
+    SDL_UpdateTexture(sdl_texture, NULL, screen->pixels, screen->pitch);
+    SDL_RenderClear(renderer);
+    SDL_RenderCopy(renderer, sdl_texture, NULL, NULL);
+    SDL_RenderPresent(renderer);
+  }
 }
 
 void flipscreen(void)
 {
-  if(use_gl)
-    SDL_GL_SwapBuffers();
+  if (use_gl)
+    SDL_GL_SwapWindow(window);
   else
-    SDL_Flip(screen);
+  {
+    SDL_UpdateTexture(sdl_texture, NULL, screen->pixels, screen->pitch);
+    SDL_RenderClear(renderer);
+    SDL_RenderCopy(renderer, sdl_texture, NULL, NULL);
+    SDL_RenderPresent(renderer);
+  }
 }
 
 void fadeout()
 {
   clearscreen(0, 0, 0);
-  white_text->draw_align("Loading...", screen->w/2, screen->h/2, A_HMIDDLE, A_TOP);
+  white_text->draw_align("Loading...", screen_w()/2, screen_h()/2, A_HMIDDLE, A_TOP);
   flipscreen();
 }
 
 void update_rect(SDL_Surface *scr, Sint32 x, Sint32 y, Sint32 w, Sint32 h)
 {
   if(!use_gl)
-    SDL_UpdateRect(scr, x, y, w, h);
+  {
+    SDL_Rect rect[1] = {x,y,w,h};
+    SDL_UpdateWindowSurfaceRects(window, rect, 1);
+  }
 }
 

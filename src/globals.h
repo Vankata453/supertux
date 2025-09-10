@@ -24,9 +24,10 @@
 
 #include <string>
 #include <map>
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #include "text.h"
 #include "menu.h"
+#include "defines.h"
 #include "mousecursor.h"
 
 extern std::string real_datadir;
@@ -68,7 +69,14 @@ struct Addon final
 extern std::map<std::string, Addon> addons;
 extern std::map<std::string, bool> addons_enabled;
 
-extern SDL_Surface * screen;
+extern SDL_Surface* screen;
+extern SDL_Window* window;
+extern SDL_Renderer* renderer;
+extern SDL_Texture* sdl_texture;
+#ifndef NOOPENGL
+extern SDL_GLContext glcontext;
+#endif
+
 extern Text* black_text;
 extern Text* gold_text;
 extern Text* silver_text;
@@ -98,5 +106,14 @@ extern float game_speed;
 extern SDL_Joystick * js;
 
 int wait_for_event(SDL_Event& event,unsigned int min_delay = 0, unsigned int max_delay = 0, bool empty_events = false);
+
+inline int screen_w()
+{
+  return SCREEN_W;
+}
+inline int screen_h()
+{
+  return SCREEN_H;
+}
 
 #endif /* SUPERTUX_GLOBALS_H */

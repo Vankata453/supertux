@@ -20,7 +20,7 @@
 #include <cassert>
 #include <stdexcept>
 
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 PHYSFS_FileCharReader::PHYSFS_FileCharReader(PHYSFS_File* file_) :
   file(file_),
@@ -77,7 +77,13 @@ PHYSFS_FileCharReader::prev_char(char& c)
 }
 
 
-int funcSeek(struct SDL_RWops* context, int offset, int whence)
+Sint64 funcSize(struct SDL_RWops* context)
+{
+  PHYSFS_file* file = static_cast<PHYSFS_file*>(context->hidden.unknown.data1);
+  return PHYSFS_fileLength(file);
+}
+
+Sint64 funcSeek(struct SDL_RWops* context, Sint64 offset, int whence)
 {
   PHYSFS_file* file = static_cast<PHYSFS_file*>(context->hidden.unknown.data1);
   int res;
@@ -92,40 +98,52 @@ int funcSeek(struct SDL_RWops* context, int offset, int whence)
       res = PHYSFS_seek(file, PHYSFS_fileLength(file) + offset);
       break;
     default:
+      res = 0; // NOLINT
       assert(false);
       break;
   }
   if (res == 0) {
-    throw std::runtime_error("Error seeking in file: " + std::string(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode())));
+    printf("Error seeking in file: %s", PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+    return -1;
   }
   return static_cast<int>(PHYSFS_tell(file));
 }
 
-int funcRead(struct SDL_RWops* context, void* ptr, int size, int maxnum)
+size_t funcRead(struct SDL_RWops* context, void* ptr, size_t size, size_t maxnum)
 {
   PHYSFS_file* file = static_cast<PHYSFS_file*>(context->hidden.unknown.data1);
 
-  const int res = static_cast<int>(PHYSFS_readBytes(file, ptr, size * maxnum));
+  PHYSFS_sint64 res = PHYSFS_readBytes(file, ptr, size * maxnum);
   if (res < 0)
+  {
     return 0;
+  }
   else
-    return res / size;
+  {
+    return static_cast<size_t>(res / size);
+  }
 }
 
-int funcWrite(struct SDL_RWops* context, const void* ptr, int size, int num)
+size_t funcWrite(struct SDL_RWops* context, const void* ptr, size_t size, size_t num)
 {
   PHYSFS_file* file = static_cast<PHYSFS_file*>(context->hidden.unknown.data1);
 
-  const int res = static_cast<int>(PHYSFS_writeBytes(file, ptr, size * num));
+  PHYSFS_sint64 res = PHYSFS_writeBytes(file, ptr, size * num);
   if (res < 0)
+  {
     return 0;
+  }
   else
-    return res / size;
+  {
+    return static_cast<size_t>(res / size);
+  }
 }
 
 int funcClose(struct SDL_RWops* context)
 {
-  PHYSFS_close(static_cast<PHYSFS_file*>(context->hidden.unknown.data1));
+  PHYSFS_file* file = static_cast<PHYSFS_file*>(context->hidden.unknown.data1);
+
+  PHYSFS_close(file);
   delete context;
 
   return 0;
@@ -144,11 +162,12 @@ SDL_RWops* get_physfs_SDLRWops(const char* filename)
     throw std::runtime_error("Couldn't open '" + std::string(filename) + "': " + std::string(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode())));
 
   SDL_RWops* ops = new SDL_RWops;
+  ops->size = funcSize;
   ops->seek = funcSeek;
   ops->read = funcRead;
   ops->write = funcWrite;
   ops->close = funcClose;
-  ops->type = 0;
+  ops->type = SDL_RWOPS_UNKNOWN;
   ops->hidden.unknown.data1 = file;
 
   return ops;
@@ -166,11 +185,12 @@ SDL_RWops* get_writable_physfs_SDLRWops(const char* filename)
     throw std::runtime_error("Couldn't open '" + std::string(filename) + "' for writing: " + std::string(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode())));
 
   SDL_RWops* ops = new SDL_RWops;
+  ops->size = funcSize;
   ops->seek = funcSeek;
   ops->read = funcRead;
   ops->write = funcWrite;
   ops->close = funcClose;
-  ops->type = 0;
+  ops->type = SDL_RWOPS_UNKNOWN;
   ops->hidden.unknown.data1 = file;
 
   return ops;

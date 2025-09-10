@@ -144,7 +144,7 @@ BouncyBrick::draw()
   SDL_Rect dest;
   
   if (base.x >= scroll_x - 32 &&
-      base.x <= scroll_x + screen->w)
+      base.x <= scroll_x + screen_w())
     {
       dest.x = (int)(base.x - scroll_x);
       dest.y = (int)base.y;

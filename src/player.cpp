@@ -103,7 +103,7 @@ Player::init()
 }
 
 int
-Player::key_event(SDLKey key, int state)
+Player::key_event(SDL_Keycode key, int state)
 {
   if(key == keymap.right)
     {
@@ -735,7 +735,7 @@ Player::is_dying()
 
 bool Player::is_dead()
 {
-  if(base.y > screen->h || base.x < scroll_x - AUTOSCROLL_DEAD_INTERVAL)  // last condition can happen in auto-scrolling
+  if(base.y > screen_h() || base.x < scroll_x - AUTOSCROLL_DEAD_INTERVAL)  // last condition can happen in auto-scrolling
     return true;
   else
     return false;
@@ -761,7 +761,7 @@ Player::check_bounds(bool back_scrolling, bool hor_autoscroll)
     }
 
   /* Keep in-bounds, vertically: */
-  if (base.y > screen->h)
+  if (base.y > screen_h())
     {
       kill(KILL);
     }
@@ -775,8 +775,8 @@ Player::check_bounds(bool back_scrolling, bool hor_autoscroll)
       if((issolid(base.x+32, base.y) || (size != SMALL && !duck && issolid(base.x+32, base.y+32))) && (dying == DYING_NOT))
         kill(KILL);
 
-    if(base.x + base.width > scroll_x + screen->w)
-      base.x = scroll_x + screen->w - base.width;
+    if(base.x + base.width > scroll_x + screen_w())
+      base.x = scroll_x + screen_w() - base.width;
     }
     
 }

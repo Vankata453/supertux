@@ -72,7 +72,7 @@ enum {
 extern char* soundfilenames[NUM_SOUNDS];
 
 #include <string>
-#include <SDL_mixer.h>
+#include <SDL2/SDL_mixer.h>
 
 /* variables for stocking the sound and music */
 extern Mix_Chunk* sounds[NUM_SOUNDS];

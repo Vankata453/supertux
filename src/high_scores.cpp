@@ -110,7 +110,7 @@ void save_hs(int score)
 
       flipscreen();
 
-      while(SDL_PollEvent(&event))
+      while(poll_event(event))
         if(event.type == SDL_KEYDOWN)
           Menu::current()->event(event);
 
