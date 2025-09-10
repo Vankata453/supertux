@@ -383,7 +383,8 @@ void title(void)
                   {
                   sprintf(str,"save/slot%d.stsg", slot);
                   printf("Removing: %s\n",str);
-                  remove(str);
+                  if (!PHYSFS_delete(str))
+                      printf("Couldn't delete '%s': %s", str, PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
                   }
 
                 update_load_save_game_menu(load_game_menu);
