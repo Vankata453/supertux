@@ -1058,6 +1058,11 @@ void st_video_setup_gl(void)
   glDisable(GL_CULL_FACE);
 
   glViewport(0, 0, SCREEN_W, SCREEN_H);
+  glviewport_x = 0;
+  glviewport_y = 0;
+  glviewport_w = SCREEN_W;
+  glviewport_h = SCREEN_H;
+
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   glOrtho(0, SCREEN_W, SCREEN_H, 0, -1.0, 1.0);
@@ -1072,29 +1077,44 @@ void st_video_setup_gl(void)
 int poll_event(SDL_Event& ev)
 {
   const int result = SDL_PollEvent(&ev);
+#ifndef NOOPENGL
   if (result)
   {
-    // OpenGL: Center and resize the logical screen on window resize
-#ifndef NOOPENGL
-    if (use_gl &&
-        ev.type == SDL_WINDOWEVENT &&
-        ev.window.event == SDL_WINDOWEVENT_RESIZED)
+    if (use_gl)
     {
-      int win_w, win_h;
-      SDL_GetWindowSize(window, &win_w, &win_h);
+      // OpenGL: Center and resize the logical screen on window resize
+      if (ev.type == SDL_WINDOWEVENT &&
+          ev.window.event == SDL_WINDOWEVENT_RESIZED)
+      {
+        int win_w, win_h;
+        SDL_GetWindowSize(window, &win_w, &win_h);
 
-      const float scale_x = win_w / 640.f;
-      const float scale_y = win_h / 480.f;
-      const float scale = scale_x < scale_y ? scale_x : scale_y;
+        const float scale_x = win_w / screen_w();
+        const float scale_y = win_h / screen_h();
+        const float scale = scale_x < scale_y ? scale_x : scale_y;
 
-      const int viewport_w = static_cast<int>(640 * scale);
-      const int viewport_h = static_cast<int>(480 * scale);
+        glviewport_w = static_cast<int>(screen_w() * scale);
+        glviewport_h = static_cast<int>(screen_h() * scale);
+        glviewport_x = (win_w - glviewport_w) / 2;
+        glviewport_y = (win_h - glviewport_h) / 2;
 
-      clearscreen(0, 0, 0);
-      glViewport((win_w - viewport_w) / 2, (win_h - viewport_h) / 2, viewport_w, viewport_h);
+        clearscreen(0, 0, 0);
+        glViewport(glviewport_x, glviewport_y, glviewport_w, glviewport_h);
+      }
+      // OpenGL: Translate mouse motion event mouse position to logical screen
+      else if (ev.type == SDL_MOUSEMOTION)
+      {
+        ev.motion.x = static_cast<int>((ev.motion.x - glviewport_x) * (static_cast<float>(screen_w()) / glviewport_w));
+        ev.motion.y = static_cast<int>((ev.motion.y - glviewport_y) * (static_cast<float>(screen_h()) / glviewport_h));
+      }
+      else if (ev.type == SDL_MOUSEBUTTONUP || ev.type == SDL_MOUSEBUTTONDOWN)
+      {
+        ev.button.x = static_cast<int>((ev.motion.x - glviewport_x) * (static_cast<float>(screen_w()) / glviewport_w));
+        ev.button.y = static_cast<int>((ev.motion.y - glviewport_y) * (static_cast<float>(screen_h()) / glviewport_h));
+      }
     }
-#endif
   }
+#endif
   return result;
 }
 

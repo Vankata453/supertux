@@ -48,6 +48,7 @@ SDL_Renderer* renderer;
 SDL_Texture* sdl_texture;
 #ifndef NOOPENGL
 SDL_GLContext glcontext;
+int glviewport_x, glviewport_y, glviewport_w, glviewport_h;
 #endif
 
 Text* black_text;

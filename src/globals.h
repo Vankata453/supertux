@@ -75,6 +75,7 @@ extern SDL_Renderer* renderer;
 extern SDL_Texture* sdl_texture;
 #ifndef NOOPENGL
 extern SDL_GLContext glcontext;
+extern int glviewport_x, glviewport_y, glviewport_w, glviewport_h;
 #endif
 
 extern Text* black_text;

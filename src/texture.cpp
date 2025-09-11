@@ -273,18 +273,13 @@ Surface* Surface::CaptureScreen()
 {
   Surface *cap_screen;
 
-  if (!(screen->flags & SDL_WINDOW_OPENGL))
-  {
-    cap_screen = new Surface(SDL_GetWindowSurface(window),false);
-  }
-
 #ifndef NOOPENGL
   if (use_gl)
   {
     SDL_Surface *temp;
     unsigned char *pixels;
     int i;
-    temp = SDL_CreateRGBSurface(SDL_SWSURFACE, screen_w(), screen_h(), 24,
+    temp = SDL_CreateRGBSurface(SDL_SWSURFACE, glviewport_w, glviewport_h, 24,
 #if SDL_BYTEORDER == SDL_LIL_ENDIAN
                                 0x000000FF, 0x0000FF00, 0x00FF0000, 0
 #else
@@ -294,26 +289,45 @@ Surface* Surface::CaptureScreen()
     if (temp == NULL)
       st_abort("Error while trying to capture the screen in OpenGL mode","");
 
-    pixels = (unsigned char*) malloc(3 * screen_w() * screen_h());
+    pixels = (unsigned char*) malloc(3 * glviewport_w * glviewport_h);
     if (pixels == NULL)
     {
       SDL_FreeSurface(temp);
       st_abort("Error while trying to capture the screen in OpenGL mode","");
     }
 
-    glReadPixels(0, 0, screen_w(), screen_h(), GL_RGB, GL_UNSIGNED_BYTE, pixels);
+    glReadPixels(glviewport_x, glviewport_y, glviewport_w, glviewport_h, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
-    for (i=0; i<screen_h(); i++)
-      memcpy(((char *) temp->pixels) + temp->pitch * i, pixels + 3*screen_w() * (screen_h()-i-1), screen_w()*3);
+    for (i = 0; i < glviewport_h; i++)
+      memcpy(((char *) temp->pixels) + temp->pitch * i, pixels + 3*glviewport_w * (glviewport_h-i-1), glviewport_w*3);
     free(pixels);
 
-    cap_screen = new Surface(temp,false);
-    SDL_FreeSurface(temp);
-
-  }
+    if (glviewport_w != screen_w() || glviewport_h != screen_h())
+    {
+      SDL_Surface* temp_scaled = SDL_CreateRGBSurface(SDL_SWSURFACE, screen_w(), screen_h(), 24,
+#if SDL_BYTEORDER == SDL_LIL_ENDIAN
+                                  0x000000FF, 0x0000FF00, 0x00FF0000, 0
+#else
+                                  0x00FF0000, 0x0000FF00, 0x000000FF, 0
 #endif
-  
-return cap_screen;
+                                );
+
+      SDL_BlitScaled(temp, NULL, temp_scaled, NULL);
+
+      cap_screen = new Surface(temp_scaled,false);
+      SDL_FreeSurface(temp_scaled);
+    }
+    else
+    {
+      cap_screen = new Surface(temp,false);
+    }
+    SDL_FreeSurface(temp);
+  }
+  else
+#endif
+    cap_screen = new Surface(SDL_GetWindowSurface(window),false);
+
+    return cap_screen;
 }
 
 SDL_Surface*
