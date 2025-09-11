@@ -346,7 +346,7 @@ int leveleditor(char* filename)
       }
     }
 
-    MouseCursor::current()->draw();
+    MouseCursor::current()->update();
 
     if(done)
     {
@@ -563,8 +563,7 @@ int le_init()
   le_object_properties_bt = new Button("/images/icons/properties.png","Edit object properties", SDLK_p, screen_w() - 32, screen_h()-98);
   le_object_properties_bt->set_active(false);
 
-  mouse_select_object = new MouseCursor("/images/status/select-cursor.png",1);
-  mouse_select_object->set_mid(16,16);
+  mouse_select_object = new MouseCursor("/images/status/select-cursor.png",1,16,16);
 
   le_tilemap_panel = new ButtonPanel(screen_w()-64,screen_h()-32,32,32);
   le_tilemap_panel->set_button_size(32,10);
@@ -1047,7 +1046,7 @@ void le_change_object_properties(GameObject *pobj)
     if(Menu::current() == NULL)
       loop = false;
 
-    mouse_cursor->draw();
+    mouse_cursor->update();
     flipscreen();
     SDL_Delay(25);
   }

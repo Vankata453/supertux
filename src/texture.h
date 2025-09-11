@@ -52,6 +52,7 @@ public:
   int h;
 
   SurfaceData(SDL_Surface* surf, int use_alpha_);
+  SurfaceData(SDL_Surface* surf, int x_, int y_, int w_, int h_, int use_alpha_);
   SurfaceData(const std::string& file_, int use_alpha_);
   SurfaceData(const std::string& file_, int x_, int y_, int w_, int h_, int use_alpha_);
   ~SurfaceData();
@@ -78,7 +79,8 @@ public:
   static void debug_check();
 
   Surface(SDL_Surface* surf, int use_alpha);  
-  Surface(const std::string& file, int use_alpha);  
+  Surface(SDL_Surface* surf, int x, int y, int w, int h, int use_alpha);
+  Surface(const std::string& file, int use_alpha);
   Surface(const std::string& file, int x, int y, int w, int h, int use_alpha);
   ~Surface();
   

@@ -21,6 +21,9 @@
 #define SUPERTUX_MOUSECURSOR_H
 
 #include <string>
+#include <array>
+#include <vector>
+
 #include "timer.h"
 #include "texture.h"
 
@@ -33,27 +36,41 @@ enum {
   MC_LINK
 };
 
-class MouseCursor
+class MouseCursor final
+{
+private:
+  static MouseCursor* current_;
+
+public:
+  static MouseCursor* current() { return current_; };
+  static void set_current(MouseCursor* pcursor);
+
+public:
+  MouseCursor(const std::string& cursor_file, int frames, int mid_x = 0, int mid_y = 0);
+  ~MouseCursor();
+
+  inline int state() const { return cur_state; }
+  void set_state(int nstate);
+
+  void update();
+
+private:
+  void update_cursor();
+
+  struct CursorData final
   {
-    public:
-    MouseCursor(std::string cursor_file, int frames);
-    ~MouseCursor();
-    int state();
-    void set_state(int nstate);
-    void set_mid(int x, int y);
-    void draw();
-    
-    static MouseCursor* current() { return current_; };
-    static void set_current(MouseCursor* pcursor) {  current_ = pcursor; };
-    
-    private:
-    int mid_x, mid_y;
-    static MouseCursor* current_;    
-    int state_before_click;
-    int cur_state;
-    int cur_frame, tot_frames;
-    Surface* cursor;
-    Timer timer;
+    Surface* surface;
+    SDL_Cursor* cursor;
   };
+
+private:
+  const int frame_w, frame_h;
+  int mid_x, mid_y;
+  int state_before_click;
+  int cur_state;
+  int cur_frame, tot_frames;
+  std::array<std::vector<CursorData>, MC_STATES_NB> cursor_states;
+  Timer timer;
+};
 
 #endif /*SUPERTUX_MOUSECURSOR_H*/

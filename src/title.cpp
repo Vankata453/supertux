@@ -347,14 +347,17 @@ void title(void)
                 case MNID_LEVELEDITOR:
                   leveleditor();
                   Menu::set_current(main_menu);
+                  MouseCursor::set_current(mouse_cursor);
                   break;
                 case MNID_CREDITS:
                   menu_song = music_manager->load_music("/music/credits.ogg");
                   music_manager->play_music(menu_song,0);
+                  SDL_ShowCursor(SDL_DISABLE);
                   display_text_file("CREDITS", bkg_title, SCROLL_SPEED_CREDITS);
                   menu_song = music_manager->load_music("/music/theme.mod");
                   music_manager->play_music(menu_song);
                   Menu::set_current(main_menu);
+                  SDL_ShowCursor(SDL_ENABLE);
                   break;
                 case MNID_QUITMAINMENU:
                   Menu::set_current(0);
@@ -414,7 +417,7 @@ void title(void)
             }
         }
 
-      mouse_cursor->draw();
+      mouse_cursor->update();
       
       flipscreen();
 

@@ -1038,10 +1038,17 @@ WorldMap::display()
       update(delta);
 
       if(Menu::current())
-        {
-          Menu::current()->draw();
-          mouse_cursor->draw();
-        }
+      {
+        Menu::current()->draw();
+
+        SDL_ShowCursor(SDL_ENABLE);
+        mouse_cursor->update();
+      }
+      else
+      {
+        SDL_ShowCursor(SDL_DISABLE);
+      }
+
       flipscreen();
 
       SDL_Delay(20);

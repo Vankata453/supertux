@@ -80,6 +80,8 @@ bool confirm_dialog(std::string text)
 
   Menu::set_current(dialog);
 
+  const int cursor_shown = SDL_ShowCursor(SDL_ENABLE);
+
   while(true)
   {
     SDL_Event event;
@@ -112,12 +114,12 @@ bool confirm_dialog(std::string text)
       break;
     }
 
-    mouse_cursor->draw();
+    mouse_cursor->update();
     flipscreen();
     SDL_Delay(25);
   }
 
-
+  SDL_ShowCursor(cursor_shown);
 }
 
 void

@@ -852,10 +852,6 @@ void st_general_setup(void)
     return;
   }
 
-  /* Hide default cursor */
-
-  SDL_ShowCursor(SDL_DISABLE);
-
   /* Load global images: */
 
   black_text  = new Text("/images/status/letters-black.png", TEXT_TEXT, 16,18);
@@ -879,7 +875,7 @@ void st_general_setup(void)
   resource_pack_addon_icon = new Surface("/images/icons/resource_pack.png", USE_ALPHA);
 
   /* Load the mouse-cursor */
-  mouse_cursor = new MouseCursor( "/images/status/mousecursor.png",1);
+  mouse_cursor = new MouseCursor("/images/status/mousecursor.png", 1);
   MouseCursor::set_current(mouse_cursor);
   
 }

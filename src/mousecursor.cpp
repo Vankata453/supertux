@@ -22,13 +22,44 @@
 
 MouseCursor* MouseCursor::current_ = 0;
 
-MouseCursor::MouseCursor(std::string cursor_file, int frames) : mid_x(0), mid_y(0)
+void MouseCursor::set_current(MouseCursor* pcursor)
 {
-  cursor = new Surface(cursor_file, USE_ALPHA);
-  
+  current_ = pcursor;
+  if (pcursor)
+    pcursor->update_cursor();
+  else
+    SDL_ShowCursor(SDL_DISABLE);
+}
+
+
+MouseCursor::MouseCursor(const std::string& cursor_file, int frames, int mid_x_, int mid_y_) :
+  frame_w(0),
+  frame_h(0),
+  mid_x(mid_x_),
+  mid_y(mid_y_)
+{
   cur_state = MC_NORMAL;
   cur_frame = 0;
   tot_frames = frames;
+
+  Surface surface(cursor_file, USE_ALPHA);
+
+  const_cast<int&>(frame_w) = surface.w / tot_frames;
+  const_cast<int&>(frame_h) = surface.h / MC_STATES_NB;
+
+  for (int y = 0; y < MC_STATES_NB; ++y)
+  {
+    cursor_states[y] = std::vector<CursorData>(tot_frames, CursorData());
+    std::vector<CursorData>& cursors = cursor_states[y];
+    for (int x = 0; x < tot_frames; ++x)
+    {
+      CursorData& cursor = cursors[x];
+      cursor.surface = new Surface(surface.impl->get_sdl_surface(), x * frame_w, y * frame_h, frame_w, frame_h, USE_ALPHA);
+      cursor.cursor = SDL_CreateColorCursor(cursor.surface->impl->get_sdl_surface(), mid_x, mid_y);
+      if (!cursor.cursor)
+        printf("SDL_CreateColorCursor() failed: %s\n", SDL_GetError());
+    }
+  }
 
   timer.init(false);
   timer.start(MC_FRAME_PERIOD);
@@ -36,53 +67,71 @@ MouseCursor::MouseCursor(std::string cursor_file, int frames) : mid_x(0), mid_y(
 
 MouseCursor::~MouseCursor()
 {
-  delete cursor;
+  if (current_ == this)
+  {
+    current_ = nullptr;
+    SDL_ShowCursor(SDL_DISABLE);
+    SDL_SetCursor(NULL);
+  }
+
+  for (auto& cursors : cursor_states)
+  {
+    for (CursorData& cursor : cursors)
+    {
+      SDL_FreeCursor(cursor.cursor);
+      delete cursor.surface;
+    }
+  }
 }
 
-int MouseCursor::state()
+void MouseCursor::update_cursor()
 {
-  return cur_state;
+  if (current_ != this)
+    return;
+
+  SDL_SetCursor(cursor_states[cur_state][cur_frame].cursor);
+
+  // Force cursor refresh
+  SDL_ShowCursor(SDL_DISABLE);
+  SDL_ShowCursor(SDL_ENABLE);
 }
 
 void MouseCursor::set_state(int nstate)
 {
+  if (nstate == cur_state) return;
   cur_state = nstate;
+
+  update_cursor();
 }
 
-void MouseCursor::set_mid(int x, int y)
+void MouseCursor::update()
 {
-  mid_x = x;
-  mid_y = y;
-}
+  int x, y;
+  const int pressed = SDL_GetMouseState(&x, &y);
+  if(pressed &SDL_BUTTON(1) || pressed &SDL_BUTTON(2))
+  {
+    if(cur_state != MC_CLICK)
+    {
+      state_before_click = cur_state;
+      cur_state = MC_CLICK;
 
-void MouseCursor::draw()
-{
-  int x,y,w,h;
-  Uint8 ispressed = SDL_GetMouseState(&x,&y);
-  w = cursor->w / tot_frames;
-  h = cursor->h / MC_STATES_NB;
-  if(ispressed &SDL_BUTTON(1) || ispressed &SDL_BUTTON(2))
-    {
-      if(cur_state != MC_CLICK)
-        {
-          state_before_click = cur_state;
-          cur_state = MC_CLICK;
-        }
+      update_cursor();
     }
-  else
-    {
-      if(cur_state == MC_CLICK)
-        cur_state = state_before_click;
-    }
+  }
+  else if(cur_state == MC_CLICK)
+  {
+    cur_state = state_before_click;
+
+    update_cursor();
+  }
 
   if(timer.get_left() < 0 && tot_frames > 1)
-    {
-      cur_frame++;
-      if(cur_frame++ >= tot_frames)
-        cur_frame = 0;
+  {
+    if(cur_frame++ >= tot_frames)
+      cur_frame = 0;
 
-      timer.start(MC_FRAME_PERIOD);
-    }
+    update_cursor();
 
-  cursor->draw_part(w*cur_frame, h*cur_state , x-mid_x, y-mid_y, w, h);
+    timer.start(MC_FRAME_PERIOD);
+  }
 }
