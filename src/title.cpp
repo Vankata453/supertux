@@ -188,11 +188,13 @@ void check_contrib_subset_menu()
     {
       if (contrib_subset_menu->get_item_by_id(index).kind == MN_ACTION)
         {
+          SDL_ShowCursor(SDL_DISABLE);
           std::cout << "Starting level: " << index << std::endl;
           GameSession session(current_contrib_subset, index, ST_GL_PLAY);
           session.run();
           player_status.reset();
           Menu::set_current(main_menu);
+          SDL_ShowCursor(SDL_ENABLE);
         }
     }  
 }
