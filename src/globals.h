@@ -91,6 +91,7 @@ extern Text* yellow_nums;
 
 extern MouseCursor * mouse_cursor;
 
+extern int  display_idx;
 extern bool use_gl;
 extern bool use_joystick;
 extern bool use_fullscreen;

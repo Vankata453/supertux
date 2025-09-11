@@ -64,6 +64,7 @@ Text* white_big_text;
 
 MouseCursor * mouse_cursor;
 
+int  display_idx = 0;
 bool use_gl;
 bool use_joystick;
 bool use_fullscreen;

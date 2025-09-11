@@ -73,6 +73,7 @@ void loadconfig(void)
 
   LispReader reader(lisp_cdr(root_obj));
 
+  reader.read_int ("display",    &display_idx);
   reader.read_bool("fullscreen", &use_fullscreen);
   reader.read_bool("sound",      &use_sound);
   reader.read_bool("music",      &use_music);
@@ -137,6 +138,7 @@ void saveconfig (void)
     {
       PHYSFS_writeFormatted(config, "(supertux-config\n");
       PHYSFS_writeFormatted(config, "\t;; the following options can be set to #t or #f:\n");
+      PHYSFS_writeFormatted(config, "\t(display    %d)\n", display_idx);
       PHYSFS_writeFormatted(config, "\t(fullscreen %s)\n", use_fullscreen ? "#t" : "#f");
       PHYSFS_writeFormatted(config, "\t(sound      %s)\n", use_sound      ? "#t" : "#f");
       PHYSFS_writeFormatted(config, "\t(music      %s)\n", use_music      ? "#t" : "#f");

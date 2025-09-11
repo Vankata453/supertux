@@ -32,8 +32,6 @@ void st_addons_setup();
 void st_addons_check(bool startup = false);
 void st_general_setup(void);
 void st_general_free();
-void st_video_setup_sdl(void);
-void st_video_setup_gl(void);
 void st_video_setup(void);
 void st_audio_setup(void);
 void st_joystick_setup(void);
