@@ -361,7 +361,7 @@ Surface* Surface::CaptureScreen()
   }
   else
 #endif
-    cap_screen = new Surface(SDL_GetWindowSurface(window),false);
+    cap_screen = new Surface(screen, false);
 
     return cap_screen;
 }
