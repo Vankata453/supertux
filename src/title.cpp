@@ -417,6 +417,10 @@ void title(void)
             {
               process_addons_menu();
             }
+          else if (menu == addons_download_menu)
+            {
+              process_addons_download_menu();
+            }
         }
 
       mouse_cursor->update();

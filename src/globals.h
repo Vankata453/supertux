@@ -30,6 +30,8 @@
 #include "defines.h"
 #include "mousecursor.h"
 
+class Downloader;
+
 extern std::string real_datadir;
 extern std::string real_userdir;
 
@@ -69,6 +71,22 @@ struct Addon final
 extern std::map<std::string, Addon> addons;
 extern std::map<std::string, bool> addons_enabled;
 
+struct IndexAddon final
+{
+  std::string title;
+  std::string author;
+
+  bool resource_pack = false;
+
+  std::string file;
+  std::string custom_url;
+
+  std::vector<std::string> dependencies;
+};
+extern bool addon_index_fetched;
+extern std::map<std::string, IndexAddon> addon_index;
+extern std::string addon_index_base_url;
+
 extern SDL_Surface* screen;
 extern SDL_Window* window;
 extern SDL_Renderer* renderer;
@@ -89,7 +107,9 @@ extern Text* red_text;
 extern Text* green_text;
 extern Text* yellow_nums;
 
-extern MouseCursor * mouse_cursor;
+extern MouseCursor* mouse_cursor;
+
+extern Downloader* downloader;
 
 extern int  display_idx;
 extern bool use_gl;

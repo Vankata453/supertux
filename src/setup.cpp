@@ -18,6 +18,7 @@
 //  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <assert.h>
+#include <algorithm>
 #include <iostream>
 #include <functional>
 #include <stdio.h>
@@ -51,6 +52,8 @@
 #include "resources.h"
 #include "intro.h"
 #include "music_manager.h"
+#include "downloader.h"
+#include "title.h"
 
 #include "player.h"
 
@@ -203,6 +206,32 @@ void st_directory_setup(int argc, char** const argv)
     throw std::runtime_error("Couldn't add '" + real_userdir + "' to PhysFS searchpath: " + std::string(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode())));
 }
 
+// Generate valid add-on ID: Replace spaces with underscores, skip other invalid lisp symbol characters
+std::string generate_addon_id(const std::string& archive)
+{
+  std::string addon_id;
+  const std::string raw_addon_id = archive.substr(0, archive.size() - 4);
+  for (char c : raw_addon_id)
+  {
+    if (c == ' ')
+    {
+      addon_id += '_';
+    }
+    else if (isalnum(c) ||
+        c == '_' || c == '-' || c == '!' || c == '?' ||
+        c == ':' || c == '+' || c == '*' || c == '/' ||
+        c == '=' || c == '<' || c == '>' || c == '$' ||
+        c == '%' || c == '&' || c == '~' || c == '^' ||
+        c == '.')
+    {
+      addon_id += c;
+    }
+  }
+  return addon_id;
+}
+
+bool st_addons_check(bool startup = false);
+
 void st_addons_setup()
 {
   if (!PHYSFS_exists("addons"))
@@ -293,7 +322,8 @@ void st_addons_enable(bool resource_packs, bool startup)
   }
 }
 
-void st_addons_check(bool startup)
+// RETURNS true if any newly detected add-on archives override data.
+bool st_addons_check(bool startup)
 {
   std::vector<std::string> archives;
   std::function<void(const char*)> callback =
@@ -305,29 +335,10 @@ void st_addons_check(bool startup)
     };
   PHYSFS_enumerate("addons", &physfs_enumerate_files, &callback);
 
+  bool new_archive_overrides_data = false;
   for (const std::string& archive : archives)
   {
-    // Generate valid add-on ID: Replace spaces with underscores, skip other invalid lisp symbol characters
-    const std::string addon_id;
-    {
-      const std::string raw_addon_id = archive.substr(0, archive.size() - 4);
-      for (char c : raw_addon_id)
-      {
-        if (c == ' ')
-        {
-          const_cast<std::string&>(addon_id) += '_';
-        }
-        else if (isalnum(c) ||
-            c == '_' || c == '-' || c == '!' || c == '?' ||
-            c == ':' || c == '+' || c == '*' || c == '/' ||
-            c == '=' || c == '<' || c == '>' || c == '$' ||
-            c == '%' || c == '&' || c == '~' || c == '^' ||
-            c == '.')
-        {
-          const_cast<std::string&>(addon_id) += c;
-        }
-      }
-    }
+    const std::string addon_id = generate_addon_id(archive);
     if (addon_id.empty())
     {
       printf("[ADD-ONS] ERROR: Couldn't process add-on archive '%s': Name leads to an empty ID!\n", archive.c_str());
@@ -392,8 +403,11 @@ void st_addons_check(bool startup)
     printf("[ADD-ONS] SUCCESS: Successfully parsed 'info' from add-on archive '%s' (id: '%s') (title: '%s')\n", archive.c_str(),
       addon_id.c_str(), addon.title.c_str());
 
+    if (addon.overrides_data)
+      new_archive_overrides_data = true;
+
     // Add add-on object to map
-    addons.insert({ addon_id, addon });
+    addons.insert({ addon_id, std::move(addon) });
     addons_enabled.insert({ addon_id, false });
   }
 
@@ -402,6 +416,130 @@ void st_addons_check(bool startup)
   if (startup)
     st_addons_enable(true, true);
   st_addons_enable(false, startup);
+
+  return new_archive_overrides_data;
+}
+
+bool st_fetch_addon_index()
+{
+  if (addon_index_fetched) return true;
+
+  std::string index_buf;
+  TransferStatusPtr status = downloader->request_download_string(
+      "https://raw.githubusercontent.com/supertux-community/supertux-addons-M1/refs/heads/master/index.txt",
+      index_buf);
+
+  bool success = false;
+  status->then([&success](bool success_) { success = success_; });
+
+  draw_background();
+  download_dialog(status);
+
+  if (!success) return false;
+  addon_index_fetched = true;
+
+  // Parse add-on index
+  lisp_object_t* root_obj = lisp_read_from_string(index_buf.c_str());
+  if (!root_obj || root_obj->type == LISP_TYPE_EOF || root_obj->type == LISP_TYPE_PARSE_ERROR)
+  {
+    printf("[ADD-ONS] ERROR: Couldn't parse add-on index!\n");
+    return true;
+  }
+  if (strcmp(lisp_symbol(lisp_car(root_obj)), "supertux-addonindex") != 0)
+  {
+    printf("[ADD-ONS] ERROR: Add-on index is not declared 'supertux-addonindex'!\n");
+    return true;
+  }
+  lisp_object_t* cur = lisp_cdr(root_obj);
+  while (!lisp_nil_p(cur))
+  {
+    lisp_object_t* lisp_el = lisp_car(cur);
+    const char* el_id = lisp_symbol(lisp_car(lisp_el));
+    if (!strcmp(el_id, "addon"))
+    {
+      lisp_object_t* addon_el = lisp_cdr(lisp_el);
+      LispReader reader(addon_el);
+
+      std::string archive;
+
+      IndexAddon addon;
+      if (!reader.read_string("title", &addon.title))
+      {
+        printf("[ADD-ONS] ERROR: Couldn't parse add-on from index: No 'title' available!\n");
+        cur = lisp_cdr(cur);
+        continue;
+      }
+      if (!reader.read_string("author", &addon.author))
+        addon.author = "Unknown";
+      reader.read_bool("resource-pack", &addon.resource_pack);
+      if (reader.read_string("url", &addon.custom_url))
+      {
+        const std::size_t last_idx = addon.custom_url.find_last_of("/");
+        archive = (last_idx == std::string::npos ? addon.custom_url : addon.custom_url.substr(last_idx + 1));
+      }
+      else if (reader.read_string("file", &addon.file))
+      {
+        const std::size_t last_idx = addon.file.find_last_of("/");
+        archive = (last_idx == std::string::npos ? addon.file : addon.file.substr(last_idx + 1));
+      }
+      else
+      {
+        printf("[ADD-ONS] ERROR: Couldn't parse add-on from index: No 'file' or 'url' available!\n");
+        cur = lisp_cdr(cur);
+        continue;
+      }
+      reader.read_string_vector("dependencies", &addon.dependencies);
+
+      if (archive.empty())
+      {
+        printf("[ADD-ONS] ERROR: Couldn't parse add-on from index: Couldn't resolve add-on archive from 'file' or 'url'!\n");
+        cur = lisp_cdr(cur);
+        continue;
+      }
+      {
+        const char* dot = strrchr(archive.c_str(), '.');
+        if (!dot || strcmp(dot, ".zip"))
+        {
+          printf("[ADD-ONS] ERROR: Couldn't parse add-on '%s' from index: Add-on archive is not of '.zip' format!\n", archive.c_str());
+          cur = lisp_cdr(cur);
+          continue;
+        }
+      }
+
+      const std::string addon_id = generate_addon_id(archive);
+      if (addon_id.empty())
+      {
+        printf("[ADD-ONS] ERROR: Couldn't process add-on '%s' from index: Name leads to an empty ID!\n", archive.c_str());
+        cur = lisp_cdr(cur);
+        continue;
+      }
+      const auto addon_it = addon_index.find(addon_id);
+      if (addon_it != addon_index.end())
+      {
+        printf("[ADD-ONS] ERROR: Couldn't process add-on '%s' from index: Add-on with the same ID ('%s') exists in index!\n", archive.c_str(), addon_id.c_str());
+        cur = lisp_cdr(cur);
+        continue;
+      }
+
+      printf("[ADD-ONS] SUCCESS: Successfully parsed add-on '%s' from index (title: '%s')\n",
+          addon_id.c_str(), addon.title.c_str());
+
+      addon_index.insert({ addon_id, std::move(addon) });
+    }
+    else if (!strcmp(el_id, "base-url"))
+    {
+      lisp_object_t* base_url_val = lisp_car(lisp_cdr(lisp_el));
+
+      if (!lisp_string_p(base_url_val))
+        st_abort("LispReader expected type string at token: ", el_id);
+
+      addon_index_base_url = lisp_string(base_url_val);
+    }
+
+    cur = lisp_cdr(cur);
+  }
+  lisp_free(root_obj);
+  return true;
 }
 
 /* Create and setup menus. */
@@ -418,6 +556,7 @@ void st_menu(void)
   contrib_menu   = new Menu();
   contrib_subset_menu   = new Menu();
   addons_menu    = new Menu();
+  addons_download_menu  = new Menu();
   worldmap_menu  = new Menu();
   restart_info_menu     = new Menu();
 
@@ -528,7 +667,13 @@ void st_menu(void)
 }
 
 static int addons_menu_page = 0;
+static int addons_download_menu_page = 0;
 constexpr int addons_per_page = 10;
+
+// Variables related to trimming add-on title/author on menu
+constexpr int addon_text_min_visible = 5;
+constexpr int addon_text_no_trim_threshold = 8;
+constexpr int addon_text_extra_horizontal_space = 100;
 
 void generate_addons_menu(bool addons_check)
 {
@@ -545,57 +690,34 @@ void generate_addons_menu(bool addons_check)
       + ")", 0, 0);
   addons_menu->additem(MN_HL, "", 0, 0);
 
-  // Variables related to trimming add-on title/author on menu
-  constexpr int min_visible = 5;
-  constexpr int no_trim_threshold = 8;
-  constexpr int extra_horizontal_space = 100;
-  const int remaining_data_len = (screen_w() - strlen("\"\" by \"\"") * white_text->w - extra_horizontal_space) / white_text->w;
-
-  int idx = addons_menu_page * addons_per_page;
-  auto addon_it = addons.begin();
-  std::advance(addon_it, idx);
-  for (; addon_it != addons.end(); ++addon_it)
+  if (!addons.empty())
   {
-    const Addon& addon = addon_it->second;
+    const int remaining_data_len = (screen_w() - strlen("\"\"") * white_text->w - addon_text_extra_horizontal_space) / white_text->w;
 
-    // Trim add-on title and/or author if the text wouldn't fit on screen
-    std::string text = "\"" + addon.title + "\" by \"" + addon.author + "\"";
-    if (static_cast<int>(text.size()) * white_text->w + extra_horizontal_space > screen_w() &&
-        (static_cast<int>(addon.title.size()) > no_trim_threshold || static_cast<int>(addon.author.size()) > no_trim_threshold))
+    int idx = addons_menu_page * addons_per_page;
+    auto addon_it = addons.begin();
+    std::advance(addon_it, idx);
+    for (; addon_it != addons.end(); ++addon_it)
     {
-      const std::string& title = addon.title;
-      const std::string& author = addon.author;
-      std::string trimmed_title = title;
-      std::string trimmed_author = author;
+      const Addon& addon = addon_it->second;
 
-      if (remaining_data_len >= static_cast<int>(title.size()) + min_visible)
+      // Trim add-on title if the text wouldn't fit on screen
+      std::string text = "\"" + addon.title + "\"";
+      if (static_cast<int>(text.size()) * white_text->w + addon_text_extra_horizontal_space > screen_w() &&
+          static_cast<int>(addon.title.size()) > addon_text_no_trim_threshold)
       {
-        // Title and the minimum required for author will fit - trim author only
-        if (static_cast<int>(author.size()) > no_trim_threshold)
-          trimmed_author = author.substr(0, std::max(min_visible, remaining_data_len - static_cast<int>(title.size()) - 3)) + "...";
-      }
-      else
-      {
-        // Full title won't fit, so trim author first
-        if (static_cast<int>(author.size()) > no_trim_threshold)
-          trimmed_author = author.substr(0, min_visible) + "...";
-
-        // Title gets all the remaining space
-        if (static_cast<int>(title.size()) > no_trim_threshold)
-          trimmed_title = title.substr(0, std::max(min_visible, remaining_data_len - static_cast<int>(trimmed_author.size()) - 3)) + "...";
+        text = "\"" + addon.title.substr(0, std::max(addon_text_min_visible, remaining_data_len - 3)) + "...\"";
       }
 
-      text = "\"" + trimmed_title + "\" by \"" + trimmed_author + "\"";
+      addons_menu->additem(MN_TOGGLE, text, addons_enabled[addon_it->first], 0, idx++,
+          nullptr, addon.resource_pack ? resource_pack_addon_icon : levelset_addon_icon);
+
+      if (idx >= (addons_menu_page + 1) * addons_per_page)
+        break;
     }
 
-    addons_menu->additem(MN_TOGGLE, text, addons_enabled[addon_it->first], 0, idx++,
-        nullptr, addon.resource_pack ? resource_pack_addon_icon : levelset_addon_icon);
-
-    if (idx >= (addons_menu_page + 1) * addons_per_page)
-      break;
+    addons_menu->additem(MN_HL, "", 0, 0);
   }
-
-  addons_menu->additem(MN_HL, "", 0, 0);
 
   if (addons_menu_page > 0)
     addons_menu->additem(MN_PURE_ACTION, "Previous page", 0, 0, MNID_PREV_PAGE);
@@ -608,7 +730,101 @@ void generate_addons_menu(bool addons_check)
     addons_menu->additem(MN_DEACTIVE, "Next page", 0, 0, MNID_NEXT_PAGE);
 
   addons_menu->additem(MN_HL, "", 0, 0);
+  addons_menu->additem(MN_PURE_ACTION, "Download Add-ons", 0, 0, MNID_DOWNLOAD_ADDONS);
+
+  addons_menu->additem(MN_HL, "", 0, 0);
   addons_menu->additem(MN_BACK, "Back", 0, 0);
+}
+
+void generate_addons_download_menu()
+{
+  addons_download_menu->clear();
+
+  addons_download_menu->additem(MN_LABEL, "", 0, 0); // Will be set later
+  addons_download_menu->additem(MN_HL, "", 0, 0);
+
+  int addon_count = 0;
+  if (std::any_of(addon_index.begin(), addon_index.end(),
+        [](const auto& addon_entry)
+        {
+          return addons.find(addon_entry.first) == addons.end();
+        }))
+  {
+    const int remaining_data_len = (screen_w() - strlen("\"\" by \"\"") * white_text->w - addon_text_extra_horizontal_space) / white_text->w;
+
+    int map_idx = -1;
+    int idx = -1;
+    for (const auto& addon_entry : addon_index)
+    {
+      ++map_idx;
+
+      // Skip add-ons which are already installed
+      if (addons.find(addon_entry.first) != addons.end())
+        continue;
+
+      ++addon_count;
+
+      if (++idx < addons_download_menu_page * addons_per_page ||
+            idx >= (addons_download_menu_page + 1) * addons_per_page)
+        continue;
+
+      const IndexAddon& addon = addon_entry.second;
+
+      // Trim add-on title and/or author if the text wouldn't fit on screen
+      std::string text = "\"" + addon.title + "\" by \"" + addon.author + "\"";
+      if (static_cast<int>(text.size()) * white_text->w + addon_text_extra_horizontal_space > screen_w() &&
+          (static_cast<int>(addon.title.size()) > addon_text_no_trim_threshold || static_cast<int>(addon.author.size()) > addon_text_no_trim_threshold))
+      {
+        const std::string& title = addon.title;
+        const std::string& author = addon.author;
+        std::string trimmed_title = title;
+        std::string trimmed_author = author;
+
+        if (remaining_data_len >= static_cast<int>(title.size()) + addon_text_min_visible)
+        {
+          // Title and the minimum required for author will fit - trim author only
+          if (static_cast<int>(author.size()) > addon_text_no_trim_threshold)
+            trimmed_author = author.substr(0, std::max(addon_text_min_visible, remaining_data_len - static_cast<int>(title.size()) - 3)) + "...";
+        }
+        else
+        {
+          // Full title won't fit, so trim author first
+          if (static_cast<int>(author.size()) > addon_text_no_trim_threshold)
+            trimmed_author = author.substr(0, addon_text_min_visible) + "...";
+
+          // Title gets all the remaining space
+          if (static_cast<int>(title.size()) > addon_text_no_trim_threshold)
+            trimmed_title = title.substr(0, std::max(addon_text_min_visible, remaining_data_len - static_cast<int>(trimmed_author.size()) - 3)) + "...";
+        }
+
+        text = "\"" + trimmed_title + "\" by \"" + trimmed_author + "\"";
+      }
+
+      addons_download_menu->additem(MN_PURE_ACTION, text, 0, 0, map_idx,
+          nullptr, addon.resource_pack ? resource_pack_addon_icon : levelset_addon_icon);
+    }
+
+    addons_download_menu->additem(MN_HL, "", 0, 0);
+  }
+
+  addons_download_menu->get_item(0).change_text(("Download Add-ons (Page "
+      + std::to_string(addons_download_menu_page + 1) + "/"
+      + std::to_string(addon_count / addons_per_page
+          + (addon_count % addons_per_page > 0 ? 1 : 0))
+      + ")").c_str());
+
+  if (addons_download_menu_page > 0)
+    addons_download_menu->additem(MN_PURE_ACTION, "Previous page", 0, 0, MNID_PREV_PAGE);
+  else
+    addons_download_menu->additem(MN_DEACTIVE, "Previous page", 0, 0, MNID_PREV_PAGE);
+
+  if (addon_count > (addons_download_menu_page + 1) * addons_per_page)
+    addons_download_menu->additem(MN_PURE_ACTION, "Next page", 0, 0, MNID_NEXT_PAGE);
+  else
+    addons_download_menu->additem(MN_DEACTIVE, "Next page", 0, 0, MNID_NEXT_PAGE);
+
+  addons_download_menu->additem(MN_HL, "", 0, 0);
+  addons_download_menu->additem(MN_BACK, "Back", 0, 0);
 }
 
 void update_load_save_game_menu(Menu* pmenu)
@@ -639,6 +855,13 @@ void process_addons_menu()
         assert(static_cast<int>(addons.size()) > (addons_menu_page + 1) * addons_per_page);
         ++addons_menu_page;
         generate_addons_menu(false);
+        break;
+      case MNID_DOWNLOAD_ADDONS:
+        if (st_fetch_addon_index())
+        {
+          generate_addons_download_menu();
+          Menu::push_current(addons_download_menu);
+        }
         break;
     }
     return;
@@ -741,6 +964,86 @@ void process_addons_menu()
     addon.mounted = false;
     printf("[ADD-ONS] SUCCESS: Unmounted add-on archive '%s'\n", addon.filename.c_str());
   }
+}
+
+void process_addons_download_menu()
+{
+  const int idx = addons_download_menu->check();
+  if (idx < 0)
+  {
+    switch (idx)
+    {
+      case MNID_PREV_PAGE:
+        assert(addons_download_menu_page > 0);
+        --addons_download_menu_page;
+        generate_addons_download_menu();
+        break;
+      case MNID_NEXT_PAGE:
+        assert(std::count_if(addon_index.begin(), addon_index.end(),
+            [](const auto& addon_entry)
+            {
+              return addons.find(addon_entry.first) == addons.end();
+            }) > (addons_download_menu_page + 1) * addons_per_page);
+        ++addons_download_menu_page;
+        generate_addons_download_menu();
+        break;
+    }
+    return;
+  }
+
+  auto addon_it = addon_index.begin();
+  std::advance(addon_it, idx);
+
+  assert(addons.find(addon_it->first) == addons.end());
+  const IndexAddon& addon = addon_it->second;
+
+  // Attempt to install all dependencies of the add-on, which are not installed
+  for (const std::string& dep_id : addon.dependencies)
+  {
+    if (addons.find(dep_id) != addons.end())
+      continue;
+
+    const auto dep_it = addon_index.find(dep_id);
+    if (dep_it == addon_index.end())
+    {
+      printf("[ADD-ONS] ERROR: Couldn't find dependency '%s' of add-on '%s' in index!\n", dep_id.c_str(), addon_it->first);
+      continue;
+    }
+
+    const IndexAddon& dep_addon = dep_it->second;
+    assert(!dep_addon.custom_url.empty() || !dep_addon.file.empty());
+
+    TransferStatusPtr status = downloader->request_download_file(
+      dep_addon.custom_url.empty() ? addon_index_base_url + "/" + dep_addon.file : dep_addon.custom_url,
+      "addons/" + dep_it->first + ".zip");
+    draw_background();
+    download_dialog(status);
+  }
+
+  // Install the add-on
+  TransferStatusPtr status = downloader->request_download_file(
+    addon.custom_url.empty() ? addon_index_base_url + "/" + addon.file : addon.custom_url,
+    "addons/" + addon_it->first + ".zip");
+
+  bool success = false;
+  status->then([&success](bool success_) { success = success_; });
+
+  draw_background();
+  download_dialog(status);
+
+  // If download was successful, mark the add-on as to-be-enabled
+  if (success)
+    addons_enabled[addon_it->first] = true;
+
+  // Detect new add-ons, enable dependencies.
+  // Notify user a restart is required if any of the newly added add-ons
+  // cannot be mounted, as it overrides data.
+  if (st_addons_check())
+    Menu::push_current(restart_info_menu);
+
+  // Regenerate menus
+  generate_addons_menu(false);
+  generate_addons_download_menu();
 }
 
 bool process_load_game_menu()
@@ -891,7 +1194,9 @@ void st_general_setup(void)
   /* Load the mouse-cursor */
   mouse_cursor = new MouseCursor("/images/status/mousecursor.png", 1);
   MouseCursor::set_current(mouse_cursor);
-  
+
+  /* Initialize downloader */
+  downloader = new Downloader();
 }
 
 void st_general_free(void)
@@ -929,6 +1234,7 @@ void st_general_free(void)
   delete save_game_menu;
   delete load_game_menu;
   delete addons_menu;
+  delete addons_download_menu;
   delete restart_info_menu;
 }
 

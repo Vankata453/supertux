@@ -21,5 +21,7 @@
 
 void title(void);
 
+void draw_background();
+
 // EOF //
 

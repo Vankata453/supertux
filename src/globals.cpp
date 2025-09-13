@@ -42,6 +42,10 @@ JoystickKeymap joystick_keymap;
 std::map<std::string, Addon> addons;
 std::map<std::string, bool> addons_enabled;
 
+bool addon_index_fetched = false;
+std::map<std::string, IndexAddon> addon_index;
+std::string addon_index_base_url;
+
 SDL_Surface* screen;
 SDL_Window* window;
 SDL_Renderer* renderer;
@@ -62,7 +66,9 @@ Text* white_text;
 Text* white_small_text;
 Text* white_big_text;
 
-MouseCursor * mouse_cursor;
+MouseCursor* mouse_cursor;
+
+Downloader* downloader;
 
 int  display_idx = 0;
 bool use_gl;

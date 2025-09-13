@@ -29,7 +29,6 @@ string_list_type dfiles(const char *path, const char* glob, const char* exceptio
 void free_strings(char **strings, int num);
 void st_directory_setup(int argc, char** const argv);
 void st_addons_setup();
-void st_addons_check(bool startup = false);
 void st_general_setup(void);
 void st_general_free();
 void st_video_setup(void);
@@ -46,6 +45,7 @@ bool process_load_game_menu();
 
 void generate_addons_menu(bool addons_check);
 void process_addons_menu();
+void process_addons_download_menu();
 
 void update_load_save_game_menu(Menu* pmenu);
 void parseargs(int argc, char * argv[]);

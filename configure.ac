@@ -107,6 +107,15 @@ AC_CHECK_LIB([physfs], [PHYSFS_init], ,
 )
 CXXFLAGS="$CXXFLAGS -lphysfs"
 
+# Check for libcurl library
+AC_CHECK_LIB([curl], [curl_easy_init],
+             [have_curl=yes],
+             [have_curl=no])
+if test "x$have_curl" = "xno"; then
+  AC_MSG_ERROR([libcurl not found])
+fi
+CXXFLAGS="$CXXFLAGS -lcurl"
+
 CXXFLAGS="$CXXFLAGS -DDATA_PREFIX='\"$datadir/supertux\"'" 
 
 dnl Checks for library functions.

@@ -37,6 +37,7 @@
 #include "leveleditor.h"
 #include "timer.h"
 #include "high_scores.h"
+#include "downloader.h"
 
 #define FLICK_CURSOR_TIME 500
 
@@ -60,6 +61,7 @@ Menu* save_game_menu = 0;
 Menu* contrib_menu   = 0;
 Menu* contrib_subset_menu   = 0;
 Menu* addons_menu   = 0;
+Menu* addons_download_menu  = 0;
 
 Menu* restart_info_menu = 0;
 
@@ -78,14 +80,11 @@ bool confirm_dialog(std::string text)
   dialog->additem(MN_ACTION,"No",0,0,false);
   dialog->additem(MN_HL,"",0,0);
 
-  Menu::set_current(dialog);
-
   const int cursor_shown = SDL_ShowCursor(SDL_ENABLE);
 
-  while(true)
+  while (true)
   {
     SDL_Event event;
-
     while (poll_event(event))
     {
       dialog->event(event);
@@ -99,14 +98,14 @@ bool confirm_dialog(std::string text)
     switch (dialog->check())
     {
     case true:
+      SDL_ShowCursor(cursor_shown);
       delete cap_screen;
-      Menu::set_current(0);
       delete dialog;
       return true;
       break;
     case false:
+      SDL_ShowCursor(cursor_shown);
       delete cap_screen;
-      Menu::set_current(0);
       delete dialog;
       return false;
       break;
@@ -118,8 +117,65 @@ bool confirm_dialog(std::string text)
     flipscreen();
     SDL_Delay(25);
   }
+  return false;
+}
+
+/* displays a dialog that updates and shows download progress with an "Abort" button */
+void download_dialog(TransferStatusPtr status)
+{
+  Surface* cap_screen = Surface::CaptureScreen();
+
+  Menu* dialog = new Menu;
+  dialog->additem(MN_LABEL, "Downloading \""
+      + (status->file.size() > 15 ? status->file.substr(0, 15) + "..." : status->file)
+      + "\"" ,0,0,0);
+  dialog->additem(MN_HL,"",0,0);
+  dialog->additem(MN_DEACTIVE, "-/- kB" ,0,0,1);
+  dialog->additem(MN_DEACTIVE, "0%" ,0,0,2);
+  dialog->additem(MN_HL,"",0,0);
+  dialog->additem(MN_ACTION,"Abort",0,0,3);
+  dialog->additem(MN_HL,"",0,0);
+
+  bool complete = false;
+  status->then([&complete](bool) { complete = true; });
+
+  const int cursor_shown = SDL_ShowCursor(SDL_ENABLE);
+
+  while (!complete)
+  {
+    SDL_Event event;
+    while (poll_event(event))
+    {
+      dialog->event(event);
+    }
+
+    cap_screen->draw(0,0);
+
+    dialog->draw();
+    dialog->action();
+
+    if (dialog->check() == 3)
+    {
+      status->abort();
+      break;
+    }
+
+    status->update();
+
+    dialog->get_item_by_id(1).change_text((std::to_string((complete ? status->dltotal : status->dlnow) / 1000)
+        + "/" + std::to_string(status->dltotal / 1000) + " kB").c_str());
+    dialog->get_item_by_id(2).change_text((std::to_string(complete ? 100 :
+          (status->dltotal <= 0 ? 0 : 100 * status->dlnow / status->dltotal)) + "%").c_str());
+
+    mouse_cursor->update();
+    flipscreen();
+    SDL_Delay(25);
+  }
 
   SDL_ShowCursor(cursor_shown);
+
+  delete cap_screen;
+  delete dialog;
 }
 
 void

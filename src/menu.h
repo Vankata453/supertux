@@ -21,11 +21,15 @@
 #define SUPERTUX_MENU_H
 
 #include <SDL2/SDL.h>
+#include <memory>
 #include <vector>
 #include "texture.h"
 #include "timer.h"
 #include "type.h"
 #include "mousecursor.h"
+
+class TransferStatus;
+using TransferStatusPtr = std::shared_ptr<TransferStatus>;
 
 /* IDs for menus */
 
@@ -64,7 +68,8 @@ enum WorldMapMenuIDs {
 
 enum AddonMenuIDs {
   MNID_PREV_PAGE = -2,
-  MNID_NEXT_PAGE = -3
+  MNID_NEXT_PAGE = -3,
+  MNID_DOWNLOAD_ADDONS = -4
   };
 
 enum LevelEditorMainMenuIDs {
@@ -104,6 +109,7 @@ enum LevelEditorSettingsMenuIDs {
   };
 
 bool confirm_dialog(std::string text);
+void download_dialog(TransferStatusPtr status);
 
 /* Kinds of menu items */
 enum MenuItemKind {
@@ -246,6 +252,7 @@ extern Surface* resource_pack_addon_icon;
 extern Menu* contrib_menu;
 extern Menu* contrib_subset_menu;
 extern Menu* addons_menu;
+extern Menu* addons_download_menu;
 extern Menu* main_menu;
 extern Menu* game_menu;
 extern Menu* worldmap_menu;
