@@ -190,10 +190,21 @@ GameSession::on_escape_press()
     {
       exit_status = ES_LEVEL_ABORT;
     }
-  else if (!Menu::current())
+  else if (Menu::current())
     {
-      Menu::set_current(game_menu);
-      st_pause_ticks_start();
+      Menu::set_current(nullptr);
+    }
+  else
+    {
+      if (end_sequence)
+      {
+        exit_status = ES_LEVEL_FINISHED;
+      }
+      else
+      {
+        Menu::set_current(game_menu);
+        st_pause_ticks_start();
+      }
     }
 }
 
@@ -239,7 +250,7 @@ GameSession::process_events()
            
                 switch(key)
                   {
-                  case SDLK_ESCAPE:    /* Escape: Open/Close the menu: */
+                  case SDLK_ESCAPE:    /* Escape: Open/Close the menu, skip end sequence */
                     on_escape_press();
                     break;
                   default:
@@ -458,6 +469,9 @@ GameSession::process_events()
 void
 GameSession::check_end_conditions()
 {
+  if (exit_status == ES_LEVEL_FINISHED)
+    return;
+
   Player* tux = world->get_tux();
 
   /* End of level? */
