@@ -125,19 +125,28 @@ void download_dialog(TransferStatusPtr status)
 {
   Surface* cap_screen = Surface::CaptureScreen();
 
+  const std::string remote_file = status->file;
+
   Menu* dialog = new Menu;
   dialog->additem(MN_LABEL, "Downloading \""
-      + (status->file.size() > 15 ? status->file.substr(0, 15) + "..." : status->file)
+      + (remote_file.size() > 18 ? remote_file.substr(0, 15) + "..." : remote_file)
       + "\"" ,0,0,0);
   dialog->additem(MN_HL,"",0,0);
   dialog->additem(MN_DEACTIVE, "-/- kB" ,0,0,1);
   dialog->additem(MN_DEACTIVE, "0%" ,0,0,2);
   dialog->additem(MN_HL,"",0,0);
-  dialog->additem(MN_ACTION,"Abort",0,0,3);
+  dialog->additem(MN_PURE_ACTION,"Abort",0,0,3);
   dialog->additem(MN_HL,"",0,0);
 
-  bool complete = false;
-  status->then([&complete](bool) { complete = true; });
+  bool complete, success, aborted = false;
+  std::string error_msg;
+  status->then([&status, &complete, &success, &error_msg](bool success_)
+    {
+      complete = true;
+      success = success_;
+      if (!success)
+        error_msg = status->error_msg;
+    });
 
   const int cursor_shown = SDL_ShowCursor(SDL_ENABLE);
 
@@ -157,6 +166,8 @@ void download_dialog(TransferStatusPtr status)
     if (dialog->check() == 3)
     {
       status->abort();
+      assert(complete && !success);
+      aborted = true;
       break;
     }
 
@@ -170,6 +181,24 @@ void download_dialog(TransferStatusPtr status)
     mouse_cursor->update();
     flipscreen();
     SDL_Delay(25);
+  }
+
+  // On unsuccessful download, display an error dialog
+  if (!success && !aborted)
+  {
+    Menu* error_dialog = new Menu(true);
+    error_dialog->additem(MN_LABEL, "Error downloading \""
+        + (remote_file.size() > 12 ? remote_file.substr(0, 9) + "..." : remote_file)
+        + "\"" ,0,0,0);
+    error_dialog->additem(MN_HL,"",0,0);
+    error_dialog->additem(MN_DEACTIVE, error_msg.empty() ? "Unknown error!" :
+        (static_cast<int>(error_msg.size()) * white_text->w > screen_w() ?
+          error_msg.substr(0, screen_w() / white_text->w - 3) + "..." : error_msg),0,0,0);
+    error_dialog->additem(MN_HL,"",0,0);
+    error_dialog->additem(MN_BACK,"Close",0,0,0);
+    error_dialog->additem(MN_HL,"",0,0);
+
+    Menu::push_current(error_dialog);
   }
 
   SDL_ShowCursor(cursor_shown);
@@ -191,6 +220,9 @@ Menu::push_current(Menu* pmenu)
 void
 Menu::pop_current()
 {
+  if (current_ && current_->free_on_close)
+    delete current_;
+
   if (!last_menus.empty())
   {
     current_ = last_menus.back();
@@ -207,6 +239,14 @@ Menu::pop_current()
 void
 Menu::set_current(Menu* menu)
 {
+  if (current_ && current_->free_on_close)
+    delete current_;
+
+  for (Menu* prev_menu : last_menus)
+  {
+    if (prev_menu->free_on_close)
+      delete prev_menu;
+  }
   last_menus.clear();
 
   if (menu)
@@ -369,7 +409,8 @@ Menu::~Menu()
 }
 
 
-Menu::Menu()
+Menu::Menu(bool free_on_close_) :
+  free_on_close(free_on_close_)
 {
   hit_item = -1;
   menuaction = MENU_ACTION_NONE;

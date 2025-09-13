@@ -289,14 +289,16 @@ Downloader::abort(TransferId id)
   if (it == m_transfers.end())
   {
     printf("DOWNLOADER: Transfer not found: %d\n", id);
+    return;
   }
-  else
-  {
-    it->second->on_finished(false);
 
-    curl_multi_remove_handle(m_multi_handle, it->second->get_curl_handle());
-    m_transfers.erase(it);
-  }
+  it->second->get_status()->error_msg = "Download aborted.";
+
+  printf("DOWNLOADER: Error downloading '%s': Download aborted.\n", it->second->get_url().c_str());
+  it->second->on_finished(false);
+
+  curl_multi_remove_handle(m_multi_handle, it->second->get_curl_handle());
+  m_transfers.erase(it);
 }
 
 void
@@ -336,7 +338,7 @@ Downloader::update()
           }
           else
           {
-            printf("DOWNLOADER: Error: %s\n", curl_easy_strerror(resultfromcurl));
+            printf("DOWNLOADER: Error downloading '%s': %s\n", it->second->get_url().c_str(), curl_easy_strerror(resultfromcurl));
             it->second->on_finished(false);
           }
           m_transfers.erase(it);

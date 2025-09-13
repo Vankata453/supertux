@@ -182,6 +182,8 @@ private:
     MENU_ACTION_REMOVE
   };
 
+  const bool free_on_close;
+
   /** Number of the item that got 'hit' (ie. pressed) in the last
       event()/action() call, -1 if none */
   int hit_item;
@@ -196,7 +198,7 @@ private:
   /* input implementation variables */
   int delete_character;
   char mn_input_chars[16];
-  
+
 public:
   Timer effect;
   int arrange_left;
@@ -204,7 +206,7 @@ public:
 
   std::vector<MenuItem> item;
 
-  Menu();
+  Menu(bool free_on_close = false);
   ~Menu();
 
   void additem(MenuItem* pmenu_item);
