@@ -200,6 +200,21 @@ GameSession::on_escape_press()
       {
         exit_status = ES_LEVEL_FINISHED;
       }
+      else if (world->get_tux()->dying)
+      {
+        player_status.bonus = PlayerStatus::NO_BONUS;
+
+        if (player_status.lives < 0) // No more lives!?
+        {
+          drawendscreen();
+          exit_status = ES_GAME_OVER;
+        }
+        else
+        {
+          // Still has lives, so reset Tux to the levelstart
+          restart_level();
+        }
+      }
       else
       {
         Menu::set_current(game_menu);
