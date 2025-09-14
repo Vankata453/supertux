@@ -460,8 +460,6 @@ bool st_fetch_addon_index()
       lisp_object_t* addon_el = lisp_cdr(lisp_el);
       LispReader reader(addon_el);
 
-      std::string archive;
-
       IndexAddon addon;
       if (!reader.read_string("title", &addon.title))
       {
@@ -472,17 +470,11 @@ bool st_fetch_addon_index()
       if (!reader.read_string("author", &addon.author))
         addon.author = "Unknown";
       reader.read_bool("resource-pack", &addon.resource_pack);
-      if (reader.read_string("url", &addon.custom_url))
+      if (reader.read_string("url", &addon.url))
       {
-        const std::size_t last_idx = addon.custom_url.find_last_of("/");
-        archive = (last_idx == std::string::npos ? addon.custom_url : addon.custom_url.substr(last_idx + 1));
+        addon.custom_url = true;
       }
-      else if (reader.read_string("file", &addon.file))
-      {
-        const std::size_t last_idx = addon.file.find_last_of("/");
-        archive = (last_idx == std::string::npos ? addon.file : addon.file.substr(last_idx + 1));
-      }
-      else
+      else if (!reader.read_string("file", &addon.url))
       {
         printf("[ADD-ONS] ERROR: Couldn't parse add-on from index: No 'file' or 'url' available!\n");
         cur = lisp_cdr(cur);
@@ -490,6 +482,8 @@ bool st_fetch_addon_index()
       }
       reader.read_string_vector("dependencies", &addon.dependencies);
 
+      const std::size_t url_last_slash_idx = addon.url.find_last_of("/");
+      const std::string archive = (url_last_slash_idx == std::string::npos ? addon.url : addon.url.substr(url_last_slash_idx + 1));
       if (archive.empty())
       {
         printf("[ADD-ONS] ERROR: Couldn't parse add-on from index: Couldn't resolve add-on archive from 'file' or 'url'!\n");
@@ -1011,10 +1005,10 @@ void process_addons_download_menu()
     }
 
     const IndexAddon& dep_addon = dep_it->second;
-    assert(!dep_addon.custom_url.empty() || !dep_addon.file.empty());
+    assert(!dep_addon.url.empty());
 
     TransferStatusPtr status = downloader->request_download_file(
-      dep_addon.custom_url.empty() ? addon_index_base_url + "/" + dep_addon.file : dep_addon.custom_url,
+      dep_addon.custom_url ? dep_addon.url : addon_index_base_url + "/" + dep_addon.url,
       "addons/" + dep_it->first + ".zip");
     draw_background();
     download_dialog(status);
@@ -1022,7 +1016,7 @@ void process_addons_download_menu()
 
   // Install the add-on
   TransferStatusPtr status = downloader->request_download_file(
-    addon.custom_url.empty() ? addon_index_base_url + "/" + addon.file : addon.custom_url,
+    addon.custom_url ? addon.url : addon_index_base_url + "/" + addon.url,
     "addons/" + addon_it->first + ".zip");
 
   bool success = false;

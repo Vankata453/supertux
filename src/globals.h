@@ -78,8 +78,8 @@ struct IndexAddon final
 
   bool resource_pack = false;
 
-  std::string file;
-  std::string custom_url;
+  std::string url;
+  bool custom_url = false;
 
   std::vector<std::string> dependencies;
 };
