@@ -109,7 +109,7 @@ void generate_contrib_menu()
     {
       LevelSubset* subset = new LevelSubset();
       subset->load(level_subsets.item[i]);
-      contrib_menu->additem(MN_GOTO, subset->title.c_str(), i,
+      contrib_menu->additem(MN_GOTO, ("[" + subset->title + "]").c_str(), i,
           contrib_subset_menu, i);
       contrib_subsets.push_back(subset);
     }
