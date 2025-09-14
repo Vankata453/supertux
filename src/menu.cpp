@@ -811,7 +811,7 @@ Menu::draw()
 
   /* Draw a transparent background */
   fillrect(pos_x - menu_width/2,
-           pos_y - 24*item.size()/2 - 10,
+           pos_y - 24*static_cast<int>(item.size())/2 - 10,
            menu_width,menu_height + 20,
            150,180,200,125);
 
