@@ -846,11 +846,13 @@ void process_addons_menu()
         assert(addons_menu_page > 0);
         --addons_menu_page;
         generate_addons_menu(false);
+        addons_menu->set_active_item_id(MNID_PREV_PAGE);
         break;
       case MNID_NEXT_PAGE:
         assert(static_cast<int>(addons.size()) > (addons_menu_page + 1) * addons_per_page);
         ++addons_menu_page;
         generate_addons_menu(false);
+        addons_menu->set_active_item_id(MNID_NEXT_PAGE);
         break;
       case MNID_DOWNLOAD_ADDONS:
         if (st_fetch_addon_index())
@@ -973,6 +975,7 @@ void process_addons_download_menu()
         assert(addons_download_menu_page > 0);
         --addons_download_menu_page;
         generate_addons_download_menu();
+        addons_download_menu->set_active_item_id(MNID_PREV_PAGE);
         break;
       case MNID_NEXT_PAGE:
         assert(std::count_if(addon_index.begin(), addon_index.end(),
@@ -982,6 +985,7 @@ void process_addons_download_menu()
             }) > (addons_download_menu_page + 1) * addons_per_page);
         ++addons_download_menu_page;
         generate_addons_download_menu();
+        addons_download_menu->set_active_item_id(MNID_NEXT_PAGE);
         break;
     }
     return;

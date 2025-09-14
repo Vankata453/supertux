@@ -22,6 +22,7 @@
 #include <ctype.h>
 #endif
 
+#include <algorithm>
 #include <iostream>
 #include <stdlib.h>
 #include <string.h>
@@ -343,6 +344,14 @@ std::string MenuItem::get_input_with_symbol(bool active_item)
   return string;
 }
 
+bool
+MenuItem::is_active() const
+{
+  return kind != MN_DEACTIVE &&
+    kind != MN_LABEL &&
+    kind != MN_HL;
+}
+
 /* Set ControlField a key */
 void Menu::get_controlfield_key_into_input(MenuItem *item)
 {
@@ -460,18 +469,40 @@ Menu::action()
     switch(menuaction)
     {
     case MENU_ACTION_UP:
+    {
       if (active_item > 0)
         --active_item;
       else
         active_item = int(item.size())-1;
+
+      // Skip inactive/decorative menu items
+      const MenuItem& new_item = item[active_item];
+      if (!new_item.is_active())
+      {
+        if (item.size() > 1 &&
+            std::any_of(item.begin(), item.end(), [](const MenuItem& item) { return item.is_active(); }))
+          action();
+      }
       break;
+    }
 
     case MENU_ACTION_DOWN:
+    {
       if(active_item < int(item.size())-1)
         ++active_item;
       else
         active_item = 0;
+
+      // Skip inactive/decorative menu items
+      const MenuItem& new_item = item[active_item];
+      if (!new_item.is_active())
+      {
+        if (item.size() > 1 &&
+            std::any_of(item.begin(), item.end(), [](const MenuItem& item) { return item.is_active(); }))
+          action();
+      }
       break;
+    }
 
     case MENU_ACTION_LEFT:
       if(item[active_item].kind == MN_STRINGSELECT
@@ -497,6 +528,12 @@ Menu::action()
 
     case MENU_ACTION_HIT:
       {
+        const MenuItem& hovered_item = item[active_item];
+        if (hovered_item.kind == MN_DEACTIVE ||
+            hovered_item.kind == MN_LABEL ||
+            hovered_item.kind == MN_HL)
+          break;
+
         hit_item = active_item;
         switch (item[active_item].kind)
         {
@@ -588,19 +625,6 @@ Menu::action()
     }
   }
 
-  MenuItem& new_item = item[active_item];
-  if(new_item.kind == MN_DEACTIVE
-      || new_item.kind == MN_LABEL
-      || new_item.kind == MN_HL)
-  {
-    // Skip the horzontal line item
-    if (menuaction != MENU_ACTION_UP && menuaction != MENU_ACTION_DOWN)
-      menuaction = MENU_ACTION_DOWN;
-
-    if (item.size() > 1)
-      action();
-  }
-
   menuaction = MENU_ACTION_NONE;
 }
 
@@ -616,7 +640,8 @@ Menu::check()
 void
 Menu::draw_item(int index, // Position of the current item in the menu
                 int menu_width,
-                int menu_height)
+                int menu_height,
+                int scroll_offset)
 {
   MenuItem& pitem = item[index];
 
@@ -631,7 +656,7 @@ Menu::draw_item(int index, // Position of the current item in the menu
   }
 
   int x_pos       = pos_x;
-  int y_pos       = pos_y + 24*index - menu_height/2 + 12 + effect_offset;
+  int y_pos       = pos_y + 24 * index - menu_height / 2 - scroll_offset + 12 + effect_offset;
   int shadow_size = 2;
 
   Text* text_font = white_text;
@@ -776,7 +801,8 @@ Menu::draw_item(int index, // Position of the current item in the menu
   }
 }
 
-int Menu::get_width() const
+int
+Menu::get_width() const
 {
   /* The width of the menu has to be more than the width of the text
      with the most characters */
@@ -797,27 +823,39 @@ int Menu::get_width() const
   return (menu_width * 16 + 24);
 }
 
-int Menu::get_height() const
+int
+Menu::get_height() const
 {
   return item.size() * 24;
+}
+
+int
+Menu::get_scroll_offset() const
+{
+  const int height_diff = get_height() - screen_h();
+  return height_diff > 0 ?
+    // This contains a few magic values, but it seems to work fine so I won't complain...
+    -height_diff / 2 - 40 + ((height_diff + 150) / static_cast<int>(item.size())) * active_item
+    : 0;
 }
 
 /* Draw the current menu. */
 void
 Menu::draw()
 {
-  int menu_height = get_height();
-  int menu_width  = get_width();
+  const int menu_width  = get_width();
+  const int menu_height = get_height();
+  const int scroll_offset = get_scroll_offset();
 
   /* Draw a transparent background */
-  fillrect(pos_x - menu_width/2,
-           pos_y - 24*static_cast<int>(item.size())/2 - 10,
+  fillrect(pos_x - menu_width / 2,
+           pos_y - menu_height / 2 - scroll_offset - 10,
            menu_width,menu_height + 20,
            150,180,200,125);
 
   for(unsigned int i = 0; i < item.size(); ++i)
   {
-    draw_item(i, menu_width, menu_height);
+    draw_item(i, menu_width, menu_height, scroll_offset);
   }
 }
 
@@ -835,9 +873,23 @@ Menu::get_item_by_id(int id)
   return dummyitem;
 }
 
-int Menu::get_active_item_id()
+int
+Menu::get_active_item_id() const
 {
-  return item[active_item].id;
+  return item.at(active_item).id;
+}
+
+void
+Menu::set_active_item_id(int id)
+{
+  for (int i = 0; i < static_cast<int>(item.size()); ++i)
+  {
+    if (item[i].id == id)
+    {
+      active_item = i;
+      break;
+    }
+  }
 }
 
 bool
@@ -929,36 +981,51 @@ Menu::event(SDL_Event& event)
     menuaction = MENU_ACTION_HIT;
     break;
   case SDL_MOUSEBUTTONDOWN:
+  {
     // Do not trigger on mouse wheel scroll
     if (event.button.button > 3)
       break;
 
+    const int menu_width  = get_width();
+    const int menu_height = get_height();
+    const int scroll_offset = get_scroll_offset();
+
     x = event.motion.x;
     y = event.motion.y;
-    if(x > pos_x - get_width()/2 &&
-        x < pos_x + get_width()/2 &&
-        y > pos_y - get_height()/2 &&
-        y < pos_y + get_height()/2)
+    if(x > pos_x - menu_width / 2 &&
+        x < pos_x + menu_width / 2 &&
+        y > pos_y - (menu_height / 2 - scroll_offset) &&
+        y < pos_y + (menu_height / 2 - scroll_offset))
     {
       menuaction = MENU_ACTION_HIT;
     }
     break;
+  }
   case SDL_MOUSEMOTION:
+  {
+    const int menu_width  = get_width();
+    const int menu_height = get_height();
+    const int scroll_offset = get_scroll_offset();
+
     x = event.motion.x;
     y = event.motion.y;
-    if(x > pos_x - get_width()/2 &&
-        x < pos_x + get_width()/2 &&
-        y > pos_y - get_height()/2 &&
-        y < pos_y + get_height()/2)
+    if(x > pos_x - menu_width / 2 &&
+        x < pos_x + menu_width / 2 &&
+        y > pos_y - (menu_height / 2 - scroll_offset) &&
+        y < pos_y + (menu_height / 2 - scroll_offset))
     {
-      active_item = (y - (pos_y - get_height()/2)) / 24;
-      mouse_cursor->set_state(MC_LINK);
+      active_item = ((y - (pos_y - (menu_height / 2))) + scroll_offset) / 24;
+
+      // Only set cursor to "Link" state when hovering over active items
+      const MenuItem& new_item = item[active_item];
+      mouse_cursor->set_state(new_item.is_active() ? MC_LINK : MC_NORMAL);
     }
     else
     {
       mouse_cursor->set_state(MC_NORMAL);
     }
     break;
+  }
   default:
     break;
   }

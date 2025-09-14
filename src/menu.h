@@ -148,6 +148,9 @@ public:
   static MenuItem* create(MenuItemKind kind, const char *text, int init_toggle, Menu* target_menu, int id, int* int_p, Surface* icon = nullptr);
 
   std::string get_input_with_symbol(bool active_item);   // returns the text with an input symbol
+
+  bool is_active() const;
+
 private:
   bool input_flickering;
   Timer input_flickering_timer;
@@ -224,14 +227,15 @@ public:
   MenuItem& get_item(int index) { return item[index]; }
   MenuItem& get_item_by_id(int id);
 
-  int get_active_item_id();
+  int get_active_item_id() const;
+  void set_active_item_id(int id);
 
   bool isToggled(int id);
 
   void get_controlfield_key_into_input(MenuItem *item);
 
   void draw   ();
-  void draw_item(int index, int menu_width, int menu_height);
+  void draw_item(int index, int menu_width, int menu_height, int scroll_offset);
   void set_pos(int x, int y, float rw = 0, float rh = 0);
 
   /** translate a SDL_Event into a menu_action */
@@ -239,6 +243,7 @@ public:
 
   int get_width() const;
   int get_height() const;
+  int get_scroll_offset() const;
 
   bool is_toggled(int id) const;
 };
