@@ -450,8 +450,8 @@ bool st_fetch_addon_index()
     printf("[ADD-ONS] ERROR: Add-on index is not declared 'supertux-addonindex'!\n");
     return true;
   }
-  lisp_object_t* cur = lisp_cdr(root_obj);
-  while (!lisp_nil_p(cur))
+  lisp_object_t* cur = root_obj;
+  while (!lisp_nil_p((cur = lisp_cdr(cur))))
   {
     lisp_object_t* lisp_el = lisp_car(cur);
     const char* el_id = lisp_symbol(lisp_car(lisp_el));
@@ -464,7 +464,6 @@ bool st_fetch_addon_index()
       if (!reader.read_string("title", &addon.title))
       {
         printf("[ADD-ONS] ERROR: Couldn't parse add-on from index: No 'title' available!\n");
-        cur = lisp_cdr(cur);
         continue;
       }
       if (!reader.read_string("author", &addon.author))
@@ -477,7 +476,6 @@ bool st_fetch_addon_index()
       else if (!reader.read_string("file", &addon.url))
       {
         printf("[ADD-ONS] ERROR: Couldn't parse add-on from index: No 'file' or 'url' available!\n");
-        cur = lisp_cdr(cur);
         continue;
       }
       reader.read_string_vector("dependencies", &addon.dependencies);
@@ -487,7 +485,6 @@ bool st_fetch_addon_index()
       if (archive.empty())
       {
         printf("[ADD-ONS] ERROR: Couldn't parse add-on from index: Couldn't resolve add-on archive from 'file' or 'url'!\n");
-        cur = lisp_cdr(cur);
         continue;
       }
       {
@@ -495,7 +492,6 @@ bool st_fetch_addon_index()
         if (!dot || strcmp(dot, ".zip"))
         {
           printf("[ADD-ONS] ERROR: Couldn't parse add-on '%s' from index: Add-on archive is not of '.zip' format!\n", archive.c_str());
-          cur = lisp_cdr(cur);
           continue;
         }
       }
@@ -504,14 +500,12 @@ bool st_fetch_addon_index()
       if (addon_id.empty())
       {
         printf("[ADD-ONS] ERROR: Couldn't process add-on '%s' from index: Name leads to an empty ID!\n", archive.c_str());
-        cur = lisp_cdr(cur);
         continue;
       }
       const auto addon_it = addon_index.find(addon_id);
       if (addon_it != addon_index.end())
       {
         printf("[ADD-ONS] ERROR: Couldn't process add-on '%s' from index: Add-on with the same ID ('%s') exists in index!\n", archive.c_str(), addon_id.c_str());
-        cur = lisp_cdr(cur);
         continue;
       }
 
@@ -522,6 +516,12 @@ bool st_fetch_addon_index()
     }
     else if (!strcmp(el_id, "base-url"))
     {
+      if (!addon_index_base_url.empty())
+      {
+        printf("[ADD-ONS] WARNING: Another 'base-url' provided in add-on index file. Ignoring.");
+        continue;
+      }
+
       lisp_object_t* base_url_val = lisp_car(lisp_cdr(lisp_el));
 
       if (!lisp_string_p(base_url_val))
@@ -529,8 +529,10 @@ bool st_fetch_addon_index()
 
       addon_index_base_url = lisp_string(base_url_val);
     }
-
-    cur = lisp_cdr(cur);
+    else
+    {
+      printf("[ADD-ONS] WARNING: Unknown token in add-on index file: '%s'", el_id);
+    }
   }
   lisp_free(root_obj);
   return true;
@@ -678,7 +680,7 @@ void generate_addons_menu(bool addons_check)
     st_addons_check();
 
   addons_menu->additem(MN_LABEL,"Add-ons (Page "
-      + std::to_string(addons_menu_page + 1) + "/"
+      + (addons.empty() ? "0" : std::to_string(addons_menu_page + 1)) + "/"
       + std::to_string(static_cast<int>(addons.size()) / addons_per_page
           + (static_cast<int>(addons.size()) % addons_per_page > 0 ? 1 : 0))
       + ")", 0, 0);
@@ -802,7 +804,7 @@ void generate_addons_download_menu()
   }
 
   addons_download_menu->get_item(0).change_text(("Download Add-ons (Page "
-      + std::to_string(addons_download_menu_page + 1) + "/"
+      + (addon_count == 0 ? "0" : std::to_string(addons_download_menu_page + 1)) + "/"
       + std::to_string(addon_count / addons_per_page
           + (addon_count % addons_per_page > 0 ? 1 : 0))
       + ")").c_str());
