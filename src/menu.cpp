@@ -176,7 +176,7 @@ void download_dialog(TransferStatusPtr status)
     dialog->get_item_by_id(1).change_text((std::to_string((complete ? status->dltotal : status->dlnow) / 1000)
         + "/" + std::to_string(status->dltotal / 1000) + " kB").c_str());
     dialog->get_item_by_id(2).change_text((std::to_string(complete ? 100 :
-          (status->dltotal <= 0 ? 0 : 100 * status->dlnow / status->dltotal)) + "%").c_str());
+          (status->dltotal <= 0 ? 0 : static_cast<int>(roundf(100 * (status->dlnow / static_cast<float>(status->dltotal)))))) + "%").c_str());
 
     mouse_cursor->update();
     flipscreen();
