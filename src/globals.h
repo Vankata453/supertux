@@ -30,6 +30,23 @@
 #include "defines.h"
 #include "mousecursor.h"
 
+/* UTILITY */
+
+struct MapCaseInsensitive final
+{
+  bool operator()(const std::string& s1, const std::string& s2) const
+  {
+    return std::lexicographical_compare(
+      s1.begin(), s1.end(),
+      s2.begin(), s2.end(),
+      [](const unsigned char& c1, const unsigned char& c2)
+        {
+          return tolower(c1) < tolower(c2);
+        });
+  }
+};
+
+
 class Downloader;
 
 extern std::string real_datadir;
@@ -68,8 +85,8 @@ struct Addon final
 
   std::vector<std::string> dependencies;
 };
-extern std::map<std::string, Addon> addons;
-extern std::map<std::string, bool> addons_enabled;
+extern std::map<std::string, Addon, MapCaseInsensitive> addons;
+extern std::map<std::string, bool, MapCaseInsensitive> addons_enabled;
 
 struct IndexAddon final
 {
@@ -84,7 +101,7 @@ struct IndexAddon final
   std::vector<std::string> dependencies;
 };
 extern bool addon_index_fetched;
-extern std::map<std::string, IndexAddon> addon_index;
+extern std::map<std::string, IndexAddon, MapCaseInsensitive> addon_index;
 extern std::string addon_index_base_url;
 
 extern SDL_Surface* screen;

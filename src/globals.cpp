@@ -39,11 +39,11 @@ JoystickKeymap::JoystickKeymap()
 
 JoystickKeymap joystick_keymap;
 
-std::map<std::string, Addon> addons;
-std::map<std::string, bool> addons_enabled;
+std::map<std::string, Addon, MapCaseInsensitive> addons;
+std::map<std::string, bool, MapCaseInsensitive> addons_enabled;
 
 bool addon_index_fetched = false;
-std::map<std::string, IndexAddon> addon_index;
+std::map<std::string, IndexAddon, MapCaseInsensitive> addon_index;
 std::string addon_index_base_url;
 
 SDL_Surface* screen;
