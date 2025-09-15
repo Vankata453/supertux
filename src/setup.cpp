@@ -293,10 +293,10 @@ void st_addons_enable(bool resource_packs, bool startup)
       }
 
       Addon& dep_addon = dep_it->second;
-      bool& addon_enabled = addons_enabled[dep_id];
-      if (addon_enabled && dep_addon.mounted)
+      bool& dep_addon_enabled = addons_enabled[dep_id];
+      if (dep_addon_enabled && dep_addon.mounted)
         continue;
-      addon_enabled = true;
+      dep_addon_enabled = true;
 
       if (dep_addon.resource_pack != resource_packs ||
           // Do not actually enable add-ons which override data after game has started
@@ -871,7 +871,6 @@ void process_addons_menu()
   bool& addon_enabled = addons_enabled[addon_it->first];
   if (addon_enabled == addons_menu->isToggled(idx))
     return;
-
   addon_enabled = !addon_enabled;
 
   Addon& addon = addon_it->second;
@@ -879,7 +878,8 @@ void process_addons_menu()
   // Notify user a restart is required to enable/disable add-ons which override data
   if (addon.overrides_data)
   {
-    Menu::push_current(restart_info_menu);
+    if (addon.mounted != addon_enabled)
+      Menu::push_current(restart_info_menu);
     return;
   }
 
@@ -916,10 +916,10 @@ void process_addons_menu()
         continue;
       }
 
-      bool& addon_enabled = addons_enabled[dep_id];
-      if (addon_enabled)
+      bool& dep_addon_enabled = addons_enabled[dep_id];
+      if (dep_addon_enabled)
         continue;
-      addon_enabled = true;
+      dep_addon_enabled = true;
 
       Addon& dep_addon = dep_it->second;
 
@@ -927,7 +927,8 @@ void process_addons_menu()
       // Notify the user later instead.
       if (dep_addon.overrides_data)
       {
-        dep_overrides_data = true;
+        if (dep_addon.mounted != dep_addon_enabled)
+          dep_overrides_data = true;
         continue;
       }
 
