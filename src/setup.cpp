@@ -26,6 +26,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #ifndef NOOPENGL
@@ -150,7 +151,11 @@ void free_strings(char **strings, int num)
 /* Set SuperTux configuration and save directories */
 void st_directory_setup(int argc, char** const argv)
 {
-  // Get custom datadir from command line arguments.
+  char working_dir[PATH_MAX];
+  if (!getcwd(working_dir, PATH_MAX))
+    throw std::runtime_error("Couldn't get current working directory!");
+
+  // Get custom datadir/userdir from command line arguments.
   // Must be parsed here early on, because config cannot be
   // loaded in parseargs() before PhysFS initialization.
   for (int i = 1; i + 1 < argc; i++)
@@ -158,8 +163,12 @@ void st_directory_setup(int argc, char** const argv)
     if (strcmp(argv[i], "--datadir") == 0 ||
         strcmp(argv[i], "-d") == 0)
     {
-      real_datadir = argv[i + 1];
-      break;
+      real_datadir = std::string(working_dir) + "/" + std::string(argv[i + 1]);
+    }
+    else if (strcmp(argv[i], "--userdir") == 0 ||
+             strcmp(argv[i], "-u") == 0)
+    {
+      real_userdir = std::string(working_dir) + "/" + std::string(argv[i + 1]);
     }
   }
 
@@ -198,7 +207,10 @@ void st_directory_setup(int argc, char** const argv)
   if (!PHYSFS_mount(real_datadir.c_str(), nullptr, 1))
     throw std::runtime_error("Couldn't add '" + real_datadir + "' to PhysFS searchpath: " + std::string(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode())));
 
-  real_userdir = PHYSFS_getPrefDir("SuperTux", "supertux_m1");
+  if (real_userdir.empty())
+    real_userdir = PHYSFS_getPrefDir("SuperTux", "supertux_m1");
+  else if (access(real_userdir.c_str(), F_OK) != 0)
+    mkdir(real_userdir.c_str(), 0755);
   printf("Userdir: %s\n", real_userdir.c_str());
   if (!PHYSFS_setWriteDir(real_userdir.c_str()))
     throw std::runtime_error("Failed to set userdir directory: " + std::string(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode())));
@@ -1660,6 +1672,13 @@ void parseargs(int argc, char * argv[])
           assert(i+1 < argc);
           ++i;
         }
+      else if (strcmp(argv[i], "--userdir") == 0 ||
+               strcmp(argv[i], "-u") == 0)
+        {
+          // Userdir is parsed in st_directory_setup().
+          assert(i+1 < argc);
+          ++i;
+        }
       else if (strcmp(argv[i], "--show-fps") == 0)
         {
           /* Use full screen: */
@@ -1731,7 +1750,8 @@ void parseargs(int argc, char * argv[])
                "  --joymap XAXIS:YAXIS:A:B:START\n"
                "  --leveleditor       Opens the leveleditor in a file. (Only works when a file is provided.)\n"
                "                      Define how joystick buttons and axis should be mapped\n"
-               "  -d, --datadir DIR   Load Game data from DIR (default: automatic)\n"
+               "  -d, --datadir DIR   Load Game data from DIR [RELATIVE to working directory] (default: automatic)\n"
+               "  -u, --userdir DIR   Read/write user data (addons, levels, savefiles...) to DIR [RELATIVE to working directory] (default: automatic)\n"
                "  --debug-mode        Enables the debug-mode, which is useful for developers.\n"
                "  --help              Display a help message summarizing command-line\n"
                "                      options, license and game controls.\n"
